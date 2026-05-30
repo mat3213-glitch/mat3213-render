@@ -23,13 +23,29 @@ jobs:
 
       - name: Install deps
         run: |
-          pip install requests
           sudo apt-get update -qq
-          sudo apt-get install -y --fix-missing ffmpeg
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          python3 -c "
+import os, pathlib
+cfg = '[ydrive]\ntype = yandex\nclient_id = {}\nclient_secret = {}\ntoken = {}\n'.format(
+    os.environ['YDRIVE_CLIENT_ID'],
+    os.environ['YDRIVE_CLIENT_SECRET'],
+    os.environ['YDRIVE_TOKEN'],
+)
+p = pathlib.Path.home() / '.config/rclone/rclone.conf'
+p.parent.mkdir(parents=True, exist_ok=True)
+p.write_text(cfg)
+print('rclone config written')
+"
 
       - name: Render
         env:
-          YADISK_LOGIN:    ${{ secrets.YADISK_LOGIN }}
-          YADISK_PASSWORD: ${{ secrets.YADISK_PASSWORD }}
-          JOB_ID:          ${{ inputs.job_id }}
+          JOB_ID: ${{ inputs.job_id }}
         run: python -u render_job.py

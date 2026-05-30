@@ -24,67 +24,46 @@ Env vars (GitHub Secrets + workflow inputs):
 import json
 import os
 import random
-import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from urllib.parse import quote as urlquote
 
-import requests
+JOB_ID = os.environ["JOB_ID"]
 
-YADISK_LOGIN = os.environ["YADISK_LOGIN"]
-YADISK_PASS  = os.environ["YADISK_PASSWORD"]
-JOB_ID       = os.environ["JOB_ID"]
-
-WEBDAV   = "https://webdav.yandex.ru"
-JOB_YD   = f"Content factory/render_jobs/{JOB_ID}"
-AUTH     = (YADISK_LOGIN, YADISK_PASS)
+REMOTE = "ydrive"
+JOB_YD = f"Content factory/render_jobs/{JOB_ID}"
 
 
-# ── WebDAV ────────────────────────────────────────────────────────────────────
-
-def yd_url(path: str) -> str:
-    return WEBDAV + "/" + "/".join(urlquote(p, safe="") for p in path.split("/") if p)
-
+# ── rclone YaDisk ─────────────────────────────────────────────────────────────
 
 def yd_ls(remote_dir: str) -> list[str]:
-    r = requests.request("PROPFIND", yd_url(remote_dir) + "/",
-                         auth=AUTH, headers={"Depth": "1"}, timeout=30)
-    if r.status_code not in (200, 207):
-        return []
-    hrefs = re.findall(r"<d:href>(.*?)</d:href>", r.text)
-    base_suffix = urlquote(remote_dir.split("/")[-1], safe="")
-    return [
-        requests.utils.unquote(h.rstrip("/").split("/")[-1])
-        for h in hrefs
-        if not h.rstrip("/").endswith(base_suffix + "") or h.count("/") > yd_url(remote_dir).count("/")
-    ]
+    r = subprocess.run(["rclone", "lsf", f"{REMOTE}:{remote_dir}", "--files-only"],
+                       capture_output=True, text=True)
+    return [f.strip() for f in r.stdout.splitlines() if f.strip()]
 
 
 def yd_get(remote_path: str, local: Path) -> bool:
-    r = requests.get(yd_url(remote_path), auth=AUTH, timeout=300, stream=True)
-    if r.status_code != 200:
-        print(f"  GET {remote_path.split('/')[-1]}: {r.status_code}")
-        return False
     local.parent.mkdir(parents=True, exist_ok=True)
-    with open(local, "wb") as f:
-        for chunk in r.iter_content(65536):
-            f.write(chunk)
-    return True
+    r = subprocess.run(["rclone", "copyto", f"{REMOTE}:{remote_path}", str(local)],
+                       capture_output=True, text=True)
+    return r.returncode == 0
 
 
 def yd_put(local: Path, remote_path: str) -> bool:
-    with open(local, "rb") as f:
-        r = requests.put(yd_url(remote_path), data=f, auth=AUTH, timeout=600)
-    ok = r.status_code in (200, 201, 204)
-    print(f"  PUT {remote_path.split('/')[-1]}: {'ok' if ok else 'FAIL '+str(r.status_code)}")
+    r = subprocess.run(["rclone", "copyto", str(local), f"{REMOTE}:{remote_path}"],
+                       capture_output=True, text=True)
+    ok = r.returncode == 0
+    print(f"  PUT {remote_path.split('/')[-1]}: {'ok' if ok else 'FAIL'}")
     return ok
 
 
 def yd_status(text: str):
-    requests.put(yd_url(f"{JOB_YD}/status.txt"),
-                 data=text.encode(), auth=AUTH, timeout=30)
+    tmp = Path(f"/tmp/_status_{os.getpid()}.txt")
+    tmp.write_text(text)
+    subprocess.run(["rclone", "copyto", str(tmp), f"{REMOTE}:{JOB_YD}/status.txt"],
+                   capture_output=True)
+    tmp.unlink(missing_ok=True)
 
 
 # ── FFmpeg ────────────────────────────────────────────────────────────────────
