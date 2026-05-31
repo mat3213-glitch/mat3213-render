@@ -63,7 +63,7 @@ def analyze_track(
     # BPM and beat timestamps
     tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr, units="frames")
     beat_times = librosa.frames_to_time(beat_frames, sr=sr)
-    bpm = float(tempo)
+    bpm = float(np.asarray(tempo).flat[0])  # librosa 0.10+ returns array
     print(f"[analyze] BPM={bpm:.1f}  beats={len(beat_times)}  dur={actual_dur:.1f}s")
 
     if len(beat_times) < 4:
