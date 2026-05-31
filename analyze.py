@@ -130,10 +130,10 @@ def analyze_track(
     while i < len(beat_arr):
         level = str(energy_class[i])
         n = int(np.random.choice(_BEATS_BY_ENERGY[level]))
-        j = min(i + n, len(beat_arr) - 1)
+        j = i + n  # unclamped — may exceed len
 
         t_start = float(beat_arr[i])
-        t_end   = float(beat_arr[j]) if j < len(beat_arr) - 1 else actual_dur
+        t_end   = float(beat_arr[j]) if j < len(beat_arr) else actual_dur
         dur = max(round(t_end - t_start, 4), 0.1)
 
         segments.append(Segment(
@@ -142,7 +142,7 @@ def analyze_track(
             n_beats=n,
             energy=level,
         ))
-        i = j
+        i = min(j, len(beat_arr))  # exit loop when j >= len
 
     if _wav_tmp:
         Path(_wav_tmp.name).unlink(missing_ok=True)
