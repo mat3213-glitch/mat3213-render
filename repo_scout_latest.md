@@ -1,10 +1,25 @@
-# Repo Scout — 2026-06-04T01:19:19.120714
+# Repo Scout — 2026-06-03T18:22:06.339346
 
 Всего в шортлисте: 25
 
+- **chatfire-AI/huobao-drama** ⭐12583 [video]
+  - https://github.com/chatfire-AI/huobao-drama
+  - 🎬 火宝短剧 - 基于AI的一站式短剧生成平台 《一句话生成完整短剧，从剧本到成片全自动化》  Huobao Drama - An AI-Powered End-to-End Short Drama Generator "One Sentence to Complete Drama: Fully Automated f
+- **HKUDS/ViMax** ⭐8624 [video]
+  - https://github.com/HKUDS/ViMax
+  - "ViMax: Agentic Video Generation (Director, Screenwriter, Producer, and Video Generator All-in-One)"
+- **vietnh1009/ASCII-generator** ⭐8262 [video]
+  - https://github.com/vietnh1009/ASCII-generator
+  - ASCII generator (image to text, image to image, video to video)
 - **OpenShot/openshot-qt** ⭐5829 [video]
   - https://github.com/OpenShot/openshot-qt
   - OpenShot Video Editor is an award-winning free and open-source video editor for Linux, Mac, and Windows, and is dedicated to delivering high quality video editi
+- **Picsart-AI-Research/Text2Video-Zero** ⭐4244 [video]
+  - https://github.com/Picsart-AI-Research/Text2Video-Zero
+  - [ICCV 2023 Oral] Text-to-Image Diffusion Models are Zero-Shot Video Generators
+- **SamurAIGPT/AI-Youtube-Shorts-Generator** ⭐3766 [video]
+  - https://github.com/SamurAIGPT/AI-Youtube-Shorts-Generator
+  - Open-source alternative to Opus Clip, Vidyo.ai, Klap & SubMagic. Turn long-form YouTube videos into viral 9:16 shorts using LLM highlight detection, Whisper tra
 - **abhiTronix/vidgear** ⭐3713 [video]
   - https://github.com/abhiTronix/vidgear
   - A High-performance cross-platform Video Processing Python framework powerpacked with unique trailblazing features :fire:
@@ -62,18 +77,3 @@
 - **y-t-bot/youtube-view-bot** ⭐37 [automation]
   - https://github.com/y-t-bot/youtube-view-bot
   - youtube view bot 
-- **y-t-bot/youtube-like-bot** ⭐31 [automation]
-  - https://github.com/y-t-bot/youtube-like-bot
-  - youtube like bot
-- **AEON-7/aeon-music-video** ⭐3 [video]
-  - https://github.com/AEON-7/aeon-music-video
-  - Audio-reactive music video builder. librosa-driven beat / onset / RMS detection drives ffmpeg filter chains for synced visual effects.
-- **ding7015869-alt/pixel-anime-player** ⭐3 [audio]
-  - https://github.com/ding7015869-alt/pixel-anime-player
-  - 🎵 Pixel Idol Desktop Music Player | 像素偶像桌面音乐播放器 — beat-reactive dancers, 6 VFX, lyric sync, photo pixelizer
-- **Yuyang-Ding1102/syncBeat** ⭐1 [audio]
-  - https://github.com/Yuyang-Ding1102/syncBeat
-  - A Reactive Kotlin Music Player with Real-Time LRC Sync.
-- **jeremyrayjewell/Cymatesserae** ⭐1 [video]
-  - https://github.com/jeremyrayjewell/Cymatesserae
-  - Audio-reactive visual engine for generating cymatic mosaics, beat-synced graphics, and exportable video from sound.
