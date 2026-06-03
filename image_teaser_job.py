@@ -70,7 +70,8 @@ def build_filter(W: int, H: int, dur: float, frames: int, has_text: bool) -> str
         f"format=yuv420p"
     )
     if has_text:
-        fontsize = int(H * 0.052)
+        # Размер от ШИРИНЫ, иначе в вертикали (H большое) текст шире кадра и срезается.
+        fontsize = int(W * 0.052)
         # textfile с реальными переносами строк → многострочный хук; fade-in с t=0.8
         vf += (
             f",drawtext=fontfile={FONT}:textfile={WORKDIR}/hook.txt:"
