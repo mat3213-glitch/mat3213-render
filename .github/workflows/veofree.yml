@@ -1,0 +1,34 @@
+name: Probe VeoFree (Playwright, US-IP)
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Text-to-video prompt'
+        required: false
+        default: 'slow cinematic drift through deep blue water, soft light rays descending into the dark, film grain, calm meditative depth, no text, no people'
+      dest_folder:
+        description: 'ЯД destination folder'
+        required: false
+        default: 'Content factory/_probe_veo'
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Playwright
+        run: |
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+      - name: Probe VeoFree
+        env:
+          YADISK_LOGIN:    ${{ secrets.YADISK_LOGIN }}
+          YADISK_PASSWORD: ${{ secrets.YADISK_PASSWORD }}
+          PROMPT:          ${{ inputs.prompt }}
+          DEST_FOLDER:     ${{ inputs.dest_folder }}
+        run: python veofree_probe.py
