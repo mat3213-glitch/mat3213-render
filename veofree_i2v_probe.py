@@ -106,28 +106,33 @@ with sync_playwright() as pw:
         except: pass
     if not fi and allfiles: fi=allfiles[0]
     if fi:
-        try: fi.set_input_files(str(TMP/"in.png")); log("картинка загружена в file input"); pg.wait_for_timeout(3000)
+        try:
+            fi.set_input_files(str(TMP/"in.png")); log("картинка загружена в file input")
+            pg.wait_for_timeout(6000)   # дать обработать загрузку (превью/аплоад)
         except Exception as e: log(f"set_input_files err: {e}")
     else:
         log("НЕ нашёл file input")
     pg.screenshot(path=str(TMP/"02_uploaded.png"))
 
-    # промпт (если есть видимая textarea)
-    for ta in pg.query_selector_all("textarea"):
-        try:
-            if ta.is_visible():
-                ta.click(); ta.fill(PROMPT); log("промпт введён"); break
-        except: pass
+    # промпт — прицельно в i2v-textarea
+    ta=pg.query_selector("#fn__include_textarea_img_video") or next(
+        (t for t in pg.query_selector_all("textarea") if t.is_visible()), None)
+    if ta:
+        try: ta.click(); ta.fill(PROMPT); log("промпт введён")
+        except Exception as e: log(f"prompt err {e}")
 
-    # GENERATE — первая видимая кнопка с текстом GENERATE
+    # GENERATE — прицельно по id i2v-кнопки, со scroll + force
     clicked=False
-    for b in pg.query_selector_all("button"):
-        try:
-            if b.is_visible() and "GENERATE" in (b.inner_text() or "").upper():
-                b.scroll_into_view_if_needed(timeout=3000)
-                b.click(timeout=8000); clicked=True
-                log(f"клик GENERATE (id={b.get_attribute('id')})"); break
+    gb=pg.query_selector("#generate_it_img_video") or pg.query_selector("#generate_it")
+    if gb:
+        try: gb.scroll_into_view_if_needed(timeout=4000)
         except: pass
+        dismiss(pg)
+        for force in (False, True):
+            try:
+                gb.click(timeout=8000, force=force); clicked=True
+                log(f"клик GENERATE id={gb.get_attribute('id')} force={force}"); break
+            except Exception as e: log(f"click force={force} err: {e}")
     log(f"generate clicked: {clicked}")
 
     for _ in range(40):
