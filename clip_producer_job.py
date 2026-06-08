@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 # analyze.py sits next to this file in the repo
-from analyze import analyze_track, Segment
+from analyze import analyze_track, Segment, find_highlight_offset
 
 JOB_ID  = os.environ.get("JOB_ID", "")
 if not JOB_ID:
@@ -142,8 +142,17 @@ def main():
     print("\n── Audio analysis (librosa) ──")
     if seed is not None:
         random.seed(seed)
-    bpm, segments = analyze_track(track_file, duration=duration, seed=seed)
-    print(f"  BPM={bpm:.1f}  segments={len(segments)}")
+
+    # Highlight-детекция: окно на энергетическом/онсетном пике вместо интро.
+    # Гейт уверенности внутри → ровный трек вернёт 0.0 (= прежнее поведение).
+    highlight = bool(job.get("highlight", False))
+    hl_offset = 0.0
+    if highlight:
+        print("── Highlight detection ──")
+        hl_offset = find_highlight_offset(track_file, window=duration)
+
+    bpm, segments = analyze_track(track_file, duration=duration, seed=seed, start=hl_offset)
+    print(f"  BPM={bpm:.1f}  segments={len(segments)}  highlight_offset={hl_offset:.1f}s")
 
     # 3. Assign sources + src_starts
     active_sources = list(src_files.keys())
@@ -213,10 +222,13 @@ def main():
     # 6. Mix audio
     print("\n── Mixing audio ──")
     result = WORKDIR / out_name
+    audio_in = ["-i", str(track_file)]
+    if hl_offset > 0:
+        audio_in = ["-ss", str(round(hl_offset, 3)), "-i", str(track_file)]  # звук с того же пика
     r = subprocess.run([
         "ffmpeg", "-y",
         "-i", str(concat_mp4),
-        "-i", str(track_file),
+        *audio_in,
         "-t", str(round(duration, 3)),
         "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
         "-shortest", str(result),

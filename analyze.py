@@ -46,10 +46,12 @@ def analyze_track(
     track_path: str | Path,
     duration: float | None = 30.0,
     seed: int | None = None,
+    start: float = 0.0,
 ) -> tuple[float, list[Segment]]:
     """Analyze track, return (bpm, segments).
 
     duration=None → analyze full track.
+    start>0 → analyze the window [start, start+duration] (highlight offset).
     """
     if seed is not None:
         random.seed(seed)
@@ -58,18 +60,20 @@ def analyze_track(
     track_path = Path(track_path)
     hop = 512
     win = 1024
-    print(f"[analyze] loading {track_path.name} ({duration or 'full'}s)...")
+    print(f"[analyze] loading {track_path.name} (start={start:.1f}s, {duration or 'full'}s)...")
 
     # aubio pip wheel lacks libav — convert to WAV first (ffmpeg is always available)
     _wav_tmp = None
-    if track_path.suffix.lower() != ".wav":
+    if track_path.suffix.lower() != ".wav" or start > 0:
         _wav_tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
-        subprocess.run(
-            ["ffmpeg", "-y", "-i", str(track_path), "-ar", "44100", "-ac", "1",
-             "-t", str(duration) if duration else "-1",
-             _wav_tmp.name],
-            capture_output=True, check=True,
-        )
+        cmd = ["ffmpeg", "-y"]
+        if start > 0:
+            cmd += ["-ss", str(round(start, 3))]  # input seek before -i (fast)
+        cmd += ["-i", str(track_path), "-ar", "44100", "-ac", "1"]
+        if duration:
+            cmd += ["-t", str(duration)]
+        cmd += [_wav_tmp.name]
+        subprocess.run(cmd, capture_output=True, check=True)
         src_path = _wav_tmp.name
     else:
         src_path = str(track_path)
@@ -150,3 +154,79 @@ def analyze_track(
     counts = {e: sum(1 for s in segments if s.energy == e) for e in ("high", "medium", "low")}
     print(f"[analyze] {len(segments)} segments → high={counts['high']} medium={counts['medium']} low={counts['low']}")
     return bpm, segments
+
+
+def find_highlight_offset(
+    track_path: str | Path,
+    window: float,
+    margin_end: float = 8.0,
+    min_gain: float = 1.20,
+) -> float:
+    """Найти старт окна длины `window` на «интересном» участке трека.
+
+    «Интерес» = энергия (RMS) × плотность онсетов (настоящий дроп имеет оба).
+    Гейт уверенности: сдвигаемся на найденный пик ТОЛЬКО если он сильнее
+    дефолтного интро минимум в `min_gain` раз. Иначе → 0.0 (берём начало).
+    Для ровных downtempo-треков это значит «оставить интро», и это правильно.
+
+    margin_end — сколько секунд хвоста (аутро/фейд) исключить из кандидатов.
+    """
+    track_path = Path(track_path)
+    hop = 512
+
+    _tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    subprocess.run(
+        ["ffmpeg", "-y", "-i", str(track_path), "-ar", "44100", "-ac", "1", _tmp.name],
+        capture_output=True, check=True,
+    )
+    try:
+        src = aubio.source(_tmp.name, hop_size=hop)
+        sr = src.samplerate
+        onset_det = aubio.onset("default", 1024, hop, sr)
+        rms_vals: list[float] = []
+        onset_flags: list[float] = []
+        while True:
+            samples, read = src()
+            if read > 0:
+                rms_vals.append(float(np.sqrt(np.mean(samples[:read] ** 2) + 1e-12)))
+                onset_flags.append(1.0 if onset_det(samples)[0] else 0.0)
+            if read < hop:
+                break
+
+        total_dur = len(rms_vals) * hop / sr
+        if total_dur <= window + margin_end:
+            print(f"[highlight] трек {total_dur:.1f}s ≤ окно+запас → offset=0.0 (интро)")
+            return 0.0
+
+        rms = np.array(rms_vals)
+        onsets = np.array(onset_flags)
+        # нормируем оба 0→1, score = энергия × (1 + плотность онсетов)
+        rms_n = (rms - rms.min()) / (np.ptp(rms) + 1e-9)
+        on_sm = uniform_filter1d(onsets, size=max(1, int(2.0 * sr / hop)))
+        on_n = (on_sm - on_sm.min()) / (np.ptp(on_sm) + 1e-9)
+        score = uniform_filter1d(rms_n * (1.0 + on_n), size=max(1, int(2.0 * sr / hop)))
+
+        win_frames = max(1, int(window * sr / hop))
+        kernel = np.ones(win_frames) / win_frames
+        windowed = np.convolve(score, kernel, mode="valid")
+
+        max_start = len(score) - win_frames - int(margin_end * sr / hop)
+        if max_start <= 0:
+            return 0.0
+        windowed = windowed[:max_start]
+
+        intro_score = float(windowed[0])           # окно с 0:00
+        best_frame = int(np.argmax(windowed))
+        best_score = float(windowed[best_frame])
+        gain = best_score / (intro_score + 1e-9)
+
+        if gain < min_gain:
+            print(f"[highlight] пик лишь {gain:.2f}× интро (<{min_gain}) → offset=0.0 "
+                  f"(трек ровный, берём интро)")
+            return 0.0
+
+        offset = round(best_frame * hop / sr, 2)
+        print(f"[highlight] пик-окно [{offset:.1f}..{offset+window:.1f}]s, {gain:.2f}× интро → offset={offset}")
+        return offset
+    finally:
+        Path(_tmp.name).unlink(missing_ok=True)
