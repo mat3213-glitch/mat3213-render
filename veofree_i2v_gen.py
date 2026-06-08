@@ -92,7 +92,12 @@ with sync_playwright() as pw:
                     if want in t or "vertical" in t or "portrait" in t or "9:16" in o["t"]:
                         pick=o["v"]; break
                 if pick is not None:
-                    pg.select_option("#cropModal select", value=pick); pg.wait_for_timeout(1500)
+                    pg.select_option("#cropModal select", value=pick)
+                    # явно дёрнуть change/input — cropper.js слушает их
+                    pg.eval_on_selector("#cropModal select",
+                        "s=>{s.dispatchEvent(new Event('input',{bubbles:true}));s.dispatchEvent(new Event('change',{bubbles:true}));}")
+                    pg.wait_for_timeout(2500)
+                    pg.screenshot(path=str(TMP/"cropcheck.png"))   # диагностика: каким стал crop-бокс
                     log(f"aspect выбран: {pick}")
                 else:
                     log("9:16 опция не найдена — оставляю дефолт")
@@ -149,6 +154,7 @@ if video_url and ".mp4" in video_url:
             (TMP/OUT).write_bytes(r.content); log(f"downloaded {len(r.content)//1024}KB")
             yd_mkcol(DEST); ok=yd_put(TMP/OUT,f"{DEST}/{OUT}")
     except Exception as e: log(f"dl err {e}")
+if (TMP/"cropcheck.png").exists(): yd_put(TMP/"cropcheck.png", f"{DEST}/{OUT}.cropcheck.png")  # диагностика всегда
 if not ok:
     yd_mkcol(DEST)
     (TMP/f"{OUT}.FAILED.txt").write_text(f"status={status}\nurl={video_url}",encoding="utf-8")
