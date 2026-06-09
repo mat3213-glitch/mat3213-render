@@ -22,20 +22,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-import requests
-
 JOB_ID = os.environ.get("JOB_ID", "")
 if not JOB_ID:
     sys.exit("JOB_ID not set")
-
-# CFImageGen — генерация фона на раннере (когда задан image_prompt вместо image.png)
-IMG_WORKER_URL    = os.environ.get("IMG_WORKER_URL", "https://yaromat-img.mat3213.workers.dev").rstrip("/")
-IMG_WORKER_SECRET = os.environ.get("IMG_WORKER_SECRET", "")
-# Бренд-эстетика yaromat: плёнка, холод, без неона/лиц (см. feedback_no_neon / vibe_inner_depth)
-ART_TAIL = ("Kodak Portra 400 film grain, cold desaturated colors, dark moody blue-grey atmosphere, "
-            "cinematic melancholy, 35mm analog feel, atmospheric fog, deep focus")
-ART_NEG  = ("neon, glowing lights, oversaturated, plastic, glossy, HDR, bright, cheerful, commercial, "
-            "CGI, 3D render, faces, portrait, text, watermark, logo")
 
 REMOTE  = "ydrive"
 JOBS_YD = "Content factory/render_jobs"
@@ -67,34 +56,6 @@ def yd_put_text(text: str, remote_path: str):
     tmp = WORKDIR / "_status.txt"
     tmp.write_text(text)
     yd_put(tmp, remote_path)
-
-
-def generate_background(prompt: str, fmt: str, out_path: Path) -> bool:
-    """Генерит фон через CFImageGen Worker. square→flux (1024², качество),
-    vertical/landscape→sdxl (нативный размер + negative). Бренд-хвост добавляется."""
-    if not IMG_WORKER_SECRET:
-        print("[bg] IMG_WORKER_SECRET не задан — генерация фона невозможна")
-        return False
-    full_prompt = f"{prompt}, {ART_TAIL}"
-    if fmt == "square":
-        body = {"prompt": full_prompt, "model": "@cf/black-forest-labs/flux-1-schnell", "steps": 8}
-    else:
-        W, H = FMT_DIMS.get(fmt, FMT_DIMS["square"])
-        body = {"prompt": full_prompt, "model": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-                "negative_prompt": ART_NEG, "width": W, "height": H, "steps": 20}
-    print(f"[bg] CFImageGen {body['model'].split('/')[-1]} ({fmt}) ...")
-    try:
-        r = requests.post(f"{IMG_WORKER_URL}/gen", headers={"X-Worker-Secret": IMG_WORKER_SECRET},
-                          json=body, timeout=(15, 180))
-    except Exception as e:
-        print(f"[bg] worker error: {e}")
-        return False
-    if r.status_code != 200 or not r.headers.get("content-type", "").startswith("image"):
-        print(f"[bg] FAIL HTTP {r.status_code}: {r.text[:160]}")
-        return False
-    out_path.write_bytes(r.content)
-    print(f"[bg] ✅ фон {len(r.content)//1024}KB → {out_path.name}")
-    return True
 
 
 def build_filter(W: int, H: int, dur: float, frames: int, has_text: bool) -> str:
@@ -145,18 +106,10 @@ def main():
     if not yd_get(f"{JOB_YD}/track.mp3", track_file):
         sys.exit("Failed to download track.mp3")
 
-    image_prompt = job.get("image_prompt", "").strip()
     image_file = WORKDIR / "image.png"
-    if yd_get(f"{JOB_YD}/image.png", image_file):
-        print(f"  image {image_file.stat().st_size//1024}KB (готовая)")
-    elif image_prompt:
-        print(f"── Генерация фона (CFImageGen) ──\n  prompt: {image_prompt[:80]}")
-        if not generate_background(image_prompt, fmt, image_file):
-            yd_put_text("error: background generation failed", f"{JOB_YD}/status.txt")
-            sys.exit("Background generation failed")
-    else:
-        sys.exit("Нет ни image.png, ни image_prompt в job")
-    print(f"  track {track_file.stat().st_size//1024}KB")
+    if not yd_get(f"{JOB_YD}/image.png", image_file):
+        sys.exit("Failed to download image.png")
+    print(f"  image {image_file.stat().st_size//1024}KB  track {track_file.stat().st_size//1024}KB")
 
     if hook_text:
         (WORKDIR / "hook.txt").write_text(hook_text, encoding="utf-8")
