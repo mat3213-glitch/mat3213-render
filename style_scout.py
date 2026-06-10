@@ -184,7 +184,7 @@ def contact_sheet(cands: list[dict], out: Path) -> bool:
     layout = "|".join(f"{(i % cols) * W}_{(i // cols) * W}" for i in range(len(tiles)))
     r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs,
                         "-filter_complex", f"xstack=inputs={len(tiles)}:layout={layout}:fill=black",
-                        str(out)], capture_output=True, text=True)
+                        "-q:v", "3", str(out)], capture_output=True, text=True)  # JPG, лёгкий
     return out.exists()
 
 
@@ -196,24 +196,43 @@ def yd_put(local: Path, remote: str):
 
 
 def tg_photo(img: Path, caption: str):
+    # Прямой multipart sendPhoto через CF Worker (проброс /bot* → api.telegram.org).
+    # БЕЗ catbox: catbox блокирует IP GH-раннеров ("Invalid uploader"). Воркер
+    # сохраняет Content-Type (boundary), Telegram принимает файл напрямую. Лист —
+    # лёгкий JPG, так что аплоад через воркер мгновенный.
     worker = os.environ.get("CLOUDFLARE_WORKER"); token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat = os.environ.get("STYLE_SCOUT_CHAT_ID"); thread = os.environ.get("STYLE_SCOUT_THREAD_ID")
     if not (worker and token and chat):
         print("  [tg] нет секретов — пропуск пинга"); return
+    import requests
+    base = {"chat_id": chat, "caption": caption[:1000]}
+    if thread:
+        base["message_thread_id"] = str(int(thread))
+    # 1) основной: multipart sendPhoto через воркер (GH-раннер — быстрый аплоад)
     try:
-        import requests
+        with open(img, "rb") as f:
+            r = requests.post(f"{worker}/bot{token}/sendPhoto", data=base,
+                              files={"photo": (img.name, f, "image/jpeg")}, timeout=180)
+        if r.status_code == 200 and r.json().get("ok"):
+            print("  [tg] sendPhoto (multipart) ok"); return
+        print(f"  [tg] multipart не ок (HTTP {r.status_code}) — пробую catbox→relay")
+    except Exception as e:
+        print(f"  [tg] multipart fail ({e}) — пробую catbox→relay")
+    # 2) фолбэк: catbox→/tg-relay (работает с резидентного IP; catbox режет CI-IP)
+    try:
         with open(img, "rb") as f:
             up = requests.post("https://catbox.moe/user/api.php",
                                data={"reqtype": "fileupload"},
-                               files={"fileToUpload": (img.name, f, "image/png")},
+                               files={"fileToUpload": (img.name, f, "image/jpeg")},
                                timeout=120).text.strip()
         if not up.startswith("http"):
             print(f"  [tg] catbox fail: {up[:80]}"); return
-        payload = {"chat_id": chat, "caption": caption[:1000], "photo": up}
-        if thread:
-            payload["message_thread_id"] = int(thread)
-        r = requests.post(f"{worker}/bot{token}/sendPhoto", json=payload, timeout=60)
-        print(f"  [tg] sendPhoto HTTP {r.status_code}")
+        payload = {"token": token, "chat_id": chat, "file_url": up,
+                   "method": "sendPhoto", "field": "photo",
+                   "extra": {k: v for k, v in base.items() if k != "chat_id"}}
+        hdr = {"X-Worker-Secret": os.environ.get("WORKER_SECRET", "")}  # /tg-relay требует секрет
+        r = requests.post(f"{worker}/tg-relay", json=payload, headers=hdr, timeout=120)
+        print(f"  [tg] sendPhoto (relay) HTTP {r.status_code}")
     except Exception as e:
         print(f"  [tg] фото не ушло: {e}")
 
@@ -245,7 +264,7 @@ def main():
     cands = dedupe(cands, args.limit)
     print(f"[scout] кандидатов после дедупа: {len(cands)} → {[c['name'] for c in cands]}")
 
-    sheet = work / f"style_scout_{ts}.png"
+    sheet = work / f"style_scout_{ts}.jpg"
     ok = contact_sheet(cands, sheet)
     print(f"[scout] контакт-лист: {'OK '+str(sheet) if ok else 'FAIL'}")
 
@@ -256,7 +275,7 @@ def main():
 
     if not args.local:
         if ok:
-            yd_put(sheet, f"Content factory/style_scout/{ts}/style_scout_{ts}.png")
+            yd_put(sheet, f"Content factory/style_scout/{ts}/style_scout_{ts}.jpg")
             tg_photo(sheet, f"Style Scout {ts}: {len(cands)} новых лук-кандидатов "
                             f"({', '.join(c['name'] for c in cands)}). "
                             f"ОК? → merge в styles.json. Предложения в репо: style_proposals.json")
