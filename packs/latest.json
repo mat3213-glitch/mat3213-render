@@ -1,0 +1,14 @@
+{
+  "grade": {
+    "name": "scout_green_grain_decay",
+    "eq": "contrast=1.15:saturation=0.6:brightness=-0.03:gamma=0.95",
+    "balance": "bs=0.03:bh=-0.01",
+    "note": "десатурированная органика, тяжёлый grain, тёмные тени"
+  },
+  "sources": [
+    "https://live.staticflickr.com/4087/5168299106_b1344d0cf4.jpg",
+    "https://live.staticflickr.com/3772/12257977683_d5941a124b.jpg",
+    "https://live.staticflickr.com/2616/3896556119_e61b1ce130_b.jpg",
+    "https://live.staticflickr.com/4120/4806289827_0f01cb8f1a_b.jpg"
+  ]
+}
