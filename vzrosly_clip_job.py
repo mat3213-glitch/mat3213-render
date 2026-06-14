@@ -119,12 +119,11 @@ def grid_seg(srcs: list, dur: float, out: Path, W: int, H: int,
         ye = f"{dy//2}+{dy//2}*cos(2*PI*(t/{dur:.3f})*0.5+{ph:.2f})"
         p.append(f"[{i}]scale={OW}:{OH}:force_original_aspect_ratio=increase,"
                  f"crop={cw}:{ch}:x='{xe}':y='{ye}',setsar=1[c{i}]")
-    yl = f"(t/{dur:.3f})*{DY}"                   # левая колонка — вниз
-    yr = f"-(t/{dur:.3f})*{DY}"                  # правая — вверх
-    p.append(f"[bg][c0]overlay=x=0:y='0+{yl}'[o0]")        # лев-верх
-    p.append(f"[o0][c2]overlay=x=0:y='{ch}+{yl}'[o1]")     # лев-низ
-    p.append(f"[o1][c1]overlay=x={cw}:y='0+{yr}'[o2]")     # прав-верх
-    p.append(f"[o2][c3]overlay=x={cw}:y='{ch}+{yr}'[o3]")  # прав-низ
+    d = f"(t/{dur:.3f})*{DY}"                     # величина хода колонок (без знака)
+    p.append(f"[bg][c0]overlay=x=0:y='0+{d}'[o0]")         # лев-верх — вниз
+    p.append(f"[o0][c2]overlay=x=0:y='{ch}+{d}'[o1]")      # лев-низ — вниз
+    p.append(f"[o1][c1]overlay=x={cw}:y='0-{d}'[o2]")      # прав-верх — вверх
+    p.append(f"[o2][c3]overlay=x={cw}:y='{ch}-{d}'[o3]")   # прав-низ — вверх
     p.append(f"[o3]noise=alls={noise}:allf=t+u,format=yuv420p[v]")
     enc = ["-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
            "-video_track_timescale", "12800", str(out)]
