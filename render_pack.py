@@ -19,6 +19,18 @@ PACKS = HERE / "packs"
 WORK = Path("/tmp/render_pack"); WORK.mkdir(parents=True, exist_ok=True)
 
 
+def has_text(path):
+    """OCR: True если на картинке заметный текст/надпись/вотермарк (≥2 словоподобных)."""
+    import re
+    try:
+        out = subprocess.run(["tesseract", str(path), "-", "--psm", "11", "-l", "eng+rus"],
+                             capture_output=True, text=True, timeout=30).stdout
+        words = re.findall(r"[A-Za-zА-Яа-я]{4,}", out)
+        return len(words) >= 2
+    except Exception:
+        return False  # нет tesseract → не блокируем
+
+
 def apply_grade(src, grade, out):
     eq = grade.get("eq", "contrast=1.05:saturation=0.7")
     bal = grade.get("balance")
@@ -62,6 +74,8 @@ def main():
     for i, u in enumerate(urls[:8]):
         raw = WORK / f"r{i}.jpg"
         if ss.ov_download(u, raw):
+            if has_text(raw):
+                print(f"  [skip] текст на картинке — {u[:50]}"); continue
             g = WORK / f"g{i}.jpg"
             if apply_grade(raw, grade, g):
                 tiles.append(g); srcs.append(u)

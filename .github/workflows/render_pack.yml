@@ -28,7 +28,7 @@ jobs:
           python-version: "3.11"
       - name: Deps
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg tesseract-ocr tesseract-ocr-rus
           pip install -q numpy pillow requests
       - name: Build pack
         env:
