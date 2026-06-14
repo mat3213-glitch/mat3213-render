@@ -16,7 +16,7 @@ on:
         default: "[]"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   pack:
@@ -41,3 +41,12 @@ jobs:
           GRADE_JSON:   ${{ github.event.inputs.grade_json }}
           QUERIES_JSON: ${{ github.event.inputs.queries_json }}
         run: python3 render_pack.py
+
+      - name: Persist pack manifest
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add packs/latest.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "no manifest"; else
+            git commit -m "pack: manifest [skip ci]"; git push
+          fi

@@ -14,6 +14,8 @@ import json, os, subprocess
 from pathlib import Path
 import style_scout as ss
 
+HERE = Path(__file__).resolve().parent
+PACKS = HERE / "packs"
 WORK = Path("/tmp/render_pack"); WORK.mkdir(parents=True, exist_ok=True)
 
 
@@ -71,10 +73,12 @@ def main():
 
     sheet = WORK / "pack.jpg"
     montage(tiles, sheet)
-    # сохраним список источников рядом (для шага pack_render)
-    (WORK / "sources.json").write_text(json.dumps(srcs, ensure_ascii=False), encoding="utf-8")
+    # ПЕРСИСТ манифеста пака в репо (для /pack_render N): grade + источники по порядку тайлов
+    PACKS.mkdir(parents=True, exist_ok=True)
+    (PACKS / "latest.json").write_text(
+        json.dumps({"grade": grade, "sources": srcs}, ensure_ascii=False, indent=2), encoding="utf-8")
     cap = (f"🎨 Рендер-пак — тренд-лук «{grade.get('name','?')}» на CC-картинках (Openverse). "
-           f"{len(tiles)} вариантов. Что в боевой тест-рендер — скажи номера.")
+           f"{len(tiles)} вариантов. В видео-тест: /pack_render N")
     ss.tg_photo(sheet, cap)
     print("[pack] готово")
 

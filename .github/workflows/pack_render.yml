@@ -1,0 +1,36 @@
+name: pack render
+
+# S3.3+: видео-тест выбранной картинки из рендер-пака (ken-burns + грейд) → тред 634.
+# Дёргает облачный бот /pack_render N. Источники/грейд — из packs/latest.json.
+
+on:
+  workflow_dispatch:
+    inputs:
+      index:
+        description: "номер картинки в паке (1-based)"
+        required: true
+        default: "1"
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg
+          pip install -q requests
+      - name: Render pack clip
+        env:
+          CLOUDFLARE_WORKER:     ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          STYLE_SCOUT_CHAT_ID:   ${{ secrets.SCOUT_CHAT_ID }}
+          STYLE_SCOUT_THREAD_ID: "634"
+          INDEX: ${{ github.event.inputs.index }}
+        run: python3 pack_render.py
