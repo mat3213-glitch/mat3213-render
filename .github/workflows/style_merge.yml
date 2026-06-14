@@ -1,0 +1,58 @@
+name: style merge
+
+# Вливает одобренные цвето-луки в styles.json. Дёргается облачным ботом (@Cloudeyaro_bot)
+# через CF Worker по твоему /merge в Telegram — БЕЗ бука. Имена резолвит воркер
+# (номера/all → имена из style_judge.json) и передаёт сюда явным списком.
+
+on:
+  workflow_dispatch:
+    inputs:
+      names:
+        description: "имена луков через пробел"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Merge into styles.json
+        run: python3 style_scout_merge.py --names ${{ github.event.inputs.names }}
+
+      - name: Commit + push
+        id: commit
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add styles.json
+          if git diff --cached --quiet; then
+            echo "changed=0" >> "$GITHUB_OUTPUT"
+            echo "нечего коммитить (уже влиты)"
+          else
+            git commit -m "style: merge approved looks via cloud bot (${{ github.event.inputs.names }}) [skip ci]"
+            git push
+            echo "changed=1" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify thread 634
+        if: always()
+        env:
+          WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT:     ${{ secrets.SCOUT_CHAT_ID }}
+        run: |
+          if [ "${{ steps.commit.outputs.changed }}" = "1" ]; then
+            MSG="✅ Влито в styles.json: ${{ github.event.inputs.names }}"
+          else
+            MSG="ℹ️ Мердж ${{ github.event.inputs.names }} — изменений нет (возможно уже влиты)"
+          fi
+          curl -sf -m 30 -H "Content-Type: application/json" \
+            -d "{\"chat_id\":\"$CHAT\",\"message_thread_id\":634,\"text\":\"$MSG\"}" \
+            "$WORKER/bot$TG_TOKEN/sendMessage" >/dev/null || echo "tg notify failed"
