@@ -1,0 +1,43 @@
+name: render pack
+
+# S3.3: рендер-пак под тренд — Openverse CC-картинки + тренд-грейд → контакт-лист в 634.
+# mimo НЕ нужен. Дёргает облачный бот /pack. Параметры — dispatch-inputs.
+
+on:
+  workflow_dispatch:
+    inputs:
+      grade_json:
+        description: "JSON грейда {name,eq,balance}"
+        required: false
+        default: "{}"
+      queries_json:
+        description: "JSON-массив запросов"
+        required: false
+        default: "[]"
+
+permissions:
+  contents: read
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg
+          pip install -q numpy pillow requests
+      - name: Build pack
+        env:
+          OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
+          OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
+          CLOUDFLARE_WORKER:       ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:      ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          STYLE_SCOUT_CHAT_ID:     ${{ secrets.SCOUT_CHAT_ID }}
+          STYLE_SCOUT_THREAD_ID:   "634"
+          GRADE_JSON:   ${{ github.event.inputs.grade_json }}
+          QUERIES_JSON: ${{ github.event.inputs.queries_json }}
+        run: python3 render_pack.py
