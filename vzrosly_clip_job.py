@@ -36,6 +36,12 @@ FMT = {"square": (1080, 1080), "vertical": (1080, 1920)}
 FPS = 25
 BEAT = 60.0 / 87.0  # 0.6897s
 
+# Моторные ручки (Фаза 2: управляются рецептом через job → recipe_to_treatment).
+# Дефолты = откалиброванные значения yaromat (-50%). main() переопределяет из job.
+MOTION_SPEED  = 0.5    # скорость/плотность дрейфа
+MOTION_AMP    = 1.15   # амплитуда движения (margin-фактор)
+BLEND_OPACITY = 0.5    # сила двойной экспозиции
+
 STYLES_FILE = REPO / "styles.json"
 _DEFAULT_STYLE = {"name": "cold_steel",
                   "eq": "contrast=1.14:saturation=0.9:brightness=-0.02:gamma=0.96",
@@ -99,8 +105,8 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
     Амплитуда и скорость движения снижены (фидбэк yaromat: -50% и то и то)."""
     enc = ["-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
            "-video_track_timescale", "12800", str(out)]
-    SPEED = 0.5                       # плотность/скорость движения ×0.5
-    BW, BH = int(W * 1.15), int(H * 1.15)   # амплитуда (margin) ×0.5 (было 1.30)
+    SPEED = MOTION_SPEED              # плотность/скорость движения (рецепт-управляемо)
+    BW, BH = int(W * MOTION_AMP), int(H * MOTION_AMP)   # амплитуда (margin) (рецепт-управляемо)
     pre = f"scale={BW}:{BH}:force_original_aspect_ratio=increase,crop={BW}:{BH}"
     mx, my = BW - W, BH - H
     cx, cy = mx / 2, my / 2
@@ -142,7 +148,7 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
         fc = (f"[0]{pre},split[a][b];"
               f"[a]crop={W}:{H}:x='{drift(cx, ax, '+', ph)}':y='{drift(cy, ay, '+', ph)}',setsar=1,format=gbrp[ca];"
               f"[b]crop={W}:{H}:x='{drift(cx, ax, '-', ph)}':y='{drift(cy, ay, '-', ph)}',setsar=1,format=gbrp[cb];"
-              f"[ca][cb]blend=all_mode={blend}:all_opacity=0.5,format=yuv420p[v]")
+              f"[ca][cb]blend=all_mode={blend}:all_opacity={BLEND_OPACITY},format=yuv420p[v]")
     r = run(["ffmpeg", "-y", "-loglevel", "error", "-loop", "1", "-t", f"{dur:.4f}",
              "-i", str(cover), "-filter_complex", fc, "-map", "[v]"] + enc)
     if r.returncode != 0:
@@ -389,6 +395,7 @@ COVER_SPEC = {
 
 
 def main():
+    global MOTION_SPEED, MOTION_AMP, BLEND_OPACITY
     print(f"Job: {JOB_ID}")
     jf = WORK / "job.json"
     if not yd_get(f"{JOB_YD}/job.json", jf):
@@ -413,6 +420,10 @@ def main():
     styles = load_styles()
     style  = pick_style(styles, seed, job.get("style", ""))  # per-track лук (грейд/зерно/виньетка)
     scenario = job.get("scenario", "collage")                # per-track сценарий монтажа (ось разнообразия)
+    # Фаза 2: моторные ручки из рецепта (дефолты = калибровка yaromat)
+    MOTION_SPEED  = float(job.get("speed", MOTION_SPEED))
+    MOTION_AMP    = float(job.get("amplitude", MOTION_AMP))
+    BLEND_OPACITY = float(job.get("blend_opacity", BLEND_OPACITY))
 
     # preview tier 2: половинное разрешение + ultrafast → дешёвый proxy для ревью движения/плотности/ритма
     if preview:
@@ -441,6 +452,7 @@ def main():
     # timeline → motion-сегменты (двойная экспозиция с движением) → xfade-цепь
     seq, total = build_timeline(variant, bpm, seed, calm, split, scenario)
     print(f"  variant={variant} bpm={bpm} seed={seed} calm={calm} split={split} scenario={scenario}")
+    print(f"  motion: speed={MOTION_SPEED} amp={MOTION_AMP} blend_opacity={BLEND_OPACITY}")
     print(f"  style={style['name']} — {style.get('note','')}")
     nominal = round(total, 3)
     print(f"  segments={len(seq)} nominal={nominal}s")
