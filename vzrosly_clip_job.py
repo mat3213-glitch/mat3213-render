@@ -98,28 +98,41 @@ def make_cover(src: Path, dst: Path, W: int, H: int, zoom: float = 1.0, flip: bo
          "-frames:v", "1", str(dst)])
 
 
-def make_grid_cover(srcs: list, dst: Path, W: int, H: int, cols: int, rows: int,
-                    gutter: int = 3) -> bool:
-    """Сетка-панель (видеостена): N разных ассетов в плитки cols×rows (приём mimo
-    «мультиэкран / крупный план, разбитый на сетку»). Чистый ffmpeg xstack, без PIL.
-    Тонкий чёрный gutter между плитками = эстетика видеостены."""
-    n = cols * rows
-    srcs = (srcs * ((n // max(1, len(srcs))) + 1))[:n]   # дополнить циклом до полной сетки
-    cw, ch = (W - gutter * (cols - 1)) // cols, (H - gutter * (rows - 1)) // rows
-    ins, filt = [], []
-    for i, s in enumerate(srcs):
-        ins += ["-i", str(s)]
-        filt.append(f"[{i}]scale={cw}:{ch}:force_original_aspect_ratio=increase,"
-                    f"crop={cw}:{ch},setsar=1[g{i}]")
-    layout = "|".join(f"{(i % cols)*(cw+gutter)}_{(i // cols)*(ch+gutter)}" for i in range(n))
-    chain = (";".join(filt) + ";" + "".join(f"[g{i}]" for i in range(n))
-             + f"xstack=inputs={n}:layout={layout}:fill=black[x];"
-             + f"[x]scale={W}:{H},setsar=1,format=yuv420p[v]")
-    r = run(["ffmpeg", "-y", "-loglevel", "error", *ins, "-filter_complex", chain,
-             "-map", "[v]", "-frames:v", "1", str(dst)])
+def grid_seg(srcs: list, dur: float, out: Path, W: int, H: int,
+             crf: str = "22", preset: str = "veryfast", noise: int = 34) -> bool:
+    """Сетка-панель 2×2 В ДВИЖЕНИИ (приём mimo «мультиэкран»), режиссура yaromat:
+    левая колонка едет ВНИЗ, правая ВВЕРХ; внутри каждого слота дрейф; сильный шум до помех.
+    Зазоры от хода колонок прикрыты размытым тёмным фоном. Чистый ffmpeg."""
+    srcs = (srcs * 4)[:4]                       # ровно 4 слота (2×2)
+    cw, ch = W // 2, H // 2
+    OW, OH = int(cw * 1.22), int(ch * 1.22)     # запас под внутренний дрейф
+    dx, dy = OW - cw, OH - ch
+    DY = int(ch * 0.18)                          # ход колонок (вниз/вверх)
+    ins = []
+    for s in srcs:
+        ins += ["-loop", "1", "-t", f"{dur:.3f}", "-i", str(s)]
+    p = [f"[0]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+         f"boxblur=20:2,eq=brightness=-0.12,setsar=1[bg]"]
+    for i in range(4):                           # слоты с внутренним дрейфом (разная фаза)
+        ph = i * math.pi / 2
+        xe = f"{dx//2}+{dx//2}*sin(2*PI*(t/{dur:.3f})*0.5+{ph:.2f})"
+        ye = f"{dy//2}+{dy//2}*cos(2*PI*(t/{dur:.3f})*0.5+{ph:.2f})"
+        p.append(f"[{i}]scale={OW}:{OH}:force_original_aspect_ratio=increase,"
+                 f"crop={cw}:{ch}:x='{xe}':y='{ye}',setsar=1[c{i}]")
+    yl = f"(t/{dur:.3f})*{DY}"                   # левая колонка — вниз
+    yr = f"-(t/{dur:.3f})*{DY}"                  # правая — вверх
+    p.append(f"[bg][c0]overlay=x=0:y='0+{yl}'[o0]")        # лев-верх
+    p.append(f"[o0][c2]overlay=x=0:y='{ch}+{yl}'[o1]")     # лев-низ
+    p.append(f"[o1][c1]overlay=x={cw}:y='0+{yr}'[o2]")     # прав-верх
+    p.append(f"[o2][c3]overlay=x={cw}:y='{ch}+{yr}'[o3]")  # прав-низ
+    p.append(f"[o3]noise=alls={noise}:allf=t+u,format=yuv420p[v]")
+    enc = ["-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
+           "-video_track_timescale", "12800", str(out)]
+    r = run(["ffmpeg", "-y", "-loglevel", "error", *ins,
+             "-filter_complex", ";".join(p), "-map", "[v]"] + enc)
     if r.returncode != 0:
-        print("make_grid_cover:", r.stderr[-300:])
-    return dst.exists()
+        print("grid_seg:", r.stderr[-400:])
+    return r.returncode == 0 and out.exists()
 
 
 def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
@@ -474,17 +487,14 @@ def main():
         make_cover(WORK / src, p, W, H, zoom, flip)
         cover_path[key] = p
 
-    # сетка-панель (приём mimo): грид-стилл из нескольких ассетов для hook-сегментов
-    grid_cover = None
+    # сетка-панель (приём mimo): 4 ассета для анимированной сетки 2×2 в hook-сегментах
+    grid_srcs = None
     if grid:
-        gk = [k for k in ["anchor", "c1", "c2", "c3", "c4", "crowd", "clock", "a1", "a2"]
+        gk = [k for k in ["anchor", "crowd", "clock", "c2", "c1", "c3", "c4", "a1"]
               if k in cover_path]
-        gcols = grows = 3 if len(gk) >= 9 else 2
-        grid_cover = cov / "grid.png"
-        if make_grid_cover([cover_path[k] for k in gk], grid_cover, W, H, gcols, grows):
-            print(f"  grid: сетка {gcols}×{grows} из {min(len(gk), gcols*grows)} ассетов → hook")
-        else:
-            grid_cover = None
+        grid_srcs = [cover_path[k] for k in gk[:4]] or None
+        if grid_srcs:
+            print(f"  grid: анимированная сетка 2×2 (лев↓/прав↑ + дрейф + шум) в hook из {len(grid_srcs)} ассетов")
 
     # timeline → motion-сегменты (двойная экспозиция с движением) → xfade-цепь
     seq, total = build_timeline(variant, bpm, seed, calm, split, scenario)
@@ -502,10 +512,9 @@ def main():
         vid = WORK / f"{s['key']}.mp4"
         if s["key"] in video_keys and vid.exists():
             ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
-        elif grid_cover and s["region"] in ("intro", "breath"):
-            # сетка-панель как hook/выдох: панели чёткие → single-дрейф, без блендов
-            ok = motion_seg(grid_cover, enc_dur, "single", s["theta"],
-                            "none", sp, W, H, crf=seg_crf, preset=seg_preset)
+        elif grid_srcs and s["region"] in ("intro", "breath"):
+            # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
+            ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
         else:
             ok = motion_seg(cover_path[s["key"]], enc_dur, s["mode"], s["theta"],
                             s["blend"], sp, W, H, crf=seg_crf, preset=seg_preset)
