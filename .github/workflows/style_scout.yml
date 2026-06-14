@@ -2,7 +2,7 @@ name: Style Scout
 
 on:
   schedule:
-    - cron: "0 11 * * 1"   # понедельник 11:00 UTC (GH schedule может задерживать)
+    - cron: "0 11 * * *"   # ЕЖЕДНЕВНО 11:00 UTC (срочный набор качества; GH может задерживать)
   workflow_dispatch:
     inputs:
       per_query:
