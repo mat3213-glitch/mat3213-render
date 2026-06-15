@@ -124,9 +124,13 @@ def main():
     (REMOTION / "props.json").write_text(json.dumps(props, ensure_ascii=False))
 
     # рендер оверлея ПРОЗРАЧНЫМ (ProRes 4444 несёт альфу)
+    # ВАЖНО: --image-format=png ОБЯЗАТЕЛЕН. По умолчанию Remotion рендерит кадры в JPEG,
+    # а JPEG не несёт альфу → прозрачные зоны схлопываются в ЧЁРНЫЙ ещё до кодирования в
+    # ProRes (баг «оверлей на чёрном фоне», из-за которого зависли все хуки). PNG несёт альфу.
     ov = WORK / "overlay.mov"
     r = run(["npx", "remotion", "render", "src/index.ts", overlay, str(ov),
-             "--props=./props.json", "--codec=prores", "--prores-profile=4444"],
+             "--props=./props.json", "--codec=prores", "--prores-profile=4444",
+             "--image-format=png"],
             cwd=str(REMOTION))
     if r.returncode != 0 or not ov.exists():
         yd_put_text(f"error: overlay render rc={r.returncode}", f"{JOB_YD}/status.txt")
