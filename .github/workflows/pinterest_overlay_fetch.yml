@@ -1,0 +1,72 @@
+name: Pinterest Overlay Fetch
+
+# Анонимно (БЕЗ кук аккаунта) качает филмик-оверлеи по поиску Pinterest → ЯД.
+# Запуск только вручную (workflow_dispatch) — без unattended-нагрузки/риска.
+
+on:
+  workflow_dispatch:
+    inputs:
+      queries:
+        description: 'Поисковые запросы (через ; или перевод строки). Пусто = дефолтный набор оверлеев'
+        required: false
+        default: ''
+      per_query:
+        description: 'Сколько пинов на запрос'
+        required: false
+        default: '8'
+      dest_folder:
+        description: 'Папка на ЯД'
+        required: false
+        default: 'Content factory/overlay_assets/pinterest'
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+          pip install -q yt-dlp requests
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run pinterest_overlay_fetch.py
+        env:
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          PIN_CHAT_ID:        '-1003946370426'
+          PIN_THREAD_ID:      '228'
+          QUERIES:            ${{ inputs.queries }}
+          PER_QUERY:          ${{ inputs.per_query }}
+          DEST_FOLDER:        ${{ inputs.dest_folder }}
+        run: python -u pinterest_overlay_fetch.py
+
+      - name: Notify failure
+        if: failure()
+        env:
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -s -X POST "$CLOUDFLARE_WORKER/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+            -H 'Content-Type: application/json' \
+            -d '{"chat_id":"-1003946370426","message_thread_id":228,"text":"❌ Pinterest overlay fetch — workflow упал"}' || true
