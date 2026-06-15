@@ -59,6 +59,15 @@ UAS = [
 def polite_sleep(a=2.0, b=5.0):
     time.sleep(random.uniform(a, b))
 
+def download_pause():
+    """Человекоподобная пауза между скачиваниями: главное — не скорость, а незаметность.
+    В основном 18–52с, ~25% случаев тянется к минуте (рандомные вариации = не похоже на бота)."""
+    base = random.uniform(18.0, 52.0)
+    if random.random() < 0.25:
+        base += random.uniform(5.0, 12.0)   # иногда до ~64с
+    print(f"  [pause] {base:.0f}s")
+    time.sleep(base)
+
 
 # ── TG ───────────────────────────────────────────────────────────────────────
 
@@ -179,7 +188,7 @@ def fetch_query(query: str, per_query: int, seen: set, dest_root: str) -> int:
                 continue
             seen.add(pid)
             out = WORKDIR / f"{pid}.mp4"
-            polite_sleep()
+            download_pause()
             cmd = ["python", "-m", "yt_dlp", "--no-warnings", "--no-playlist",
                    "-f", "bestvideo[ext=mp4]/best[ext=mp4]/best/bv*+ba/b",
                    "--remux-video", "mp4",
@@ -220,7 +229,7 @@ def main():
         n = fetch_query(q, PER_QUERY, seen, DEST)
         total += n
         lines.append(f"• {q}: {n}")
-        polite_sleep(3, 6)
+        polite_sleep(15, 35)
 
     yd_write_json(sorted(seen), ids_path)
 
