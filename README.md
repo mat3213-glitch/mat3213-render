@@ -30,6 +30,7 @@
 | `render_full_job.py` | `render_full.yml` | FULL_RENDER пайплайн (полнометражный клип) |
 | `FULL_RENDER.py` | — (библиотека) | production-пайплайн полного клипа |
 | `render_job.py` | `render_blend.yml` | BLEND-рендер (double-exposure, [[project_ffmpeg_blend]]) |
+| **`screenwriter.py`** ⭐ | — (CLI/шаг) | **агент-сценарист: бриф трека → драматургический `treatment.json`** (логлайн, мотив-метафора, beats по структуре). Free-LLM (Groq→Gemini). Драма без лиц. Скилл `skills/craft/screenwriter/`. Режиссёр-раскадровщик (treatment→кадры) — следующий шаг |
 
 ## 2. Тизеры и форматные клипы
 
