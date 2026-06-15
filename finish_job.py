@@ -32,6 +32,7 @@ import os
 import random
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from analyze import analyze_track, Segment, find_highlight_offset
@@ -199,7 +200,9 @@ def build_finish_pass(concat_mp4: Path, track_file: Path, result: Path,
         "-filter_complex", fc,
         "-map", "[v]", "-map", "4:a",
         "-t", str(round(duration, 3)),
-        "-c:v", "libx264", "-preset", "medium", "-crf", "19", "-tune", "grain",
+        # veryfast + maxrate: зерно не жмётся → medium висит; cap-bitrate + быстрый пресет = ×4-8 скорость, картинка та же
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-tune", "grain",
+        "-maxrate", "10M", "-bufsize", "20M",
         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-shortest",
         str(result),
     ]
@@ -272,6 +275,7 @@ def main():
 
     # ── Cut segments (+ посегментная уникализация) ──
     print(f"\n── Cutting {len(segments)} segments  (uniquize={uniquize}) ──")
+    t_cut = time.time()
     seg_files: list[Path] = []
     for i, seg in enumerate(segments):
         src_file = src_files[seg.source]
@@ -283,13 +287,14 @@ def main():
         if src_start + seg_dur > src_dur:
             src_start = max(0.0, src_dur - seg_dur - 0.1)
 
+        # промежуточная нарезка = throwaway (финиш-пасс пере-кодирует) → ultrafast/crf26 для скорости
         cmd = [
             "ffmpeg", "-y",
             "-ss", str(round(src_start, 3)),
             "-t",  str(round(seg_dur, 3)),
             "-i",  str(src_file),
             "-vf", seg_filters[i],
-            "-c:v", "libx264", "-crf", "20", "-preset", "fast",
+            "-c:v", "libx264", "-crf", "26", "-preset", "ultrafast",
             "-an", "-fps_mode", "cfr", "-r", "25",
             str(out_file),
         ]
@@ -301,7 +306,7 @@ def main():
 
     if not seg_files:
         sys.exit("No segments rendered")
-    print(f"  {len(seg_files)}/{len(segments)} segments OK")
+    print(f"  {len(seg_files)}/{len(segments)} segments OK  ({time.time()-t_cut:.0f}s)")
 
     # ── Concat ──
     print("\n── Concatenating ──")
@@ -320,7 +325,9 @@ def main():
     result = WORKDIR / out_name
     if fin:
         print("\n── Finish pass (grade + grit/scratch + noise + title) ──")
+        t_fin = time.time()
         r = build_finish_pass(concat_mp4, track_file, result, duration, W, H, fin, hl_offset)
+        print(f"  finish pass {time.time()-t_fin:.0f}s")
     else:
         print("\n── Mixing audio (no finish) ──")
         audio_in = ["-i", str(track_file)]
