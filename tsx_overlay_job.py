@@ -124,18 +124,30 @@ def main():
     (REMOTION / "props.json").write_text(json.dumps(props, ensure_ascii=False))
 
     # рендер оверлея ПРОЗРАЧНЫМ (ProRes 4444 несёт альфу)
-    # ВАЖНО: --image-format=png ОБЯЗАТЕЛЕН. По умолчанию Remotion рендерит кадры в JPEG,
-    # а JPEG не несёт альфу → прозрачные зоны схлопываются в ЧЁРНЫЙ ещё до кодирования в
-    # ProRes (баг «оверлей на чёрном фоне», из-за которого зависли все хуки). PNG несёт альфу.
+    # --image-format=png: кадры в PNG (а не JPEG) → несёт альфу
+    # --pixel-format=yuva444p10le: encoder пишет АЛЬФА-ПЛОСКОСТЬ (y u v a) в ProRes
+    #   Без этого флага ProRes 4444 кодируется без alpha → чёрный непрозрачный слой.
     ov = WORK / "overlay.mov"
     r = run(["npx", "remotion", "render", "src/index.ts", overlay, str(ov),
              "--props=./props.json", "--codec=prores", "--prores-profile=4444",
-             "--image-format=png"],
+             "--image-format=png", "--pixel-format=yuva444p10le"],
             cwd=str(REMOTION))
     if r.returncode != 0 or not ov.exists():
         yd_put_text(f"error: overlay render rc={r.returncode}", f"{JOB_YD}/status.txt")
         sys.exit("overlay render fail")
     print(f"  overlay.mov {ov.stat().st_size//1024}KB")
+
+    # --- диагностика альфы: ffprobe pix_fmt overlay.mov ---
+    pf = run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+              "-show_entries", "stream=pix_fmt", "-of", "csv=p=0", str(ov)],
+             capture_output=True, text=True)
+    pix_fmt = (pf.stdout or "").strip()
+    print(f"  overlay.mov pix_fmt = {pix_fmt}")
+    has_alpha = "a" in pix_fmt.lower()  # yuva444p10le → True
+    if not has_alpha:
+        print(f"  ⚠ WARN: pix_fmt={pix_fmt} — альфа-канал ОТСУТСТВУЕТ, композит будет непрозрачным!")
+    else:
+        print(f"  ✓ alpha channel present ({pix_fmt})")
 
     # композит: сдвинуть оверлей на [at], показать [at..at+dur], сохранить аудио базы
     end = round(at + ov_dur, 3)
