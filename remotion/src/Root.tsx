@@ -8,6 +8,7 @@ import {FocusBracket} from './overlays/FocusBracket';
 import {ShapeWipe} from './overlays/ShapeWipe';
 import {AccentBurst} from './overlays/AccentBurst';
 import {BeatPulse} from './overlays/BeatPulse';
+import {InnerScratch} from './overlays/InnerScratch';
 
 /**
  * Реестр шаблонов. mimo ДОБАВЛЯЕТ сюда РОВНО одну строку на свой новый шаблон
@@ -37,6 +38,7 @@ const OVERLAYS: {id: string; component: React.FC<OverlayProps>}[] = [
   {id: 'ShapeWipe', component: ShapeWipe},
   {id: 'AccentBurst', component: AccentBurst},
   {id: 'BeatPulse', component: BeatPulse},
+  {id: 'InnerScratch', component: InnerScratch},
 ];
 
 const OVERLAY_DEFAULTS: OverlayProps = {
