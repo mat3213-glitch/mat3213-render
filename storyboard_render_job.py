@@ -77,7 +77,10 @@ def pull_clip(path: str) -> Path | None:
     return None
 
 
-def render_shot(i: int, shot: dict, cover: str) -> Path | None:
+def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | None:
+    """Кадр = base-футаж. Если у base ЗЕЛЁНАЯ зона (chroma) и есть fill → целевое наложение:
+    фон-заливка (арт/он-тема) + винил с вырезанным зелёным сверху. БЕЗ футаж-на-футаж/оверлеев
+    ([[feedback_no_footage_on_footage]])."""
     dur = max(0.4, float(shot["t_dur"]))
     base = shot.get("base") or {}
     bpath = base.get("path")
@@ -88,24 +91,20 @@ def render_shot(i: int, shot: dict, cover: str) -> Path | None:
     if not bfile:
         return None
     out = SHOTS / f"shot_{i:03d}.mp4"
-    ov = shot.get("overlay") or {}
-    ofile = pull_clip(ov["path"]) if ov.get("path") else None
-
+    chroma = base.get("chroma")
     common = ["-t", f"{dur:.3f}", "-r", "25", "-pix_fmt", "yuv420p",
               "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-an", str(out)]
-    if ofile:
-        fc = (f"[0:v]{cover},fps=25,setsar=1[b];"
-              f"[1:v]{cover},fps=25,setsar=1[o];"
-              f"[b][o]blend=all_mode=screen:all_opacity={OVERLAY_OPACITY},format=yuv420p[v]")
-        ok = ff(["-stream_loop", "-1", "-i", str(bfile),
-                 "-stream_loop", "-1", "-i", str(ofile),
+    if chroma and fill:
+        fc = (f"[0:v]{cover},fps=25,setsar=1,eq=saturation=0.62:contrast=1.08[bg];"
+              f"[1:v]{cover},fps=25,setsar=1,chromakey={chroma}:0.16:0.10[fg];"
+              f"[bg][fg]overlay,format=yuv420p[v]")
+        ok = ff(["-stream_loop", "-1", "-i", str(fill),
+                 "-stream_loop", "-1", "-i", str(bfile),
                  "-filter_complex", fc, "-map", "[v]", *common])
     else:
         ok = ff(["-stream_loop", "-1", "-i", str(bfile),
                  "-vf", f"{cover},fps=25,setsar=1", *common])
-    if not ok:
-        return None
-    return out
+    return out if ok else None
 
 
 def main():
@@ -125,16 +124,26 @@ def main():
     if not shots:
         sys.exit("storyboard без shots")
 
+    # fill для целевой заливки зелёных зон (арт/он-тема). Опционально.
+    fill = None
+    if sb.get("fill"):
+        fcand = WORKDIR / "fill.mp4"
+        if yd_get(f"{JOB_YD}/{sb['fill']}", fcand):
+            fill = fcand
+            print(f"  fill: {sb['fill']} ✓ (заливка зелёных зон)", flush=True)
+        else:
+            print(f"  ⚠ fill {sb['fill']} не стянут — зелёные зоны останутся", flush=True)
+
     # 1. рендер кадров
     print("\n── Рендер кадров ──", flush=True)
     rendered = []
     for i, sh in enumerate(shots):
-        out = render_shot(i, sh, cover)
+        out = render_shot(i, sh, cover, fill)
         if out:
             rendered.append(out)
-            print(f"  ✓ shot {i}: {sh['t_dur']:.1f}с "
-                  f"{(sh.get('base') or {}).get('category')}"
-                  f"+{(sh.get('overlay') or {}).get('category','-')}", flush=True)
+            b = sh.get("base") or {}
+            tag = f"{b.get('category')}{'+заливка' if (b.get('chroma') and fill) else ''}"
+            print(f"  ✓ shot {i}: {sh['t_dur']:.1f}с {tag}", flush=True)
     if not rendered:
         yd_put_status("FAIL: ни один кадр не отрендерился")
         sys.exit("0 кадров")

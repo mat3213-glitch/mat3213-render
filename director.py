@@ -150,9 +150,10 @@ def _call_gemini(prompt: str) -> str | None:
 
 VISUALIZER_NOTE = """
 === РЕЖИМ ВИЗУАЛАЙЗЕРА (вертикальный рил из каталога) ===
-base — НЕ внешний футаж, а слой из НАШЕГО каталога: {"kind":"catalog","category":"vinil"|"soundwave"}.
-  vinil = устойчивый грув/дыхание/тело трека; soundwave = пики/ритм/кульминация.
-overlay_category — "overlay" (филмик-текстура поверх) | null.
+base — слой из НАШЕГО каталога: {"kind":"catalog","category":"vinil"|"soundwave"}.
+  vinil = устойчивый грув/тело трека (у него ЗЕЛЁНАЯ зона — туда зальётся арт/он-тема фон);
+  soundwave = пики/ритм/кульминация.
+overlay_category — ВСЕГДА null (футаж на футаж НЕ мешаем — целевое наложение делает заливка зелёного).
 Конкретные клипы подберёт код. Мотив трактата выражаем РИТМОМ/масштабом/движением, а не литералом."""
 
 
@@ -189,20 +190,24 @@ def generate_shots(treatment: dict, bpm: float, segs: list[dict], cat_summary: s
 
 
 # ── сборка + резолв каталога ─────────────────────────────────────────────────
-def _resolve_cat(cat: str, orientation, seed_key, used: set) -> dict | None:
-    """Детерминированно подобрать клип каталога категории cat, избегая уже использованных."""
+def _resolve_cat(cat: str, orientation, seed_key, used: set,
+                 chroma: bool | None = None) -> dict | None:
+    """Детерминированно подобрать клип каталога категории cat, избегая уже использованных.
+    chroma=True → только клипы с зелёной зоной (под целевую заливку артом)."""
     if cat not in ("overlay", "soundwave", "vinil"):
         return None
-    # ориентацию для base не зажимаем (вертикали в каталоге мало — кропнем при рендере)
-    cand = asset_catalog.pick(category=cat, orientation=orientation, n=12, seed=seed_key) \
-        or asset_catalog.pick(category=cat, n=12, seed=seed_key)
+    # ориентацию не зажимаем (вертикалей в каталоге мало — кропнем при рендере)
+    cand = asset_catalog.pick(category=cat, orientation=orientation, n=12, seed=seed_key, chroma=chroma) \
+        or asset_catalog.pick(category=cat, n=12, seed=seed_key, chroma=chroma)
     cand = [c for c in cand if c["id"] not in used] or cand
     if not cand:
         return None
     e = cand[0]
     used.add(e["id"])
-    return {"category": cat, "id": e["id"], "path": e["path"],
-            "blend": e.get("blend", "screen"), "duration": e.get("duration")}
+    out = {"category": cat, "id": e["id"], "path": e["path"], "duration": e.get("duration")}
+    if e.get("chroma"):
+        out["chroma"] = e["chroma"]      # цвет хромакея → рендер вырежет зелёный
+    return out
 
 
 def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
@@ -223,15 +228,20 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
         scale  = sh.get("scale") if sh.get("scale") in SCALES else "medium"
         base   = sh.get("base") if isinstance(sh.get("base"), dict) else {}
 
-        # base: в визуалайзере резолвим из каталога (целевой футаж), иначе оставляем запрос/генерацию
+        # base: в визуалайзере резолвим из каталога (целевой футаж).
+        # vinil → ТОЛЬКО chroma-клипы (зелёная зона под заливку артом); soundwave → как есть.
         if visualizer or base.get("kind") == "catalog":
             bcat = base.get("category")
             if bcat not in ("vinil", "soundwave"):
                 bcat = "soundwave" if seg.get("energy") == "high" else "vinil"
-            rb = _resolve_cat(bcat, orientation, f"{seed}-base-{i}", used)
+            rb = _resolve_cat(bcat, orientation, f"{seed}-base-{i}", used,
+                              chroma=True if bcat == "vinil" else None)
             base = {"kind": "catalog", **rb} if rb else {"kind": "catalog", "category": bcat}
 
-        overlay = _resolve_cat(sh.get("overlay_category"), orientation, f"{seed}-ov-{i}", used)
+        # ПРАВИЛО [[feedback_no_footage_on_footage]]: НЕ мешаем оверлей поверх футажа.
+        # Целевое наложение = заливка зелёной зоны (chroma) фоном — это делает рендер.
+        overlay = None if visualizer else \
+            _resolve_cat(sh.get("overlay_category"), orientation, f"{seed}-ov-{i}", used)
 
         out_shots.append({
             "idx": i,
@@ -317,6 +327,9 @@ def main():
     storyboard = assemble(treatment, bpm, segs, shots, a.seed, a.orientation, a.visualizer)
     storyboard["format"] = "vertical" if a.orientation == "vertical" else (a.orientation or "landscape")
     storyboard["visualizer"] = a.visualizer
+    if a.visualizer:
+        # целевая заливка зелёных зон винила фоном (арт/обложка/он-тема) — файл fill.mp4 в job-папке
+        storyboard["fill"] = "fill.mp4"
 
     out_json = json.dumps(storyboard, ensure_ascii=False, indent=2)
     print("\n=== STORYBOARD ===")

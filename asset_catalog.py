@@ -56,12 +56,18 @@ def load(force: bool = False) -> list:
 
 def pick(category: str | None = None, tags: list[str] | None = None,
          orientation: str | None = None, min_dur: float | None = None,
-         max_dur: float | None = None, n: int = 1, seed=None) -> list[dict]:
-    """Выбрать до n записей под фильтр. tags — ИЛИ (любой совпавший). seed — детерминизм на трек."""
+         max_dur: float | None = None, n: int = 1, seed=None,
+         chroma: bool | None = None) -> list[dict]:
+    """Выбрать до n записей под фильтр. tags — ИЛИ (любой совпавший). seed — детерминизм на трек.
+    chroma=True → только клипы с зелёной зоной (хромакей); False → только без неё."""
     items = load()
 
     def ok(e: dict) -> bool:
         if category and e.get("category") != category:
+            return False
+        if chroma is True and not e.get("chroma"):
+            return False
+        if chroma is False and e.get("chroma"):
             return False
         if orientation and e.get("orientation") != orientation:
             return False
