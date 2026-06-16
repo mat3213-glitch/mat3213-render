@@ -88,13 +88,16 @@ def load_segments(args) -> tuple[float, list[dict]]:
                       "n_beats": s.n_beats, "energy": s.energy} for s in segs]
     # fallback-сетка из duration+bpm (без аудио): для теста/standalone
     bpm = float(args.bpm or 120.0)
-    dur = float(args.duration or 60.0)
+    dur = float(args.reel_dur or args.duration or 60.0)
+    reel = bool(args.reel_dur)
     beat = 60.0 / bpm
     segs, t = [], 0.0
-    rng = random.Random(args.seed_int)
     while t < dur - 0.5:
         frac = t / dur
-        energy = "low" if frac < 0.25 else ("high" if 0.45 < frac < 0.8 else "medium")
+        if reel:   # рил = окно дропа, интро уже отрезано → без low; пик в середине
+            energy = "high" if frac < 0.6 else "medium"
+        else:
+            energy = "low" if frac < 0.25 else ("high" if 0.45 < frac < 0.8 else "medium")
         nb = {"low": 8, "medium": 8, "high": 4}[energy]
         sd = min(nb * beat, dur - t)
         segs.append({"track_pos": round(t, 2), "duration": round(sd, 2),
@@ -145,21 +148,32 @@ def _call_gemini(prompt: str) -> str | None:
     return None
 
 
-def build_prompt(treatment: dict, bpm: float, segs: list[dict], cat_summary: str) -> str:
+VISUALIZER_NOTE = """
+=== РЕЖИМ ВИЗУАЛАЙЗЕРА (вертикальный рил из каталога) ===
+base — НЕ внешний футаж, а слой из НАШЕГО каталога: {"kind":"catalog","category":"vinil"|"soundwave"}.
+  vinil = устойчивый грув/дыхание/тело трека; soundwave = пики/ритм/кульминация.
+overlay_category — "overlay" (филмик-текстура поверх) | null.
+Конкретные клипы подберёт код. Мотив трактата выражаем РИТМОМ/масштабом/движением, а не литералом."""
+
+
+def build_prompt(treatment: dict, bpm: float, segs: list[dict], cat_summary: str,
+                 visualizer: bool = False) -> str:
     seg_lines = "\n".join(
         f"  seg {i}: t={s['track_pos']}с dur={s['duration']}с energy={s['energy']}"
         for i, s in enumerate(segs))
     return (
         SYSTEM
+        + (VISUALIZER_NOTE if visualizer else "")
         + "\n\n=== TREATMENT ===\n" + json.dumps(treatment, ensure_ascii=False, indent=1)
         + f"\n\n=== ТАЙМЛАЙН ТРЕКА (bpm={bpm:.0f}, сегментов={len(segs)}) ===\n" + seg_lines
-        + "\n\n=== ИНВЕНТАРЬ КАТАЛОГА (overlay-слои, подберёт код) ===\n" + cat_summary
+        + "\n\n=== ИНВЕНТАРЬ КАТАЛОГА ===\n" + cat_summary
         + f"\n\nВыдай РОВНО {len(segs)} кадров (по одному на seg 0..{len(segs)-1})."
     )
 
 
-def generate_shots(treatment: dict, bpm: float, segs: list[dict], cat_summary: str) -> list[dict]:
-    prompt = build_prompt(treatment, bpm, segs, cat_summary)
+def generate_shots(treatment: dict, bpm: float, segs: list[dict], cat_summary: str,
+                   visualizer: bool = False) -> list[dict]:
+    prompt = build_prompt(treatment, bpm, segs, cat_summary, visualizer)
     raw = _call_groq(prompt) or _call_gemini(prompt)
     if not raw:
         sys.exit("Ни Groq, ни Gemini не ответили (проверь ключи/гео).")
@@ -175,8 +189,24 @@ def generate_shots(treatment: dict, bpm: float, segs: list[dict], cat_summary: s
 
 
 # ── сборка + резолв каталога ─────────────────────────────────────────────────
+def _resolve_cat(cat: str, orientation, seed_key, used: set) -> dict | None:
+    """Детерминированно подобрать клип каталога категории cat, избегая уже использованных."""
+    if cat not in ("overlay", "soundwave", "vinil"):
+        return None
+    # ориентацию для base не зажимаем (вертикали в каталоге мало — кропнем при рендере)
+    cand = asset_catalog.pick(category=cat, orientation=orientation, n=12, seed=seed_key) \
+        or asset_catalog.pick(category=cat, n=12, seed=seed_key)
+    cand = [c for c in cand if c["id"] not in used] or cand
+    if not cand:
+        return None
+    e = cand[0]
+    used.add(e["id"])
+    return {"category": cat, "id": e["id"], "path": e["path"],
+            "blend": e.get("blend", "screen"), "duration": e.get("duration")}
+
+
 def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
-             seed, orientation: str | None) -> dict:
+             seed, orientation: str | None, visualizer: bool = False) -> dict:
     by_seg = {}
     for sh in shots:
         try:
@@ -184,30 +214,24 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
         except (TypeError, ValueError):
             continue
 
-    used: set[str] = set()       # не реюзать один overlay-клип подряд
-    rng = random.Random(seed)
+    used: set[str] = set()       # не реюзать один клип подряд
     out_shots = []
     for i, seg in enumerate(segs):
         sh = by_seg.get(i, {})
         motion = sh.get("motion") if sh.get("motion") in MOTIONS else "slow_push"
         trans  = sh.get("transition") if sh.get("transition") in TRANSITIONS else "cut"
         scale  = sh.get("scale") if sh.get("scale") in SCALES else "medium"
-        base   = sh.get("base") if isinstance(sh.get("base"), dict) else \
-                 {"kind": "search", "query": "", "provider": "openverse"}
+        base   = sh.get("base") if isinstance(sh.get("base"), dict) else {}
 
-        overlay = None
-        cat = sh.get("overlay_category")
-        if cat in ("overlay", "soundwave", "vinil"):
-            # детерминированный подбор из каталога; избегаем недавно использованных
-            cand = asset_catalog.pick(category=cat, orientation=orientation,
-                                      n=8, seed=f"{seed}-{i}")
-            cand = [c for c in cand if c["id"] not in used] or cand
-            if cand:
-                e = cand[0]
-                used.add(e["id"])
-                overlay = {"category": cat, "id": e["id"], "path": e["path"],
-                           "blend": e.get("blend", "screen"),
-                           "duration": e.get("duration")}
+        # base: в визуалайзере резолвим из каталога (целевой футаж), иначе оставляем запрос/генерацию
+        if visualizer or base.get("kind") == "catalog":
+            bcat = base.get("category")
+            if bcat not in ("vinil", "soundwave"):
+                bcat = "soundwave" if seg.get("energy") == "high" else "vinil"
+            rb = _resolve_cat(bcat, orientation, f"{seed}-base-{i}", used)
+            base = {"kind": "catalog", **rb} if rb else {"kind": "catalog", "category": bcat}
+
+        overlay = _resolve_cat(sh.get("overlay_category"), orientation, f"{seed}-ov-{i}", used)
 
         out_shots.append({
             "idx": i,
@@ -256,6 +280,11 @@ def main():
     ap.add_argument("--seed", default="default", help="детерминизм на трек")
     ap.add_argument("--orientation", choices=["horizontal", "vertical", "square"],
                     help="ориентация overlay-клипов под формат рендера")
+    ap.add_argument("--reel-dur", type=float, help="длина рила (с): окно сегментов вместо полного")
+    ap.add_argument("--skip-sec", type=float, default=0.0,
+                    help="пропустить первые N с (интро брать ЗАПРЕЩЕНО → ставить ≥ длины интро)")
+    ap.add_argument("--visualizer", action="store_true",
+                    help="base из каталога (vinil/soundwave), не внешний футаж — рил-визуалайзер")
     ap.add_argument("-o", "--out", help="куда писать storyboard.json (default: рядом с treatment)")
     ap.add_argument("--print", action="store_true", dest="to_stdout")
     a = ap.parse_args()
@@ -265,12 +294,29 @@ def main():
     bpm, segs = load_segments(a)
     if not segs:
         sys.exit("пустой таймлайн (нет сегментов)")
-    print(f"[director] сегментов: {len(segs)} | bpm={bpm:.0f} | seed={a.seed}")
+
+    # рил-окно: ИНТРО БРАТЬ ЗАПРЕЩЕНО → отрезаем первые skip-sec, берём reel-dur секунд
+    if a.skip_sec > 0:
+        segs = [s for s in segs if float(s["track_pos"]) >= a.skip_sec - 0.01]
+    if a.reel_dur and segs:
+        t0 = float(segs[0]["track_pos"]); win = []
+        for s in segs:
+            if float(s["track_pos"]) - t0 >= a.reel_dur:
+                break
+            win.append(s)
+        segs = win
+    if not segs:
+        sys.exit("после рил-окна не осталось сегментов (проверь skip-sec/reel-dur)")
+    print(f"[director] сегментов: {len(segs)} | bpm={bpm:.0f} | seed={a.seed} | "
+          f"окно [{segs[0]['track_pos']:.1f}..{segs[-1]['track_pos']+segs[-1]['duration']:.1f}]с"
+          f"{' (интро отрезано)' if a.skip_sec else ''}")
 
     cat = catalog_summary()
     print(f"[director] каталог:\n{cat}")
-    shots = generate_shots(treatment, bpm, segs, cat)
-    storyboard = assemble(treatment, bpm, segs, shots, a.seed, a.orientation)
+    shots = generate_shots(treatment, bpm, segs, cat, a.visualizer)
+    storyboard = assemble(treatment, bpm, segs, shots, a.seed, a.orientation, a.visualizer)
+    storyboard["format"] = "vertical" if a.orientation == "vertical" else (a.orientation or "landscape")
+    storyboard["visualizer"] = a.visualizer
 
     out_json = json.dumps(storyboard, ensure_ascii=False, indent=2)
     print("\n=== STORYBOARD ===")
