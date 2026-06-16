@@ -142,8 +142,9 @@ def build_finish_pass(concat_mp4: Path, track_file: Path, result: Path,
                       duration: float, W: int, H: int, fin: dict,
                       audio_offset: float):
     """Грейд + warm-green маска + grit/scratch + noise + тайтл-карта → mux audio."""
-    mask_color = fin.get("mask_color", "0x8a9a60")
-    mask_op    = float(fin.get("mask_opacity", 0.14))
+    # маска тёплого-зелёного: НИЗКИЙ красный (прошлый 0x8a9a60 нёс много R → подмешивал розовое)
+    mask_color = fin.get("mask_color", "0x3f7d4a")
+    mask_op    = float(fin.get("mask_opacity", 0.16))
     grit_op    = float(fin.get("grit_opacity", 0.30))
     scr_op     = float(fin.get("scratch_opacity", 0.22))
     noise_lvl  = int(fin.get("noise", 30))
@@ -174,8 +175,11 @@ def build_finish_pass(concat_mp4: Path, track_file: Path, result: Path,
         )
 
     fc = (
-        f"[0:v]eq=saturation=0.60:contrast=1.13:brightness=-0.02,"
-        f"colorbalance=rm=0.02:gm=0.04:bm=-0.05:rs=0.01:gs=0.03:bs=-0.04,setsar=1[g];"
+        # анти-магента грейд: магента = R+ B+ G− → давим R и B, поднимаем G по всем диапазонам.
+        # (прошлый rm=+0.02 ДОБАВЛЯЛ красный → оставалось розовым). Цель: тёплый-зелёный, не розовый.
+        f"[0:v]eq=saturation=0.58:contrast=1.13:brightness=-0.02,"
+        f"colorbalance=rs=-0.03:gs=0.05:bs=-0.05:rm=-0.05:gm=0.07:bm=-0.05:rh=-0.03:gh=0.04:bh=-0.04,"
+        f"setsar=1[g];"
         f"[3:v]format=rgba,colorchannelmixer=aa={mask_op}[mask];"
         f"[g][mask]overlay=shortest=1[gm];"
         f"[1:v]scale={W}:{H},setsar=1,format=gbrp[grit];"
