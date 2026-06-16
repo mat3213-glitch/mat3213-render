@@ -15,14 +15,13 @@ on:
       ratio:
         description: 'Соотношение сторон'
         default: '16:9'
-  # после успешной пробы раскомментировать:
-  # schedule:
-  #   - cron: '0 2 * * *'   # ежедневно 02:00 UTC (05:00 МСК); GH может задерживать
+  schedule:
+    - cron: '0 2 * * *'   # ежедневно 02:00 UTC (05:00 МСК); GH может задерживать (проба IP пройдена 16.06)
 
 jobs:
   gen:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -57,9 +56,10 @@ jobs:
       - name: Generate (Qwen)
         working-directory: qwen
         env:
-          N_IMG:               ${{ inputs.n_img }}
-          N_VID:               ${{ inputs.n_vid }}
-          RATIO:               ${{ inputs.ratio }}
+          # при schedule контекст inputs пуст → fallback на боевой объём (1 фото + 2 видео)
+          N_IMG:               ${{ inputs.n_img || '1' }}
+          N_VID:               ${{ inputs.n_vid || '2' }}
+          RATIO:               ${{ inputs.ratio || '16:9' }}
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
