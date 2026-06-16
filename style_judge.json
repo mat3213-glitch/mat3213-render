@@ -4,45 +4,43 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Цельный кинематографичный вайб, тёплая глубина без каста"
+      "reason": "Тёплый приглушённый кинематограф, глубина без вычурности"
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": true,
-      "score": 7,
-      "reason": "Холодный контраст, дорого, но прохладнее нужного"
+      "keep": false,
+      "score": 6,
+      "reason": "Нейтрально, но нет той тёплой глубины"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 8,
-      "reason": "Отличный тёплый тон, глубина и цельность"
+      "reason": "Аналогичный тон, чуть контрастнее — держит вайб"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст дешёвый, выглядит как фильтр"
+      "score": 5,
+      "reason": "Зелёный каст ощущается дешевле, как фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
-      "score": 3,
-      "reason": "Плоское, выцветшее, нет глубины"
+      "score": 6,
+      "reason": "Слишком нейтрально, нет характера"
     },
     {
       "name": "scout_warm_mid_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Тёплый мягкий тон, достойный кандидат"
+      "keep": false,
+      "score": 6,
+      "reason": "Тёплый, но плосковат — не дорого"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
-    "scout_cool_mid_muted",
-    "scout_warm_night_muted_2",
-    "scout_warm_mid_soft"
+    "scout_warm_night_muted_2"
   ],
-  "_generated": "2026-06-15",
+  "_generated": "2026-06-16",
   "_judge": "mimo-auto"
 }
