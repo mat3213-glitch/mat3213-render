@@ -24,6 +24,27 @@ from pathlib import Path
 from datetime import date
 import requests
 
+# Устойчивый импорт media_register (работает и из подпапки, и из корня репо)
+_here = Path(__file__).resolve()
+for _p in (_here.parent, _here.parent.parent):
+    sys.path.insert(0, str(_p))
+try:
+    import media_register
+except Exception:
+    media_register = None
+
+
+def _register(path, pool, mtype, prompt, date):
+    """Регистрация в media_catalog (best-effort, не валит генерацию)."""
+    if media_register is None:
+        return
+    try:
+        media_register.register(path, pool, mtype, "gen", prompt, date)
+        print(f"  [register] {path} → media_catalog")
+    except Exception as e:
+        print(f"  [register] пропуск: {e}")
+
+
 SCRIPT_DIR = Path(__file__).parent
 GEN_PY = SCRIPT_DIR / "GEN.py"
 WORK_DIR = Path("/tmp/qwen_daily_work")
@@ -158,6 +179,7 @@ def main():
             if yd_put(out, remote):
                 ok_img += 1
                 print(f"  ✅ img_{i:02d} → ЯД")
+                _register(remote, "qwen_pool", "image", prompt, today)
             else:
                 fail += 1
             out.unlink(missing_ok=True)
@@ -174,6 +196,7 @@ def main():
             if yd_put(out, remote):
                 ok_vid += 1
                 print(f"  ✅ vid_{i:02d} → ЯД")
+                _register(remote, "qwen_pool", "video", prompt, today)
             else:
                 fail += 1
             out.unlink(missing_ok=True)

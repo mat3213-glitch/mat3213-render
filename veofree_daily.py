@@ -21,6 +21,27 @@ from pathlib import Path
 from datetime import date
 import requests
 
+# Устойчивый импорт media_register (работает и из подпапки, и из корня репо)
+_here = Path(__file__).resolve()
+for _p in (_here.parent, _here.parent.parent):
+    sys.path.insert(0, str(_p))
+try:
+    import media_register
+except Exception:
+    media_register = None
+
+
+def _register(path, pool, mtype, prompt, date):
+    """Регистрация в media_catalog (best-effort, не валит генерацию)."""
+    if media_register is None:
+        return
+    try:
+        media_register.register(path, pool, mtype, "gen", prompt, date)
+        print(f"  [register] {path} → media_catalog")
+    except Exception as e:
+        print(f"  [register] пропуск: {e}")
+
+
 SCRIPT_DIR = Path(__file__).parent
 GEN_PY = SCRIPT_DIR / "veofree_gen.py"
 
@@ -151,6 +172,7 @@ def main():
         out_name = f"vid_{i:02d}.mp4"
         if run_veofree(prompt, dest_base, out_name):
             ok += 1
+            _register(f"{dest_base}/{out_name}", "veofree_pool", "video", prompt, today)
         else:
             fail += 1
 
