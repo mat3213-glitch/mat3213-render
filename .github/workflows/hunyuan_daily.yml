@@ -1,0 +1,55 @@
+name: Hunyuan i2v Daily
+
+# Ежедневное «оживление» фото в видео (Hunyuan i2v): берёт готовые фото из пулов на ЯД
+# (qwen_pool / pexels_pool / openverse_pool) → видео → hunyuan_pool/<дата>/ + TG.
+# cron включаем ПОСЛЕ зелёной ручной пробы (Hunyuan = Tencent, проверить US-IP).
+on:
+  workflow_dispatch:
+    inputs:
+      n_vid:
+        description: 'Сколько видео из фото (проба = 1, боевой = 2)'
+        default: '1'
+      ratio:
+        description: 'Соотношение сторон'
+        default: '9:16'
+  # после успешной пробы раскомментировать:
+  # schedule:
+  #   - cron: '0 4 * * *'   # ежедневно 04:00 UTC (после Qwen 02 / VeoFree 03); GH может задерживать
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Pull Hunyuan session from ЯД
+        run: rclone copyto "ydrive:Content factory/hunyuan_ci/hunyuan_session.json" hunyuan/hunyuan_session.json
+      - name: Install deps
+        run: pip install -q requests cos-python-sdk-v5
+      - name: Generate (Hunyuan i2v)
+        working-directory: hunyuan
+        env:
+          N_VID:               ${{ inputs.n_vid || '2' }}
+          RATIO:               ${{ inputs.ratio || '9:16' }}
+          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:        '5'
+        run: python -u hunyuan_daily.py
