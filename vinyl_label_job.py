@@ -83,7 +83,7 @@ def main():
 
     fc = (
         f"[0:v]{COVER},eq=saturation=0.55:contrast=1.05,setsar=1[bg];"
-        f"[2:v]format=rgba,scale={LS}:{LS},rotate=a='t*{rot}':c=none@0.0:ow={LS}:oh={LS}[logo];"
+        f"[2:v]format=rgba,scale={LS}:{LS},rotate=a='t*{rot}':c=none:ow={LS}:oh={LS}[logo];"
         f"[bg][logo]overlay={LX-LS//2}:{LY-LS//2}[bl];"
         f"[1:v]{COVER},chromakey={chroma}:0.16:0.10,setsar=1[rec];"
         f"[bl][rec]overlay[comp];"
