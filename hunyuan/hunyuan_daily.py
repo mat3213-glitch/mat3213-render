@@ -90,7 +90,7 @@ def collect_photos(dry=False):
     for pool in PHOTO_POOLS:
         for ext in exts:
             try:
-                cmd = ["rclone", "lsf", "-R", "--include", ext, pool]
+                cmd = ["rclone", "lsf", "-R", "--files-only", "--include", ext, pool]
                 if dry:
                     print(f"  [dry] {' '.join(cmd)}")
                     continue
