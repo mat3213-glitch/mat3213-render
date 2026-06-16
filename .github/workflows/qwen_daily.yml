@@ -1,0 +1,67 @@
+name: Qwen Daily Gen
+
+# Ежедневная генерация Qwen (фото+видео) → ЯД qwen_pool/<дата>/ + TG-уведомление.
+# Цель: держать сессию Qwen в рабочем состоянии и наполнять библиотеку релевантным материалом.
+# ВАЖНО: cron включаем ТОЛЬКО после зелёной ручной пробы (проверка, пускает ли Qwen US-IP раннера).
+on:
+  workflow_dispatch:
+    inputs:
+      n_img:
+        description: 'Сколько картинок (проба = 1)'
+        default: '1'
+      n_vid:
+        description: 'Сколько видео (проба = 0, боевой = 2)'
+        default: '0'
+      ratio:
+        description: 'Соотношение сторон'
+        default: '16:9'
+  # после успешной пробы раскомментировать:
+  # schedule:
+  #   - cron: '0 2 * * *'   # ежедневно 02:00 UTC (05:00 МСК); GH может задерживать
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull Qwen session from ЯД
+        run: rclone copyto "ydrive:Content factory/qwen_ci/qwen_session.json" qwen/qwen_session.json
+
+      - name: Install Playwright
+        run: |
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Generate (Qwen)
+        working-directory: qwen
+        env:
+          N_IMG:               ${{ inputs.n_img }}
+          N_VID:               ${{ inputs.n_vid }}
+          RATIO:               ${{ inputs.ratio }}
+          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:        '5'
+        run: python -u qwen_daily.py
