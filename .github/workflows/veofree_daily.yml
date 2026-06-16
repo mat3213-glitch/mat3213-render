@@ -1,0 +1,38 @@
+name: VeoFree Daily Gen
+
+# Ежедневная генерация VeoFree (t2v) → ЯД veofree_pool/<дата>/ + TG.
+# Цель: держать токен/доступ VeoFree тёплым и наполнять библиотеку видео.
+# cron включаем ПОСЛЕ зелёной ручной пробы.
+on:
+  workflow_dispatch:
+    inputs:
+      n_vid:
+        description: 'Сколько видео (проба = 1, боевой = 2)'
+        default: '1'
+  # после успешной пробы раскомментировать:
+  # schedule:
+  #   - cron: '0 3 * * *'   # ежедневно 03:00 UTC (после Qwen 02:00); GH может задерживать
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Playwright
+        run: |
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+      - name: Generate (VeoFree daily)
+        env:
+          N_VID:               ${{ inputs.n_vid || '2' }}
+          YADISK_LOGIN:        ${{ secrets.YADISK_LOGIN }}
+          YADISK_PASSWORD:     ${{ secrets.YADISK_PASSWORD }}
+          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:        '5'
+        run: python -u veofree_daily.py
