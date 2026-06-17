@@ -8,100 +8,44 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+
       - name: Install rclone
         run: curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Configure rclone
         env:
-          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_ID: ${{ secrets.YDRIVE_CLIENT_ID }}
           YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
-          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
-        run: |
-          rclone config create ydrive yandex \
-            client_id="$YDRIVE_CLIENT_ID" \
-            client_secret="$YDRIVE_CLIENT_SECRET" \
-            token="$YDRIVE_TOKEN"
+          YDRIVE_TOKEN: ${{ secrets.YDRIVE_TOKEN }}
+        run: rclone config create ydrive yandex client_id="$YDRIVE_CLIENT_ID" client_secret="$YDRIVE_CLIENT_SECRET" token="$YDRIVE_TOKEN"
 
-      - name: Download pipeline files from YD
+      - name: Download files from YD
         run: |
           mkdir -p /work
           rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_e2e/" /work/
           rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_storyboard_md/storyboard_to_md.py" /work/
           ls /work/
 
-      - name: Step 5 — storyboard_to_md
-        working-directory: /work
+      - name: Step 5 - storyboard_to_md
         run: |
-          python3 storyboard_to_md.py storyboard_matched.json \
-            --title "Hurts in My Heart" \
-            --out pipeline_review.md
+          cd /work
+          python3 storyboard_to_md.py storyboard_matched.json --title "Hurts in My Heart" --out pipeline_review.md
           cat pipeline_review.md
 
-      - name: Step 7 — pipeline_report.md
-        working-directory: /work
-        run: |
-          python3 - << 'PYEOF'
-          import json, textwrap
-          from pathlib import Path
-
-          treatment = json.loads(Path("treatment_mock.json").read_text())
-          storyboard = json.loads(Path("storyboard_matched.json").read_text())
-          shots = storyboard.get("shots", [])
-
-          rows = "\n".join(
-              f"| {s['seg']+1} | {s['section']} | {s['scale']} | {s['motion']} | "
-              f"{s.get('base',{}).get('provider','?')} → {s.get('base',{}).get('query','?')[:40]} |"
-              for s in shots
-          )
-
-          report = f"""# Pipeline E2E Report — Hurts in My Heart
-
-## Статус по шагам
-| Шаг | Компонент | Статус | Замечания |
-|-----|-----------|--------|-----------|
-| 1 | Окружение | ✅ OK | зависимости установлены |
-| 2 | screenwriter --mock | ✅ OK | архетип: {treatment.get('archetype_id','?')}, beats: {len(treatment.get('beats',[]))} |
-| 3 | director --mock | ✅ OK | shots: {len(shots)} |
-| 4 | reference_match --mock | ✅ OK | storyboard_matched.json готов |
-| 5 | storyboard_to_md | ✅ OK | pipeline_review.md создан |
-| 6 | screenwriter --live | ⏭ пропущен | нет GROQ_API_KEY |
-
-## Архетип (mock)
-- archetype_id: {treatment.get('archetype_id','?')}
-- logline: {treatment.get('logline','?')}
-- central_motif: {treatment.get('central_motif','?')}
-- beats: {len(treatment.get('beats',[]))}
-
-## Storyboard mock ({len(shots)} shots)
-| # | Секция | Масштаб | Движение | Футаж-запрос |
-|---|--------|---------|----------|--------------|
-{rows}
-
-## Проблемы и баги
-- Нет: pipeline прошёл чисто на mock-данных
-
-## Что нужно исправить
-- Добавить GROQ_API_KEY для live-теста screenwriter
-- Подключить реальный каталог footage для reference_match
-"""
-          Path("pipeline_report.md").write_text(report, encoding="utf-8")
-          print("pipeline_report.md written")
-          PYEOF
-          cat pipeline_report.md
+      - name: Step 7 - pipeline_report
+        run: python3 pipeline_finish_job.py /work
 
       - name: Upload to YD
-        working-directory: /work
         run: |
-          rclone copy pipeline_review.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
-          rclone copy pipeline_report.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
-          echo "Saved to YD"
+          rclone copy /work/pipeline_review.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
+          rclone copy /work/pipeline_report.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
+          echo "Done"
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pipeline-finish
-          path: |
-            /work/pipeline_review.md
-            /work/pipeline_report.md
+          path: /work/pipeline_*.md
           retention-days: 14
+
