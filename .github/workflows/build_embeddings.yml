@@ -48,7 +48,6 @@ jobs:
           pip install --quiet transformers Pillow lancedb librosa numpy requests pyyaml
 
       - name: Build embeddings
-        working-directory: Instrument/ContentAgent/archetypes
         run: |
           python3 embeddings_pipeline.py --build
           python3 embeddings_pipeline.py --stats
@@ -57,5 +56,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: embeddings-lance
-          path: Instrument/ContentAgent/archetypes/embeddings.lance/
+          path: embeddings.lance/
           retention-days: 90
