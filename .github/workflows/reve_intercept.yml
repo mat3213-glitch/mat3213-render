@@ -1,0 +1,39 @@
+name: Reve Intercept
+
+on:
+  workflow_dispatch:
+
+jobs:
+  intercept:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run interceptor
+        env:
+          REVE_BEARER_TOKEN: ${{ secrets.REVE_BEARER_TOKEN }}
+        run: python3 Instrument/Reve/reve_gen.py
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reve-intercept
+          path: |
+            Instrument/Reve/reve_captured_payload.json
+            Instrument/Reve/reve_captured_responses.json
+            Instrument/Reve/reve_debug_screenshot*.png
+            Instrument/Reve/reve_final_screenshot.png
+            Instrument/Reve/reve_test_output.jpg
+          retention-days: 7
