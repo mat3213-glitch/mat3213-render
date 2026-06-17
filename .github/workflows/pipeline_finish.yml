@@ -9,8 +9,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Install rclone
-        run: |
-          curl -fsSL https://rclone.org/install.sh | sudo bash
+        run: curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Configure rclone
         env:
@@ -18,14 +17,10 @@ jobs:
           YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
           YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
         run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [ydrive]
-          type = yandex
-          client_id = $YDRIVE_CLIENT_ID
-          client_secret = $YDRIVE_CLIENT_SECRET
-          token = $YDRIVE_TOKEN
-          EOF
+          rclone config create ydrive yandex \
+            client_id="$YDRIVE_CLIENT_ID" \
+            client_secret="$YDRIVE_CLIENT_SECRET" \
+            token="$YDRIVE_TOKEN"
 
       - name: Download pipeline files from YD
         run: |
@@ -40,67 +35,58 @@ jobs:
           python3 storyboard_to_md.py storyboard_matched.json \
             --title "Hurts in My Heart" \
             --out pipeline_review.md
-          echo "--- pipeline_review.md ---"
           cat pipeline_review.md
-
-      - name: Step 6 — Skip Groq live test (no key)
-        run: echo "Groq live test skipped (no GROQ_API_KEY)"
 
       - name: Step 7 — pipeline_report.md
         working-directory: /work
         run: |
           python3 - << 'PYEOF'
-          import json
+          import json, textwrap
           from pathlib import Path
 
           treatment = json.loads(Path("treatment_mock.json").read_text())
           storyboard = json.loads(Path("storyboard_matched.json").read_text())
           shots = storyboard.get("shots", [])
 
-          rows = []
-          for s in shots:
-              base = s.get("base", {})
-              rows.append(f"| {s['seg']+1} | {s['section']} | {s['scale']} | {s['motion']} | {base.get('provider','?')} → {base.get('query','?')[:40]} |")
+          rows = "\n".join(
+              f"| {s['seg']+1} | {s['section']} | {s['scale']} | {s['motion']} | "
+              f"{s.get('base',{}).get('provider','?')} → {s.get('base',{}).get('query','?')[:40]} |"
+              for s in shots
+          )
 
           report = f"""# Pipeline E2E Report — Hurts in My Heart
 
-          ## Статус по шагам
-          | Шаг | Компонент | Статус | Замечания |
-          |-----|-----------|--------|-----------|
-          | 1 | Окружение | ✅ OK | зависимости установлены, файлы скачаны |
-          | 2 | screenwriter --mock | ✅ OK | архетип: {treatment.get('archetype_id','?')}, beats: {len(treatment.get('beats',[]))} |
-          | 3 | director --mock | ✅ OK | shots: {len(shots)} |
-          | 4 | reference_match --mock | ✅ OK | storyboard_matched.json готов |
-          | 5 | storyboard_to_md | ✅ OK | pipeline_review.md создан |
-          | 6 | screenwriter --live | ⏭ пропущен | нет GROQ_API_KEY |
+## Статус по шагам
+| Шаг | Компонент | Статус | Замечания |
+|-----|-----------|--------|-----------|
+| 1 | Окружение | ✅ OK | зависимости установлены |
+| 2 | screenwriter --mock | ✅ OK | архетип: {treatment.get('archetype_id','?')}, beats: {len(treatment.get('beats',[]))} |
+| 3 | director --mock | ✅ OK | shots: {len(shots)} |
+| 4 | reference_match --mock | ✅ OK | storyboard_matched.json готов |
+| 5 | storyboard_to_md | ✅ OK | pipeline_review.md создан |
+| 6 | screenwriter --live | ⏭ пропущен | нет GROQ_API_KEY |
 
-          ## Архетип (mock)
-          - archetype_id: {treatment.get('archetype_id','?')}
-          - logline: {treatment.get('logline','?')}
-          - central_motif: {treatment.get('central_motif','?')}
-          - beats: {len(treatment.get('beats',[]))}
+## Архетип (mock)
+- archetype_id: {treatment.get('archetype_id','?')}
+- logline: {treatment.get('logline','?')}
+- central_motif: {treatment.get('central_motif','?')}
+- beats: {len(treatment.get('beats',[]))}
 
-          ## Storyboard mock ({len(shots)} shots)
-          | # | Секция | Масштаб | Движение | Футаж-запрос |
-          |---|--------|---------|----------|--------------|
-          {chr(10).join(rows)}
+## Storyboard mock ({len(shots)} shots)
+| # | Секция | Масштаб | Движение | Футаж-запрос |
+|---|--------|---------|----------|--------------|
+{rows}
 
-          ## Проблемы и баги
-          - Нет: pipeline прошёл чисто на mock-данных
+## Проблемы и баги
+- Нет: pipeline прошёл чисто на mock-данных
 
-          ## Что нужно исправить
-          - Добавить GROQ_API_KEY для live-теста screenwriter
-          - Подключить реальный каталог footage для reference_match
-          """
-
-          # убираем лишние отступы
-          import textwrap
-          report = textwrap.dedent(report)
+## Что нужно исправить
+- Добавить GROQ_API_KEY для live-теста screenwriter
+- Подключить реальный каталог footage для reference_match
+"""
           Path("pipeline_report.md").write_text(report, encoding="utf-8")
           print("pipeline_report.md written")
           PYEOF
-
-          echo "--- pipeline_report.md ---"
           cat pipeline_report.md
 
       - name: Upload to YD
@@ -108,7 +94,7 @@ jobs:
         run: |
           rclone copy pipeline_review.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
           rclone copy pipeline_report.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
-          echo "Saved to YD: Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
+          echo "Saved to YD"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
