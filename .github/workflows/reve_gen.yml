@@ -54,13 +54,13 @@ jobs:
           REVE_BEARER_TOKEN: ${{ secrets.REVE_BEARER_TOKEN }}
           REVE_PROMPT:       ${{ github.event.inputs.prompt }}
           REVE_COUNT:        ${{ github.event.inputs.count }}
-        run: python3 reve_gen_job.py
+        run: python3 Instrument/Reve/reve_gen_job.py
 
       - name: Upload to YD
         run: |
           TS=$(date +%Y%m%d_%H%M%S)
-          rclone copy /tmp/reve_outputs/ "ydrive:Content factory/reve_outputs/${TS}/"
-          echo "Uploaded to ydrive:Content factory/reve_outputs/${TS}/"
+          rclone copy /tmp/reve_outputs/ "ydrive:Content factory/Instrument/Reve/outputs/${TS}/"
+          echo "Uploaded to ydrive:Content factory/Instrument/Reve/outputs/${TS}/"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -68,4 +68,4 @@ jobs:
         with:
           name: reve-images
           path: /tmp/reve_outputs/
-          retention-days: 7
+          retention-days: 30
