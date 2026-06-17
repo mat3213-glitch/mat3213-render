@@ -22,30 +22,30 @@ jobs:
 
       - name: Download files from YD
         run: |
-          mkdir -p /work
-          rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_e2e/" /work/
-          rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_storyboard_md/storyboard_to_md.py" /work/
-          ls /work/
+          mkdir -p "$HOME/work"
+          rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_e2e/" "$HOME/work/"
+          rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_storyboard_md/storyboard_to_md.py" "$HOME/work/"
+          ls "$HOME/work/"
 
       - name: Step 5 - storyboard_to_md
         run: |
-          cd /work
+          cd "$HOME/work"
           python3 storyboard_to_md.py storyboard_matched.json --title "Hurts in My Heart" --out pipeline_review.md
           cat pipeline_review.md
 
       - name: Step 7 - pipeline_report
-        run: python3 pipeline_finish_job.py /work
+        run: python3 "$GITHUB_WORKSPACE/pipeline_finish_job.py" "$HOME/work"
 
       - name: Upload to YD
         run: |
-          rclone copy /work/pipeline_review.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
-          rclone copy /work/pipeline_report.md "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
+          rclone copy "$HOME/work/pipeline_review.md" "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
+          rclone copy "$HOME/work/pipeline_report.md" "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
           echo "Done"
 
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pipeline-finish
-          path: /work/pipeline_*.md
+          path: "${{ env.HOME }}/work/pipeline_*.md"
           retention-days: 14
 
