@@ -18,7 +18,7 @@ jobs:
           YDRIVE_CLIENT_ID: ${{ secrets.YDRIVE_CLIENT_ID }}
           YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
           YDRIVE_TOKEN: ${{ secrets.YDRIVE_TOKEN }}
-        run: rclone config create ydrive yandex client_id="$YDRIVE_CLIENT_ID" client_secret="$YDRIVE_CLIENT_SECRET" token="$YDRIVE_TOKEN"
+        run: python3 -c "import os,pathlib; p=pathlib.Path.home()/\".config/rclone/rclone.conf\"; p.parent.mkdir(parents=True,exist_ok=True); p.write_text(\"[ydrive]\ntype = yandex\nclient_id = {}\nclient_secret = {}\ntoken = {}\n\".format(os.environ[\"YDRIVE_CLIENT_ID\"],os.environ[\"YDRIVE_CLIENT_SECRET\"],os.environ[\"YDRIVE_TOKEN\"]))"
 
       - name: Download files from YD
         run: |
