@@ -1,0 +1,71 @@
+name: Reve Gen
+
+# Генерация изображений через app.reve.com (US-раннер, обход геоблока).
+# Результат (JPG) → YD ydrive:Content factory/reve_outputs/<timestamp>/
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "Промпт для генерации"
+        required: true
+        default: "foggy forest at dawn, cinematic, desaturated, no people"
+      count:
+        description: "Количество изображений"
+        required: false
+        default: "1"
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y rclone
+
+      - name: Configure rclone
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [ydrive]
+          type = yandex
+          client_id = $YDRIVE_CLIENT_ID
+          client_secret = $YDRIVE_CLIENT_SECRET
+          token = $YDRIVE_TOKEN
+          EOF
+
+      - name: Generate image
+        env:
+          REVE_BEARER_TOKEN: ${{ secrets.REVE_BEARER_TOKEN }}
+          REVE_PROMPT:       ${{ github.event.inputs.prompt }}
+          REVE_COUNT:        ${{ github.event.inputs.count }}
+        run: python3 reve_gen_job.py
+
+      - name: Upload to YD
+        run: |
+          TS=$(date +%Y%m%d_%H%M%S)
+          rclone copy /tmp/reve_outputs/ "ydrive:Content factory/reve_outputs/${TS}/"
+          echo "Uploaded to ydrive:Content factory/reve_outputs/${TS}/"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reve-images
+          path: /tmp/reve_outputs/
+          retention-days: 7
