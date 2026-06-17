@@ -1,0 +1,61 @@
+name: Build Embeddings
+
+# Вычисление SigLIP + librosa эмбеддингов клипов → LanceDB.
+# Cyanite-подобный семантический поиск для подбора референсов по архетипу.
+# Ручной запуск + после обновления каталога (fetch_media, board_fetch).
+# Результат: .lance директория → артефакт → скачивается другими workflow.
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Fetch Media"]
+    types: [completed]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [ydrive]
+          type = yandex
+          client_id = $YDRIVE_CLIENT_ID
+          client_secret = $YDRIVE_CLIENT_SECRET
+          token = $YDRIVE_TOKEN
+          EOF
+
+      - name: Install dependencies
+        run: |
+          pip install --quiet torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install --quiet transformers Pillow lancedb librosa numpy requests pyyaml
+
+      - name: Build embeddings
+        working-directory: Instrument/ContentAgent/archetypes
+        run: |
+          python3 embeddings_pipeline.py --build
+          python3 embeddings_pipeline.py --stats
+
+      - name: Upload embeddings artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: embeddings-lance
+          path: Instrument/ContentAgent/archetypes/embeddings.lance/
+          retention-days: 90
