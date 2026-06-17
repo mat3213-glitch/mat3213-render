@@ -44,7 +44,7 @@ def get_user():
 def chat_generate(project_id: str, prompt: str) -> dict | None:
     payload = {
         "project_id": project_id,
-        "messages": [{"role": "user", "content": prompt}],
+        "conversation": [{"role": "user", "content": prompt}],
     }
     r = requests.post(f"{BASE_URL}/api/misc/chat", json=payload, headers=headers(), timeout=60)
     print(f"chat {r.status_code}: {r.text[:400]}")
