@@ -84,16 +84,43 @@ async def main():
         # Делаем API-вызовы из браузерного контекста через fetch()
         print(f"\nStep 3: Probe node structure (project_id={project_id})")
 
-        async def fetch_js(method, path, payload=None):
+        # Явный вызов userinfo если project_id не получили из localStorage
+        if not project_id:
+            print("  Fetching userinfo explicitly...")
+            ui_r = await page.evaluate(f"""
+async () => {{
+    const resp = await fetch('https://app.reve.com/api/misc/userinfo', {{
+        headers: {{'Authorization': 'Bearer {BEARER_TOKEN}', 'Content-Type': 'application/json'}}
+    }});
+    return {{status: resp.status, body: await resp.text()}};
+}}
+""")
+            print(f"  userinfo: {ui_r['status']}: {ui_r['body'][:200]}")
+            if ui_r["status"] == 200:
+                try:
+                    project_id = json.loads(ui_r["body"])["user"]["default_project"]
+                    print(f"  Got project_id: {project_id}")
+                except Exception:
+                    pass
+
+        # Fallback — хардкод известного project_id
+        if not project_id:
+            project_id = "4864d45b-75f0-4e2c-a25e-79e130334119"
+            print(f"  Using hardcoded project_id: {project_id}")
+
+        # fetch с Bearer (для misc API) или без (для project API — нужны куки сессии)
+        async def fetch_js(method, path, payload=None, use_bearer=True):
             body_js = f"JSON.stringify({json.dumps(payload)})" if payload else "undefined"
+            auth_header = f"'Authorization': 'Bearer {BEARER_TOKEN}'," if use_bearer else ""
             js = f"""
 async () => {{
     const opts = {{
         method: '{method}',
         headers: {{
-            'Authorization': 'Bearer {BEARER_TOKEN}',
+            {auth_header}
             'Content-Type': 'application/json',
         }},
+        credentials: 'include',
     }};
     if ({body_js} !== undefined) opts.body = {body_js};
     const resp = await fetch('https://app.reve.com{path}', opts);
@@ -107,9 +134,9 @@ async () => {{
 
         results = []
 
-        # Получаем список существующих нод
-        print("\n  GET /node?props=all")
-        r = await fetch_js("GET", f"/api/project/{project_id}/node?props=all")
+        # Получаем список существующих нод (credentials: include — сессионные куки)
+        print("\n  GET /node?props=all (with session cookies)")
+        r = await fetch_js("GET", f"/api/project/{project_id}/node?props=all", use_bearer=False)
         results.append({"step": "list_nodes", "status": r["status"], "body": r["body"]})
 
         node_id = None
@@ -125,14 +152,14 @@ async () => {{
 
         # Создаём новую ноду (пробуем разные форматы)
         if not node_id:
-            print("\n  POST /node — create node")
+            print("\n  POST /node — create node (with session cookies)")
             for node_payload in [
                 {"type": "image_gen", "position": {"x": 0, "y": 0}},
                 {"kind": "image_gen"},
                 {"node_type": "image_gen"},
                 {},
             ]:
-                r = await fetch_js("POST", f"/api/project/{project_id}/node", node_payload)
+                r = await fetch_js("POST", f"/api/project/{project_id}/node", node_payload, use_bearer=False)
                 results.append({"step": "create_node", "payload": node_payload, "status": r["status"], "body": r["body"]})
                 if r["status"] in (200, 201):
                     try:
@@ -155,7 +182,7 @@ async () => {{
         gen_payloads.append({"data": {"prompt": PROMPT}})
 
         for gp in gen_payloads:
-            r = await fetch_js("POST", f"/api/project/{project_id}/generation", gp)
+            r = await fetch_js("POST", f"/api/project/{project_id}/generation", gp, use_bearer=False)
             results.append({"step": "generate", "payload": gp, "status": r["status"], "body": r["body"]})
             if r["status"] == 200:
                 print(f"  ✅ Generation started!")
