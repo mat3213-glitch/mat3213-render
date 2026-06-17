@@ -94,28 +94,40 @@ def extract_frame(clip_path: Path, timestamp: float = 1.0) -> Path | None:
     return frames if frames else None
 
 
+_SIGLIP_PROCESSOR = None
+_SIGLIP_MODEL = None
+
+
+def _load_siglip():
+    global _SIGLIP_PROCESSOR, _SIGLIP_MODEL
+    if _SIGLIP_PROCESSOR is None:
+        from transformers import AutoProcessor, AutoModel
+        print(f"[embeddings] загружаю SigLIP {SIGLIP_MODEL}...")
+        _SIGLIP_PROCESSOR = AutoProcessor.from_pretrained(SIGLIP_MODEL)
+        _SIGLIP_MODEL = AutoModel.from_pretrained(SIGLIP_MODEL)
+        _SIGLIP_MODEL.eval()
+        print("[embeddings] SigLIP загружен")
+    return _SIGLIP_PROCESSOR, _SIGLIP_MODEL
+
+
 def extract_siglip_embedding(frame_paths: list[Path]) -> np.ndarray | None:
-    """SigLIP: усреднённый эмбеддинг нескольких кадров (768-dim)."""
+    """SigLIP: усреднённый эмбеддинг нескольких кадров (768-dim). Модель грузится один раз."""
     if not HAS_PIL:
         return None
     try:
-        from transformers import AutoProcessor, AutoModel
         import torch
-
-        processor = AutoProcessor.from_pretrained(SIGLIP_MODEL)
-        model = AutoModel.from_pretrained(SIGLIP_MODEL)
-        model.eval()
-
+        processor, model = _load_siglip()
         embeddings = []
         for fp in frame_paths:
             try:
                 image = Image.open(fp).convert("RGB")
                 inputs = processor(images=image, return_tensors="pt")
                 with torch.no_grad():
-                    outputs = model.get_image_features(**inputs)
-                emb = outputs.logits_per_image.squeeze().numpy()
+                    # get_image_features возвращает тензор (batch, dim), не NamedTuple
+                    emb = model.get_image_features(**inputs).squeeze().numpy()
                 embeddings.append(emb)
-            except Exception:
+            except Exception as e:
+                print(f" (frame err: {e})", end="")
                 continue
 
         if not embeddings:
@@ -124,7 +136,8 @@ def extract_siglip_embedding(frame_paths: list[Path]) -> np.ndarray | None:
         mean_emb = np.mean(embeddings, axis=0)
         norm = np.linalg.norm(mean_emb)
         return mean_emb / norm if norm > 0 else mean_emb
-    except Exception:
+    except Exception as e:
+        print(f" (siglip err: {e})", end="")
         return None
 
 
@@ -191,7 +204,11 @@ def show_stats(db_path: Path = DB_PATH):
         print("База не найдена. Запусти --build")
         return
     db = lancedb.connect(str(db_path))
-    tbl = db.open_table("clips")
+    try:
+        tbl = db.open_table("clips")
+    except Exception as e:
+        print(f"Таблица clips не найдена (--build не завершил запись): {e}")
+        return
     df = tbl.to_pandas()
     print(f"Всего: {len(df)} клипов")
     if "category" in df.columns:
