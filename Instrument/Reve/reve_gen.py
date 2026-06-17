@@ -82,52 +82,105 @@ async def main():
                         pass
 
         # Делаем API-вызовы из браузерного контекста через fetch()
-        print(f"\nStep 3: Probe generation endpoints (project_id={project_id})")
+        print(f"\nStep 3: Probe node structure (project_id={project_id})")
 
-        endpoints_to_try = []
-        if project_id:
-            endpoints_to_try += [
-                ("POST", f"/api/project/{project_id}/generation",
-                 {"prompt": PROMPT, "model": "reve-2.0", "width": 1024, "height": 1024}),
-                ("POST", f"/api/project/{project_id}/generate",
-                 {"prompt": PROMPT}),
-                ("POST", f"/api/project/{project_id}/infer",
-                 {"prompt": PROMPT}),
-            ]
-        endpoints_to_try += [
-            ("POST", "/api/misc/chat",
-             {"conversation": [{"role": "user", "content": PROMPT}]}),
-            ("POST", "/api/proto/model_infer",
-             {"model_id": "reve-2.0", "inputs": {"prompt": PROMPT}, "origin": "rnd"}),
-            ("POST", "/api/proto/generate",
-             {"prompt": PROMPT, "model_id": "reve-2.0"}),
-        ]
-
-        results = []
-        for method, path, payload in endpoints_to_try:
-            print(f"\n  Trying {method} {path}")
+        async def fetch_js(method, path, payload=None):
+            body_js = f"JSON.stringify({json.dumps(payload)})" if payload else "undefined"
             js = f"""
 async () => {{
-    const resp = await fetch('https://app.reve.com{path}', {{
+    const opts = {{
         method: '{method}',
         headers: {{
             'Authorization': 'Bearer {BEARER_TOKEN}',
             'Content-Type': 'application/json',
         }},
-        body: JSON.stringify({json.dumps(payload)}),
-    }});
+    }};
+    if ({body_js} !== undefined) opts.body = {body_js};
+    const resp = await fetch('https://app.reve.com{path}', opts);
     const text = await resp.text();
-    return {{ status: resp.status, body: text.slice(0, 3000) }};
+    return {{ status: resp.status, body: text.slice(0, 4000) }};
 }}
 """
+            r = await page.evaluate(js)
+            print(f"  {method} {path} → {r['status']}: {r['body'][:200]}")
+            return r
+
+        results = []
+
+        # Получаем список существующих нод
+        print("\n  GET /node?props=all")
+        r = await fetch_js("GET", f"/api/project/{project_id}/node?props=all")
+        results.append({"step": "list_nodes", "status": r["status"], "body": r["body"]})
+
+        node_id = None
+        if r["status"] == 200:
             try:
-                r = await page.evaluate(js)
-                print(f"  → {r['status']}: {r['body'][:300]}")
-                results.append({"path": path, "payload": payload, "status": r["status"], "body": r["body"]})
-                if r["status"] == 200:
-                    print("  ✅ 200 OK — успешный endpoint!")
+                nodes = json.loads(r["body"])
+                if isinstance(nodes, list) and nodes:
+                    node_id = nodes[0].get("id") or nodes[0].get("node_id")
+                    print(f"  Found existing node: {node_id}")
+                    print(f"  Node keys: {list(nodes[0].keys())}")
             except Exception as e:
-                print(f"  ERR: {e}")
+                print(f"  Parse error: {e}")
+
+        # Создаём новую ноду (пробуем разные форматы)
+        if not node_id:
+            print("\n  POST /node — create node")
+            for node_payload in [
+                {"type": "image_gen", "position": {"x": 0, "y": 0}},
+                {"kind": "image_gen"},
+                {"node_type": "image_gen"},
+                {},
+            ]:
+                r = await fetch_js("POST", f"/api/project/{project_id}/node", node_payload)
+                results.append({"step": "create_node", "payload": node_payload, "status": r["status"], "body": r["body"]})
+                if r["status"] in (200, 201):
+                    try:
+                        d = json.loads(r["body"])
+                        node_id = d.get("id") or d.get("node_id") or d.get("item", {}).get("id")
+                        print(f"  ✅ Node created: {node_id}")
+                    except Exception:
+                        pass
+                    break
+
+        # Генерация
+        print(f"\n  POST /generation (node={node_id})")
+        gen_payloads = []
+        if node_id:
+            gen_payloads = [
+                {"node": node_id, "data": {"prompt": PROMPT}},
+                {"node": node_id, "data": {"prompt": PROMPT, "model": "reve-2.0", "width": 1024, "height": 1024}},
+                {"node": node_id, "data": {"prompt": PROMPT}, "model_id": "reve-2.0"},
+            ]
+        gen_payloads.append({"data": {"prompt": PROMPT}})
+
+        for gp in gen_payloads:
+            r = await fetch_js("POST", f"/api/project/{project_id}/generation", gp)
+            results.append({"step": "generate", "payload": gp, "status": r["status"], "body": r["body"]})
+            if r["status"] == 200:
+                print(f"  ✅ Generation started!")
+                break
+
+        # Polling если нашли generation_id
+        for res in results:
+            if res.get("status") == 200 and res.get("step") == "generate":
+                try:
+                    d = json.loads(res["body"])
+                    gen_id = d.get("id") or d.get("generation_id") or d.get("item", {}).get("id")
+                    if gen_id:
+                        print(f"\n  Polling generation {gen_id}...")
+                        for _ in range(15):
+                            await page.wait_for_timeout(4000)
+                            rp = await fetch_js("GET", f"/api/project/{project_id}/generation/{gen_id}")
+                            results.append({"step": "poll", "status": rp["status"], "body": rp["body"]})
+                            if rp["status"] == 200:
+                                pd = json.loads(rp["body"])
+                                status = pd.get("item", {}).get("status", pd.get("status", "?"))
+                                print(f"  status: {status}")
+                                if status in ("completed", "done", "success"):
+                                    break
+                except Exception as e:
+                    print(f"  Polling error: {e}")
 
         # Сохраняем всё
         probe_path = OUT_DIR / "reve_captured_payload.json"
