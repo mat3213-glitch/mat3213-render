@@ -16,7 +16,7 @@ job.json:
   {"track_dur": 196.78, "out_name": "ty_prosti_blend.mp4"}
 
 Env vars (GitHub Secrets + workflow inputs):
-  YADISK_LOGIN     — mat3213@yandex.ru
+  YADISK_LOGIN     — Yandex login (значение в секретах/.env)
   YADISK_PASSWORD  — WebDAV app-password
   JOB_ID           — render job ID (e.g. 2026-05-30_ty_prosti)
 """

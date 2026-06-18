@@ -3,7 +3,7 @@ Download video clips from Wikimedia Commons and upload to Yandex.Disk via WebDAV
 Used by GitHub Actions — no API key needed, CC0/CC-BY public domain content.
 
 Env vars (set as GitHub Secrets):
-  YADISK_LOGIN     — mat3213@yandex.ru
+  YADISK_LOGIN     — Yandex login (значение в секретах/.env)
   YADISK_PASSWORD  — WebDAV password
   QUERIES          — comma-separated search terms, e.g. "night city,rain street,fog forest"
   COUNT            — clips per query (default: 10)
