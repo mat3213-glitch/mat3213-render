@@ -72,7 +72,7 @@ def download_pause():
 # ── TG ───────────────────────────────────────────────────────────────────────
 
 def send_tg(text: str):
-    worker = os.environ.get("CLOUDFLARE_WORKER", "https://api.telegram.org")
+    worker = os.environ.get("CLOUDFLARE_WORKER", "")
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat = os.environ.get("PIN_CHAT_ID", "-1003946370426")
     thread = os.environ.get("PIN_THREAD_ID", "228")

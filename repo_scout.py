@@ -312,7 +312,7 @@ def write_report(items: list[dict]):
 def send_tg(text: str):
     if not text:
         return
-    worker = os.environ.get("CLOUDFLARE_WORKER", "https://api.telegram.org")
+    worker = os.environ.get("CLOUDFLARE_WORKER", "")
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat = os.environ.get("SCOUT_CHAT_ID", "")
     thread = os.environ.get("SCOUT_THREAD_ID", "")
