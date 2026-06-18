@@ -2,46 +2,45 @@
   "verdicts": [
     {
       "name": "scout_warm_night_muted",
-      "keep": true,
-      "score": 8,
-      "reason": "Muted warmth, cinematic depth, expensive atmosphere"
+      "keep": false,
+      "score": 4,
+      "reason": "Оранжевый каст дешёвый, не кинематографично."
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": false,
-      "score": 6,
-      "reason": "Too detached, lacks emotional inner depth"
+      "keep": true,
+      "score": 8,
+      "reason": "Холодная глубина, дорого, под даунтемпо."
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": true,
-      "score": 8,
-      "reason": "Balanced warmth, subtle, cohesive downtempo vibe"
+      "keep": false,
+      "score": 5,
+      "reason": "Почти дубль первого, тот же оранжевый каст."
     },
     {
       "name": "scout_green_night_soft",
-      "keep": false,
-      "score": 4,
-      "reason": "Green cast reads as cheap filter, not premium"
+      "keep": true,
+      "score": 7,
+      "reason": "Тизерный тон, атмосферно, но зелень на грани."
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
-      "score": 5,
-      "reason": "Too flat-neutral, no distinctive atmosphere"
+      "score": 3,
+      "reason": "Плоско, выцвешенно, нет глубины."
     },
     {
       "name": "scout_warm_mid_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Warm softness, cinematic but slightly less depth"
+      "keep": false,
+      "score": 5,
+      "reason": "Оливковый каст смешивает тёплый+холодный."
     }
   ],
   "recommend_merge": [
-    "scout_warm_night_muted",
-    "scout_warm_night_muted_2",
-    "scout_warm_mid_soft"
+    "scout_cool_mid_muted",
+    "scout_green_night_soft"
   ],
-  "_generated": "2026-06-17",
+  "_generated": "2026-06-18",
   "_judge": "mimo-auto"
 }
