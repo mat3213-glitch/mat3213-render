@@ -1,0 +1,87 @@
+name: mimo audit (public repos)
+
+# mimo agent аудитит ПУБЛИЧНЫЕ репо (mat3213-render, music-content-pipeline)
+# на утечки секретов + баги/риски. Бинарь+auth с приватной ЯД (mimo_ci/).
+# Отчёт → ЯД AUDIT/ + TG тред 468 (GITHAB). Приватные репо сканируются на буке (PAT не уходит в облако).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone ripgrep
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Restore mimo binary + auth from ydrive
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+          "$HOME/.mimocode/bin/mimo" --version || true
+
+      - name: Clone public repos
+        run: |
+          mkdir -p /tmp/pub && cd /tmp/pub
+          for r in mat3213-render music-content-pipeline; do
+            git clone --depth 1 "https://github.com/mat3213-glitch/$r.git" "$r" \
+              && echo "cloned $r ($(find $r -type f | wc -l) files)" || echo "clone FAIL $r"
+          done
+
+      - name: Run mimo audit
+        run: |
+          MIMO="$HOME/.mimocode/bin/mimo"
+          cd /tmp/pub
+          PROMPT="$(cat "$GITHUB_WORKSPACE/mimo_audit_prompt.txt")"
+          timeout 1500 "$MIMO" run --pure --dangerously-skip-permissions "$PROMPT" \
+            > /tmp/audit_out.txt 2>&1 </dev/null || true
+          sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g' /tmp/audit_out.txt | tail -25
+
+      - name: Upload report to ydrive
+        if: always()
+        run: |
+          if [ -f /tmp/mimo_pub_audit.md ]; then
+            rclone copyto /tmp/mimo_pub_audit.md "ydrive:Content factory/AUDIT/MIMO_PUB_AUDIT_2026-06-18.md"
+            echo "report uploaded to ydrive"
+          else
+            echo "NO report file produced"
+          fi
+
+      - name: Report to Telegram (thread 468)
+        if: always()
+        env:
+          WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT:     ${{ secrets.SCOUT_CHAT_ID }}
+        run: |
+          SUMMARY="$(grep -A8 'Сводка' /tmp/mimo_pub_audit.md 2>/dev/null | head -10)"
+          [ -n "$SUMMARY" ] || SUMMARY="(отчёт не сформирован — см. лог джоба)"
+          MSG="🔎 mimo audit публичных репо — готово
+          $SUMMARY"
+          if [ -n "$WORKER" ] && [ -n "$TG_TOKEN" ] && [ -n "$CHAT" ]; then
+            curl -sf -m 60 -A "curl/8.5.0" "$WORKER/bot$TG_TOKEN/sendMessage" \
+              -d "chat_id=$CHAT" -d "message_thread_id=468" \
+              --data-urlencode "text=$MSG" >/dev/null && echo "tg sent" || echo "tg send failed"
+          else
+            echo "tg secrets missing — skip"
+          fi

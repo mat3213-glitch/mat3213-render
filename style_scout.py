@@ -58,7 +58,8 @@ def ov_token() -> str | None:
 
 def _post(url, data):
     req = urllib.request.Request(url, data=data,
-          headers={"Content-Type": "application/x-www-form-urlencoded"})
+          headers={"Content-Type": "application/x-www-form-urlencoded",
+                   "User-Agent": "curl/8.5.0"})  # некоторые API/прокси режут дефолтный urllib UA
     return urllib.request.urlopen(req, timeout=20).read().decode()
 
 

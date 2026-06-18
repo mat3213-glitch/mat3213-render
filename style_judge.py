@@ -93,7 +93,8 @@ def tg_text(msg: str):
         data["message_thread_id"] = str(int(thread))
     try:
         req = urllib.request.Request(f"{worker}/bot{token}/sendMessage",
-                                     data=urllib.parse.urlencode(data).encode())
+                                     data=urllib.parse.urlencode(data).encode(),
+                                     headers={"User-Agent": "curl/8.5.0"})  # CF режет дефолтный urllib UA → 1010
         urllib.request.urlopen(req, timeout=60).read()
         print("  [tg] sendMessage ok")
     except Exception as e:
