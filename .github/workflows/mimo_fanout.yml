@@ -1,0 +1,97 @@
+name: mimo fanout worker
+
+# 4-й воркер оркестра fan-out (см. Instrument/AgentQueue/fanout.py, воркер gh-mimo).
+# Принимает task_id + prompt, гоняет mimo (mimocode) headless через free-client,
+# кладёт результат JSON на ЯД: Content factory/mimo_ci/fanout_out/<task_id>.json.
+# Каждый диспатч = отдельный ран = настоящая облачная параллель (без SQLite-локов,
+# без нагрузки на бук). Бинарь+auth тянутся с приватной ЯД, НЕ из секретов.
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_id:
+        description: "уникальный id задачи (имя выходного файла)"
+        required: true
+        type: string
+      prompt:
+        description: "промпт для mimo"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Restore mimo binary + auth from ydrive
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+
+      - name: Run mimo
+        id: run
+        env:
+          PROMPT: ${{ inputs.prompt }}
+        run: |
+          MIMO="$HOME/.mimocode/bin/mimo"
+          mkdir -p /tmp/mimorun && cd /tmp/mimorun
+          START=$(date +%s)
+          timeout 540 "$MIMO" run --pure --dangerously-skip-permissions "$PROMPT" \
+            > out.txt 2> err.txt </dev/null
+          RC=$?
+          END=$(date +%s)
+          # чистим ANSI и служебные строки (> build · ...)
+          sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g' out.txt | grep -vE '^\s*>' | sed '/^\s*$/d' > clean.txt
+          echo "RC=$RC ELAPSED=$((END-START))"
+          echo "rc=$RC"            >> "$GITHUB_OUTPUT"
+          echo "elapsed=$((END-START))" >> "$GITHUB_OUTPUT"
+
+      - name: Build + upload result JSON
+        if: always()
+        env:
+          TASK_ID: ${{ inputs.task_id }}
+          RC:      ${{ steps.run.outputs.rc }}
+          ELAPSED: ${{ steps.run.outputs.elapsed }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          task_id = os.environ["TASK_ID"]
+          rc = os.environ.get("RC") or "1"
+          elapsed = int(os.environ.get("ELAPSED") or 0)
+          clean = pathlib.Path("/tmp/mimorun/clean.txt")
+          err   = pathlib.Path("/tmp/mimorun/err.txt")
+          text = clean.read_text(encoding="utf-8", errors="replace").strip() if clean.exists() else ""
+          ok = (rc == "0") and bool(text)
+          res = {
+              "id": task_id, "ok": ok, "text": text, "model": "mimo-gh",
+              "elapsed": elapsed,
+              "error": "" if ok else (f"rc={rc} " + (err.read_text(errors='replace')[:300] if err.exists() else ""))[:300],
+          }
+          out = pathlib.Path("/tmp/result.json")
+          out.write_text(json.dumps(res, ensure_ascii=False, indent=2), encoding="utf-8")
+          print(json.dumps(res, ensure_ascii=False)[:500])
+          PY
+          rclone copyto /tmp/result.json "ydrive:Content factory/mimo_ci/fanout_out/${TASK_ID}.json"
+          echo "→ ydrive: mimo_ci/fanout_out/${TASK_ID}.json"
