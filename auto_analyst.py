@@ -92,7 +92,9 @@ def tg(text: str):
             "chat_id": TG_CHAT, "message_thread_id": TG_THREAD,
             "text": text[:4000], "parse_mode": "HTML",
         }).encode()
-        req = urllib.request.Request(f"{TG_WORKER}/bot{TG_TOKEN}/sendMessage", data=data)
+        # CF Worker режет дефолтный Python-urllib UA (403/1010) — притворяемся curl
+        req = urllib.request.Request(f"{TG_WORKER}/bot{TG_TOKEN}/sendMessage", data=data,
+                                     headers={"User-Agent": "curl/8.5.0"})
         urllib.request.urlopen(req, timeout=30)
         log("TG: отчёт отправлен")
     except Exception as e:
