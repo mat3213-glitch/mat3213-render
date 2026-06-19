@@ -83,22 +83,39 @@ def rclone(*args):
     return subprocess.run(["rclone"] + list(args), capture_output=True, text=True)
 
 
-def tg(text: str):
-    """Отчёт в TG-тред 634 через CF Worker (обход RU-блока). Не падает."""
+def _tg_one(text: str):
+    data = urllib.parse.urlencode({
+        "chat_id": TG_CHAT, "message_thread_id": TG_THREAD,
+        "text": text, "parse_mode": "HTML",
+    }).encode()
+    # CF Worker режет дефолтный Python-urllib UA (403/1010) — притворяемся curl
+    req = urllib.request.Request(f"{TG_WORKER}/bot{TG_TOKEN}/sendMessage", data=data,
+                                 headers={"User-Agent": "curl/8.5.0"})
+    urllib.request.urlopen(req, timeout=30)
+
+
+def tg(text: str, chunk: int = 3800):
+    """Отчёт в TG-тред 634 через CF Worker. TG-лимит 4096 → длинное РАЗБИВАЕМ (грабля №8), не обрезаем."""
     if not (TG_WORKER and TG_TOKEN and TG_CHAT):
         log("TG: секреты не заданы — пропуск"); return
-    try:
-        data = urllib.parse.urlencode({
-            "chat_id": TG_CHAT, "message_thread_id": TG_THREAD,
-            "text": text[:4000], "parse_mode": "HTML",
-        }).encode()
-        # CF Worker режет дефолтный Python-urllib UA (403/1010) — притворяемся curl
-        req = urllib.request.Request(f"{TG_WORKER}/bot{TG_TOKEN}/sendMessage", data=data,
-                                     headers={"User-Agent": "curl/8.5.0"})
-        urllib.request.urlopen(req, timeout=30)
-        log("TG: отчёт отправлен")
-    except Exception as e:
-        log(f"TG err: {e}")
+    parts, buf = [], ""
+    for line in text.split("\n"):
+        if len(buf) + len(line) + 1 > chunk:
+            if buf:
+                parts.append(buf)
+            while len(line) > chunk:
+                parts.append(line[:chunk]); line = line[chunk:]
+            buf = line
+        else:
+            buf = f"{buf}\n{line}" if buf else line
+    if buf:
+        parts.append(buf)
+    for i, p in enumerate(parts or [text]):
+        try:
+            _tg_one(p + (f"\n<i>…({i+1}/{len(parts)})</i>" if len(parts) > 1 else ""))
+        except Exception as e:
+            log(f"TG err: {e}")
+    log("TG: отчёт отправлен")
 
 
 # ── рубрика ──────────────────────────────────────────────────────────────────────
