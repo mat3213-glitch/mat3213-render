@@ -96,6 +96,9 @@ jobs:
           SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
         run: python3 auto_analyst.py --targets "${{ matrix.target }}"
+      - name: Report to memory_os feed
+        if: always()
+        run: python3 memos_emit.py gh-ai auto_analyst ${{ job.status }} "target=${{ matrix.target }}"
 
   # ── 3. Доска: собрать ADOPTION_BOARD из всех report.json (без гонки) ──────────────
   board:
