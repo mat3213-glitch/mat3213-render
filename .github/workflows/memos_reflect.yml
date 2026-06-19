@@ -1,0 +1,39 @@
+name: memos reflect (cloud self-learning)
+
+# Облачная рефлексия+оптимизатор: самообучение БЕЗ бука.
+# Анализирует GH-раны (все), ЯД-фид emit, CHECKPOINT → REFLECTION.md/PROPOSALS.md + TG 1007.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # каждые 6 часов
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  models: read              # дефолтный GITHUB_TOKEN получает доступ к GitHub Models
+
+jobs:
+  reflect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Reflect + optimize (cloud)
+        env:
+          GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY:   ${{ github.repository }}
+          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
+        run: python3 memos_reflect_cloud.py
