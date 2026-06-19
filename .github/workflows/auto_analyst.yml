@@ -1,0 +1,124 @@
+name: auto analyst (repo/site)
+
+# Автономная облачная система анализа-теста репо/сайтов по рубрике пользы.
+# Полностью в облаке (GH Actions), исполнитель — mimo на раннере (gh-mimo).
+# ПАРАЛЛЕЛЬНЫЙ FAN-OUT через matrix: 1 облачный ран mimo на цель (без SQLite-локов,
+# без нагрузки на бук). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред 634.
+# Финал «внедряем/нет» — за yaromat. Решения хранятся в ADOPTION_BOARD.md.
+#
+# Триггеры:
+#   - workflow_dispatch(targets) — дроп вручную (или из бота по очереди ЯД)
+#   - schedule — АВТОНОМНО раз в неделю: из очереди ЯД + находок repo_scout (без человека/ИИ)
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "URL через пробел (пусто = взять из очереди ЯД analyst_queue/pending/)"
+        required: false
+        type: string
+  schedule:
+    - cron: "0 9 * * 1"   # пн 09:00 UTC — автономный проход
+
+permissions:
+  contents: read
+
+jobs:
+  # ── 1. План: собрать цели → matrix ────────────────────────────────────────────────
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone && pip install -q pyyaml
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Collect targets → matrix
+        id: set
+        env:
+          TARGETS: ${{ inputs.targets }}
+          EVENT:   ${{ github.event_name }}
+        run: |
+          ARGS=()
+          if [ -n "$TARGETS" ]; then ARGS+=(--targets "$TARGETS"); fi
+          if [ "$EVENT" = "schedule" ]; then ARGS+=(--from-scout --from-queue); fi
+          if [ ${#ARGS[@]} -eq 0 ]; then ARGS+=(--from-queue); fi
+          OUT=$(python3 auto_analyst.py --list-targets "${ARGS[@]}")
+          echo "targets: $OUT"
+          echo "matrix=$OUT" >> "$GITHUB_OUTPUT"
+
+  # ── 2. Анализ: ПАРАЛЛЕЛЬНЫЙ fan-out, 1 раннер+mimo на цель ────────────────────────
+  analyze:
+    needs: plan
+    if: needs.plan.outputs.matrix != '[]' && needs.plan.outputs.matrix != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        target: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone && pip install -q pyyaml
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Restore mimo from ydrive
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+      - name: Analyze target
+        env:
+          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
+          GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
+        run: python3 auto_analyst.py --targets "${{ matrix.target }}"
+
+  # ── 3. Доска: собрать ADOPTION_BOARD из всех report.json (без гонки) ──────────────
+  board:
+    needs: analyze
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deps
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone && pip install -q pyyaml
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Rebuild adoption board
+        env:
+          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
+        run: python3 auto_analyst.py --rebuild-board
