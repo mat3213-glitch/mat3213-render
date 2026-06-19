@@ -1,0 +1,51 @@
+name: memos collector
+on:
+  workflow_run:
+    types: [completed]
+    workflows:
+      - Clip Producer
+      - Download Wikimedia Clips
+      - Fetch Media (runner-side, US-IP)
+      - Finish Clip
+      - Hunyuan i2v Daily
+      - Image Teaser
+      - Image Gen (CF Workers AI)
+      - pack render
+      - Pinterest Overlay Fetch
+      - Pipeline Finish
+      - Qwen Daily Gen
+      - Render Blend Video
+      - Render Full Video
+      - render pack
+      - Reve Gen
+      - Storyboard Render
+      - tsx-clip
+      - tsx-overlay
+      - tsx-sandbox
+      - VeoFree Daily Gen
+      - VeoFree Generate (1 per run)
+      - VeoFree i2v Generate (1 per run)
+      - Vinyl Label Render
+      - Vinyl Teaser
+      - Vinyl Viral
+      - Vzrosly Clip
+      - Build Embeddings
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+      - name: Configure rclone
+        env:
+          YDRIVE_CLIENT_ID: ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN: ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" > "$HOME/.config/rclone/rclone.conf"
+      - name: Report to memos
+        run: python3 memos_emit.py gh-ai "${{ github.event.workflow_run.name }}" "${{ github.event.workflow_run.conclusion }}" "run=${{ github.event.workflow_run.html_url }}"
