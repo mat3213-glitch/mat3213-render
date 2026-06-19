@@ -2,45 +2,46 @@
   "verdicts": [
     {
       "name": "scout_warm_night_muted",
-      "keep": false,
-      "score": 4,
-      "reason": "Оранжевый каст дешёвый, не кинематографично."
+      "keep": true,
+      "score": 8,
+      "reason": "Цинематогрфичный, глубокие тени, дорогой вид"
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": true,
-      "score": 8,
-      "reason": "Холодная глубина, дорого, под даунтемпо."
+      "keep": false,
+      "score": 4,
+      "reason": "Слишком холодный, стерильный, нет глубины"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": false,
-      "score": 5,
-      "reason": "Почти дубль первого, тот же оранжевый каст."
+      "keep": true,
+      "score": 8,
+      "reason": "Тёплый каст уместен, тени сохранены, цельно"
     },
     {
       "name": "scout_green_night_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Тизерный тон, атмосферно, но зелень на грани."
+      "keep": false,
+      "score": 3,
+      "reason": "Зелёный каст как дешёвый фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 3,
-      "reason": "Плоско, выцвешенно, нет глубины."
+      "keep": true,
+      "score": 7,
+      "reason": "Сдержанно, нейтрально, дорого смотрится"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": false,
-      "score": 5,
-      "reason": "Оливковый каст смешивает тёплый+холодный."
+      "score": 3,
+      "reason": "Выцветший, плоский, нет кинематографичности"
     }
   ],
   "recommend_merge": [
-    "scout_cool_mid_muted",
-    "scout_green_night_soft"
+    "scout_warm_night_muted",
+    "scout_warm_night_muted_2",
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-06-18",
+  "_generated": "2026-06-19",
   "_judge": "mimo-auto"
 }
