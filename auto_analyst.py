@@ -124,9 +124,15 @@ def collect_targets(args) -> list[str]:
             targets += [ln.strip() for ln in c.stdout.splitlines() if ln.strip().startswith("http")]
             rclone("moveto", f"{YD_QUEUE_PENDING}/{fn}", f"{YD_QUEUE_DONE}/{fn}")
     if args.from_scout:
-        # автономный источник: последний дайджест repo_scout (если выгружается на ЯД)
-        c = rclone("cat", f"{YD_SCOUT}/latest_urls.txt")
-        targets += [ln.strip() for ln in c.stdout.splitlines() if ln.strip().startswith("http")]
+        # АВТОНОМНЫЙ источник: локальный дайджест repo_scout (коммитится в этот же репо,
+        # воркфлоу его чекаутит — ЯД-обвязка не нужна). Дедуп против уже проверенных.
+        rep = HERE / "repo_scout_latest.md"
+        if rep.exists():
+            urls = re.findall(r"https://github\.com/[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+", rep.read_text(errors="replace"))
+            already = _existing_slugs()
+            for u in urls:
+                if slug_of(u) not in already:
+                    targets.append(u)
     # уникализируем, чистим
     seen, out = set(), []
     for t in targets:
@@ -134,6 +140,12 @@ def collect_targets(args) -> list[str]:
         if t and t not in seen:
             seen.add(t); out.append(t)
     return out
+
+
+def _existing_slugs() -> set[str]:
+    """Слаги уже проверенных инструментов на ЯД (для дедупа автономного прохода)."""
+    r = rclone("lsf", YD_TOOLS, "--dirs-only")
+    return {x.strip().rstrip("/") for x in r.stdout.splitlines() if x.strip()}
 
 
 def slug_of(url: str) -> str:
