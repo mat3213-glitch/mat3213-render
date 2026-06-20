@@ -1,0 +1,41 @@
+name: proxy probe (phone RU egress)
+
+# Ф2-верификация: облако (GH) -> tailnet -> SOCKS5 на телефоне Honor 10i.
+# Проверяет, что egress = жилой RU-IP телефона. Ничего не постит. Только ручной запуск.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tailscale up (ephemeral node)
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Wait for phone in tailnet
+        run: |
+          for i in $(seq 1 18); do
+            if tailscale ping -c 1 "${{ secrets.PHONE_TAILNET_IP }}" >/dev/null 2>&1; then
+              echo "✓ phone reachable on tailnet"; break
+            fi
+            echo "waiting for phone... attempt $i"; sleep 5
+          done
+          echo "--- tailscale status ---"
+          tailscale status || true
+
+      - name: Control — runner egress IP (should be US/datacenter)
+        run: |
+          echo "--- GH runner native egress ---"
+          curl -s --max-time 25 https://ifconfig.co/json || echo "control failed"
+
+      - name: Egress through phone SOCKS (should be RU residential)
+        run: |
+          PROXY="socks5h://${{ secrets.PROXY_USER }}:${{ secrets.PROXY_PASS }}@${{ secrets.PHONE_TAILNET_IP }}:1080"
+          echo "--- via phone proxy ---"
+          OUT=$(curl -s --max-time 50 --proxy "$PROXY" https://ifconfig.co/json)
+          echo "$OUT"
+          echo "$OUT" | grep -qi '"country_iso": *"RU"' \
+            && echo "✅ PROXY OK — egress is RU residential" \
+            || { echo "❌ proxy egress is NOT RU (or unreachable)"; exit 1; }
