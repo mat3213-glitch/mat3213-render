@@ -1,0 +1,134 @@
+name: pinterest post (via phone RU proxy)
+
+# Постинг пина в Pinterest из облака через жилой RU-прокси телефона (Honor 10i).
+# Канонический постер publish_pinterest.py тянется с ЯД (единый источник, не дубль).
+# Chromium НЕ умеет SOCKS5-auth -> на раннере локальный gost-форвардер 127.0.0.1:1081
+# добавляет auth и проксирует на телефон по tailnet.
+# По умолчанию DRY-RUN: логинится по кукам, делает скрин состояния, НЕ постит.
+# Реальная публикация только при confirm=true.
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: "Доска Pinterest"
+        required: false
+        default: "Музыка"
+        type: string
+      desc:
+        description: "Описание пина"
+        required: false
+        default: "test pin (dry-run via phone RU proxy)"
+        type: string
+      image:
+        description: "Путь к изображению на раннере (пусто = плейсхолдер для dry-run)"
+        required: false
+        default: ""
+        type: string
+      confirm:
+        description: "true = РЕАЛЬНО опубликовать (иначе dry-run)"
+        required: false
+        default: "false"
+        type: string
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch canonical poster from ydrive
+        run: |
+          mkdir -p pinterest/cookies pinterest/outputs
+          rclone copyto "ydrive:Content factory/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
+          test -s pinterest/publish_pinterest.py && echo "✓ poster fetched"
+
+      - name: Write Pinterest cookies from secret
+        env:
+          PINTEREST_COOKIES: ${{ secrets.PINTEREST_COOKIES }}
+        run: |
+          printf '%s\n' "$PINTEREST_COOKIES" > pinterest/cookies/pinterest_cookies.txt
+          echo "cookie lines: $(grep -c pinterest.com pinterest/cookies/pinterest_cookies.txt)"
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install --quiet playwright python-dotenv
+          python -m playwright install --with-deps chromium
+
+      - name: Tailscale up (ephemeral node)
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      - name: Wait for phone in tailnet
+        run: |
+          for i in $(seq 1 18); do
+            if tailscale ping -c 1 "${{ secrets.PHONE_TAILNET_IP }}" >/dev/null 2>&1; then
+              echo "✓ phone reachable on tailnet"; break
+            fi
+            echo "waiting for phone... attempt $i"; sleep 5
+          done
+
+      - name: Start local SOCKS forwarder (adds auth for Chromium)
+        env:
+          PHONE_IP:   ${{ secrets.PHONE_TAILNET_IP }}
+          PROXY_USER: ${{ secrets.PROXY_USER }}
+          PROXY_PASS: ${{ secrets.PROXY_PASS }}
+        run: |
+          curl -sL https://github.com/ginuerzh/gost/releases/download/v2.12.0/gost-linux-amd64-2.12.0.gz -o gost.gz
+          gunzip gost.gz && chmod +x gost
+          nohup ./gost -L "socks5://127.0.0.1:1081" \
+                       -F "socks5://${PROXY_USER}:${PROXY_PASS}@${PHONE_IP}:1080" \
+                       >/tmp/gost.log 2>&1 &
+          sleep 4
+          echo "--- forwarder self-check (egress via phone) ---"
+          curl -s --max-time 40 --proxy socks5h://127.0.0.1:1081 https://ifconfig.co/json || \
+            { echo "❌ forwarder/proxy down"; cat /tmp/gost.log; exit 1; }
+
+      - name: Make placeholder image (if none given)
+        run: |
+          if [ -z "${{ inputs.image }}" ]; then
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" \
+              | base64 -d > pinterest/outputs/placeholder.png
+            echo "IMG=pinterest/outputs/placeholder.png" >> "$GITHUB_ENV"
+          else
+            echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run poster
+        env:
+          PINTEREST_PROXY: "socks5://127.0.0.1:1081"
+        run: |
+          DRY="--dry-run"
+          [ "${{ inputs.confirm }}" = "true" ] && DRY=""
+          echo "mode: ${DRY:-PUBLISH}"
+          python pinterest/publish_pinterest.py \
+            --image "$IMG" \
+            --board "${{ inputs.board }}" \
+            --desc "${{ inputs.desc }}" \
+            $DRY
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinterest-screenshots
+          path: pinterest/outputs/*.png
+          if-no-files-found: warn
