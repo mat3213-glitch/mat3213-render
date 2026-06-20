@@ -1,0 +1,110 @@
+name: freellm fanout worker
+
+# Воркер оркестра fan-out (см. Instrument/AgentQueue/fanout.py, воркер freellm-gh).
+# Поднимает freellmapi (OpenAI-совместимый прокси 16 free-провайдеров) на раннере,
+# STATELESS бутстрапит его (ключи из секретов → seed по API, без UI, без персист-БД),
+# прогоняет батч промптов через /v1 и кладёт результат JSON на ЯД.
+# US-IP раннера открывает ВСЕ провайдеры (Groq/Cerebras тоже, которые RU-IP режет).
+# Батч-вход: ЯД Content factory/freellm_ci/in/<batch_id>.json
+# Результат:  ЯД Content factory/freellm_ci/out/<batch_id>.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_id:
+        description: "id батча (имя in/out файла на ЯД)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FREELLM_SHA: "015029858d8585f3076d86f18e28d595e55751b2"  # pinned freellmapi
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # render-репо: даёт freellm_seed_and_run.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch batch input from ydrive
+        env:
+          BATCH_ID: ${{ inputs.batch_id }}
+        run: |
+          set -e
+          rclone copyto "ydrive:Content factory/freellm_ci/in/${BATCH_ID}.json" batch.json
+          echo "batch tasks: $(python3 -c 'import json;print(len(json.load(open("batch.json"))))')"
+
+      - name: Clone freellmapi (pinned)
+        run: |
+          set -e
+          git clone --filter=blob:none https://github.com/tashfeenahmed/freellmapi.git /tmp/freellm
+          git -C /tmp/freellm checkout "$FREELLM_SHA"
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: /tmp/freellm/node_modules
+          key: freellm-nm-${{ env.FREELLM_SHA }}-${{ runner.os }}
+
+      - name: Install + build server
+        working-directory: /tmp/freellm
+        run: |
+          set -e
+          npm ci
+          npm run build:server
+
+      - name: Boot proxy + seed + run batch
+        env:
+          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2:   ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3:   ${{ secrets.GEMINI_API_KEY_3 }}
+          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          HUGGINGFACE_TOKEN:  ${{ secrets.HUGGINGFACE_TOKEN }}
+          GH_MODELS_TOKEN:    ${{ secrets.GH_MODELS_TOKEN }}
+        run: |
+          set -e
+          export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+          export PORT=3001
+          ( cd /tmp/freellm && node server/dist/index.js > /tmp/freellm_server.log 2>&1 ) &
+          SERVER_PID=$!
+          echo "proxy pid=$SERVER_PID"
+          set +e
+          python3 freellm_seed_and_run.py --batch batch.json --out out.json --timeout 150
+          RC=$?
+          echo "--- server log (tail) ---"; tail -n 30 /tmp/freellm_server.log || true
+          kill $SERVER_PID 2>/dev/null
+          exit $RC
+
+      - name: Upload result JSON to ydrive
+        if: always()
+        env:
+          BATCH_ID: ${{ inputs.batch_id }}
+        run: |
+          if [ -f out.json ]; then
+            rclone copyto out.json "ydrive:Content factory/freellm_ci/out/${BATCH_ID}.json"
+            echo "uploaded out/${BATCH_ID}.json"
+          else
+            echo '{"error":"no out.json — see run log"}' > err.json
+            rclone copyto err.json "ydrive:Content factory/freellm_ci/out/${BATCH_ID}.json"
+          fi
