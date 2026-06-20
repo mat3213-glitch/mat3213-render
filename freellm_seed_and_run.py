@@ -31,7 +31,7 @@ import urllib.error
 import urllib.request
 
 BASE = os.environ.get("FREELLM_BASE", "http://127.0.0.1:3001").rstrip("/")
-DEFAULT_MODEL = os.environ.get("FREELLM_DEFAULT_MODEL", "gemini-2.5-flash")
+DEFAULT_MODEL = os.environ.get("FREELLM_DEFAULT_MODEL", "auto")  # роутер сам выберет лучший живой бэкенд + failover
 SETUP_EMAIL = os.environ.get("FREELLM_EMAIL", "ci@freellm.local")
 SETUP_PASS = os.environ.get("FREELLM_PASSWORD", "ci-bootstrap-pass-8+")
 
