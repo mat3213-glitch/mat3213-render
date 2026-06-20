@@ -92,8 +92,11 @@ jobs:
           PROXY_USER: ${{ secrets.PROXY_USER }}
           PROXY_PASS: ${{ secrets.PROXY_PASS }}
         run: |
-          curl -sL https://github.com/ginuerzh/gost/releases/download/v2.12.0/gost-linux-amd64-2.12.0.gz -o gost.gz
+          set -euo pipefail
+          curl -fsSL https://github.com/ginuerzh/gost/releases/download/v2.11.5/gost-linux-amd64-2.11.5.gz -o gost.gz
+          file gost.gz | grep -qi gzip || { echo "❌ gost download not gzip"; head -c 200 gost.gz; exit 1; }
           gunzip gost.gz && chmod +x gost
+          ./gost -V || true
           nohup ./gost -L "socks5://127.0.0.1:1081" \
                        -F "socks5://${PROXY_USER}:${PROXY_PASS}@${PHONE_IP}:1080" \
                        >/tmp/gost.log 2>&1 &
