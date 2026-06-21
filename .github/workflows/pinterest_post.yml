@@ -24,6 +24,11 @@ on:
         required: false
         default: ""
         type: string
+      image_yd:
+        description: "Путь к арту на ЯД (напр. render_jobs/.../bg_art.png) — тянется на раннер; приоритетнее image"
+        required: false
+        default: ""
+        type: string
       confirm:
         description: "true = РЕАЛЬНО опубликовать (иначе dry-run)"
         required: false
@@ -105,14 +110,20 @@ jobs:
           curl -s --max-time 40 --proxy socks5h://127.0.0.1:1081 https://ifconfig.co/json || \
             { echo "❌ forwarder/proxy down"; cat /tmp/gost.log; exit 1; }
 
-      - name: Make placeholder image (if none given)
+      - name: Resolve image (ЯД art > runner path > placeholder)
         run: |
-          if [ -z "${{ inputs.image }}" ]; then
+          set -euo pipefail
+          if [ -n "${{ inputs.image_yd }}" ]; then
+            rclone copyto "ydrive:Content factory/${{ inputs.image_yd }}" pinterest/outputs/art.png
+            test -s pinterest/outputs/art.png || { echo "❌ арт с ЯД не скачался"; exit 1; }
+            echo "✓ арт с ЯД: ${{ inputs.image_yd }} ($(stat -c%s pinterest/outputs/art.png) bytes)"
+            echo "IMG=pinterest/outputs/art.png" >> "$GITHUB_ENV"
+          elif [ -n "${{ inputs.image }}" ]; then
+            echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
+          else
             echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" \
               | base64 -d > pinterest/outputs/placeholder.png
             echo "IMG=pinterest/outputs/placeholder.png" >> "$GITHUB_ENV"
-          else
-            echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
           fi
 
       - name: Run poster
