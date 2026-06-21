@@ -106,7 +106,7 @@ def pull_feed() -> list:
 
 
 def pull_checkpoint() -> str:
-    if rclone("copyto", f"{YD_AUDIT}/CHECKPOINT.md", "/tmp/CHECKPOINT.md", timeout=60).returncode == 0:
+    if rclone("copyto", f"{YD}/memory/CHECKPOINT.md", "/tmp/CHECKPOINT.md", timeout=60).returncode == 0:
         return Path("/tmp/CHECKPOINT.md").read_text(errors="ignore")[:5000]
     return ""
 
