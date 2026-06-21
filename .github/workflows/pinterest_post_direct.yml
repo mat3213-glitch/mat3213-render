@@ -1,39 +1,50 @@
-name: pinterest post (A/B direct US-GH, no proxy)
+name: pinterest post (direct US-GH, no proxy)
 
-# A/B-ТЕСТ: постинг в Pinterest НАПРЯМУЮ с US-GH-IP (датацентр США), БЕЗ прокси телефона.
-# Цель — проверить, терпит ли RU-аккаунт смену гео на US-датацентр. Если да — Pinterest
-# уходит с капризного телефона совсем.
-# Отличие от pinterest_post.yml: УБРАНЫ шаги Tailscale/Wait-phone/SOCKS-forwarder и env
-# PINTEREST_PROXY — Chromium ходит прямым US-GH-IP. Всё остальное идентично (тот же
-# канонический publish_pinterest.py с ЯД, те же куки PINTEREST_COOKIES).
-# По умолчанию DRY-RUN: логин по кукам + скрин состояния, НЕ постит. Реальный пост только confirm=true.
-# ОБРАТИМОСТЬ: сначала прогнать dry-run (проверить, что куки не отвалились от смены гео),
-# и лишь потом 1 реальный пин.
+# Постинг в Pinterest НАПРЯМУЮ с US-GH-IP (датацентр), БЕЗ прокси телефона.
+# Доказано A/B 2026-06-21: RU-аккаунт постит с US-IP без challenge (куки переживают гео).
+#
+# ДВА режима:
+#  • schedule (cron 01:00 NSK = 18:00 UTC) ИЛИ ручной use_queue=true →
+#    берёт СЛЕДУЮЩИЙ пин из очереди ЯД (pinterest_queue/pending/*.json, по имени),
+#    после успешной публикации джоб уезжает в pinterest_queue/done/.
+#  • ручной workflow_dispatch с инпутами → постит заданный арт (A/B-режим).
+#
+# Публикует РЕАЛЬНО при: event=schedule ЛИБО confirm=true. Иначе dry-run (логин+скрин, без поста).
+# В конце — TG-уведомление в личку (967686357) через CF Worker: ссылка на пин / «очередь пуста».
+# 01:00 NSK выбрано осознанно: ночью yaromat не сидит в Pinterest с RU-телефона → нет
+# пересечения сессий (impossible-travel снят).
 on:
+  schedule:
+    - cron: "0 18 * * *"   # 01:00 Asia/Novosibirsk (UTC+7, без DST)
   workflow_dispatch:
     inputs:
+      use_queue:
+        description: "true = взять следующий пин из очереди ЯД (как ночной cron)"
+        required: false
+        default: "false"
+        type: string
       board:
-        description: "Доска Pinterest"
+        description: "Доска Pinterest (ручной режим)"
         required: false
         default: "Музыка"
         type: string
       desc:
-        description: "Описание пина"
+        description: "Описание пина (ручной режим)"
         required: false
-        default: "test pin (A/B direct US-GH, no proxy)"
+        default: "test pin (direct US-GH, no proxy)"
         type: string
       image:
-        description: "Путь к изображению на раннере (пусто = плейсхолдер для dry-run)"
+        description: "Путь к изображению на раннере (пусто = плейсхолдер)"
         required: false
         default: ""
         type: string
       image_yd:
-        description: "Путь к арту на ЯД (напр. render_jobs/.../bg_art.png) — тянется на раннер; приоритетнее image"
+        description: "Путь к арту на ЯД (render_jobs/.../x.png) — приоритетнее image"
         required: false
         default: ""
         type: string
       confirm:
-        description: "true = РЕАЛЬНО опубликовать (иначе dry-run)"
+        description: "true = РЕАЛЬНО опубликовать (ручной режим; cron постит всегда)"
         required: false
         default: "false"
         type: string
@@ -62,6 +73,17 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
+      - name: Determine mode (queue vs manual inputs)
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.use_queue }}" = "true" ]; then
+            echo "queue=true" >> "$GITHUB_OUTPUT"
+            echo "режим: ОЧЕРЕДЬ"
+          else
+            echo "queue=false" >> "$GITHUB_OUTPUT"
+            echo "режим: РУЧНЫЕ ИНПУТЫ"
+          fi
+
       - name: Show egress IP (контроль гео раннера)
         run: |
           echo "--- egress US-GH-IP ---"
@@ -74,7 +96,31 @@ jobs:
           rclone copyto "ydrive:Content factory/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
           test -s pinterest/publish_pinterest.py && echo "✓ poster fetched"
 
+      - name: Resolve job from queue (queue mode)
+        if: steps.mode.outputs.queue == 'true'
+        run: |
+          set -euo pipefail
+          PENDING="ydrive:Content factory/pinterest_queue/pending"
+          NEXT=$(rclone lsf "$PENDING/" 2>/dev/null | grep '\.json$' | sort | head -1 || true)
+          if [ -z "$NEXT" ]; then
+            echo "QUEUE_EMPTY=1" >> "$GITHUB_ENV"
+            echo "::warning::очередь Pinterest пуста — постить нечего"
+            exit 0
+          fi
+          rclone copyto "$PENDING/$NEXT" job.json
+          python3 - <<'PYEOF'
+          import json, os
+          j = json.load(open("job.json", encoding="utf-8"))
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as f:
+              f.write(f"Q_IMAGE_YD={j['image_yd']}\n")
+              f.write(f"BOARD={j.get('board','Музыка')}\n")
+              f.write("Q_DESC<<__EOF__\n" + j["desc"].rstrip("\n") + "\n__EOF__\n")
+          PYEOF
+          echo "Q_FILE=$NEXT" >> "$GITHUB_ENV"
+          echo "✓ взят из очереди: $NEXT"
+
       - name: Write Pinterest cookies from secret
+        if: env.QUEUE_EMPTY != '1'
         env:
           PINTEREST_COOKIES: ${{ secrets.PINTEREST_COOKIES }}
         run: |
@@ -82,17 +128,20 @@ jobs:
           echo "cookie lines: $(grep -c pinterest.com pinterest/cookies/pinterest_cookies.txt)"
 
       - name: Install Playwright + Chromium
+        if: env.QUEUE_EMPTY != '1'
         run: |
           pip install --quiet playwright python-dotenv
           python -m playwright install --with-deps chromium
 
-      - name: Resolve image (ЯД art > runner path > placeholder)
+      - name: Resolve image (queue ЯД > input ЯД > runner path > placeholder)
+        if: env.QUEUE_EMPTY != '1'
         run: |
           set -euo pipefail
-          if [ -n "${{ inputs.image_yd }}" ]; then
-            rclone copyto "ydrive:Content factory/${{ inputs.image_yd }}" pinterest/outputs/art.png
-            test -s pinterest/outputs/art.png || { echo "❌ арт с ЯД не скачался"; exit 1; }
-            echo "✓ арт с ЯД: ${{ inputs.image_yd }} ($(stat -c%s pinterest/outputs/art.png) bytes)"
+          IMG_YD="${Q_IMAGE_YD:-${{ inputs.image_yd }}}"
+          if [ -n "$IMG_YD" ]; then
+            rclone copyto "ydrive:Content factory/$IMG_YD" pinterest/outputs/art.png
+            test -s pinterest/outputs/art.png || { echo "❌ арт с ЯД не скачался: $IMG_YD"; exit 1; }
+            echo "✓ арт с ЯД: $IMG_YD ($(stat -c%s pinterest/outputs/art.png) bytes)"
             echo "IMG=pinterest/outputs/art.png" >> "$GITHUB_ENV"
           elif [ -n "${{ inputs.image }}" ]; then
             echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
@@ -103,15 +152,74 @@ jobs:
           fi
 
       - name: Run poster (DIRECT, no proxy)
+        if: env.QUEUE_EMPTY != '1'
         run: |
+          set -o pipefail
+          # Реальный пост: cron ИЛИ confirm=true. Иначе dry-run.
           DRY="--dry-run"
+          [ "${{ github.event_name }}" = "schedule" ] && DRY=""
           [ "${{ inputs.confirm }}" = "true" ] && DRY=""
+          BOARD="${BOARD:-${{ inputs.board }}}"
+          DESC="${Q_DESC:-${{ inputs.desc }}}"
           echo "mode: ${DRY:-PUBLISH}  (egress = US-GH datacenter, БЕЗ прокси телефона)"
+          echo "доска: $BOARD"
           python pinterest/publish_pinterest.py \
             --image "$IMG" \
-            --board "${{ inputs.board }}" \
-            --desc "${{ inputs.desc }}" \
-            $DRY
+            --board "$BOARD" \
+            --desc "$DESC" \
+            $DRY 2>&1 | tee pinterest/outputs/poster.log
+
+      - name: Extract pin URL
+        if: always()
+        run: |
+          URL=""
+          [ -f pinterest/outputs/poster.log ] && \
+            URL=$(grep -oE 'https://www\.pinterest\.com/pin/[0-9]+' pinterest/outputs/poster.log | head -1 || true)
+          echo "PIN_URL=$URL" >> "$GITHUB_ENV"
+          [ -n "$URL" ] && echo "✓ пин: $URL" || echo "(URL пина не найден — dry-run/ошибка/очередь пуста)"
+
+      - name: Archive queue item to done (на успехе)
+        if: steps.mode.outputs.queue == 'true' && env.QUEUE_EMPTY != '1' && env.PIN_URL != ''
+        run: |
+          rclone moveto "ydrive:Content factory/pinterest_queue/pending/$Q_FILE" \
+                        "ydrive:Content factory/pinterest_queue/done/$Q_FILE" \
+            && echo "✓ джоб $Q_FILE → done/"
+
+      - name: Notify Telegram (личка admin)
+        if: always()
+        env:
+          TG_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_SECRET: ${{ secrets.TG_WORKER_SECRET }}
+        run: |
+          python3 - <<'PYEOF'
+          import os, json, urllib.request
+          worker = "https://content-factory-worker-2.mat3213.workers.dev"
+          token  = os.environ.get("TG_TOKEN", "")
+          secret = os.environ.get("TG_SECRET", "")
+          admin  = 967686357
+          pin    = os.environ.get("PIN_URL", "").strip()
+          empty  = os.environ.get("QUEUE_EMPTY", "") == "1"
+          board  = os.environ.get("BOARD", "?") or "?"
+          run_id = os.environ.get("GITHUB_RUN_ID", "")
+          if pin:
+              msg = f"✅ Pinterest: пост ушёл\n{pin}\nдоска: {board}"
+          elif empty:
+              msg = "⚠️ Pinterest: очередь пуста — пост не ушёл (добавь джоб в pinterest_queue/pending/)"
+          else:
+              msg = f"❗️Pinterest: пост НЕ опубликован (dry-run или ошибка)\nrun {run_id}"
+          if not token or not secret:
+              print("TG: нет токена/секрета — пропуск"); raise SystemExit(0)
+          data = json.dumps({"chat_id": admin, "text": msg}).encode()
+          req = urllib.request.Request(
+              f"{worker}/bot{token}/sendMessage", data=data,
+              headers={"Content-Type": "application/json",
+                       "X-Worker-Secret": secret, "User-Agent": "curl/8.5.0"})
+          try:
+              r = urllib.request.urlopen(req, timeout=25)
+              print("TG sent, HTTP", r.status)
+          except Exception as e:
+              print("TG ERR:", e)
+          PYEOF
 
       - name: Upload screenshots
         if: always()
