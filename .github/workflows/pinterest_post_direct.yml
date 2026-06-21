@@ -1,0 +1,122 @@
+name: pinterest post (A/B direct US-GH, no proxy)
+
+# A/B-ТЕСТ: постинг в Pinterest НАПРЯМУЮ с US-GH-IP (датацентр США), БЕЗ прокси телефона.
+# Цель — проверить, терпит ли RU-аккаунт смену гео на US-датацентр. Если да — Pinterest
+# уходит с капризного телефона совсем.
+# Отличие от pinterest_post.yml: УБРАНЫ шаги Tailscale/Wait-phone/SOCKS-forwarder и env
+# PINTEREST_PROXY — Chromium ходит прямым US-GH-IP. Всё остальное идентично (тот же
+# канонический publish_pinterest.py с ЯД, те же куки PINTEREST_COOKIES).
+# По умолчанию DRY-RUN: логин по кукам + скрин состояния, НЕ постит. Реальный пост только confirm=true.
+# ОБРАТИМОСТЬ: сначала прогнать dry-run (проверить, что куки не отвалились от смены гео),
+# и лишь потом 1 реальный пин.
+on:
+  workflow_dispatch:
+    inputs:
+      board:
+        description: "Доска Pinterest"
+        required: false
+        default: "Музыка"
+        type: string
+      desc:
+        description: "Описание пина"
+        required: false
+        default: "test pin (A/B direct US-GH, no proxy)"
+        type: string
+      image:
+        description: "Путь к изображению на раннере (пусто = плейсхолдер для dry-run)"
+        required: false
+        default: ""
+        type: string
+      image_yd:
+        description: "Путь к арту на ЯД (напр. render_jobs/.../bg_art.png) — тянется на раннер; приоритетнее image"
+        required: false
+        default: ""
+        type: string
+      confirm:
+        description: "true = РЕАЛЬНО опубликовать (иначе dry-run)"
+        required: false
+        default: "false"
+        type: string
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Show egress IP (контроль гео раннера)
+        run: |
+          echo "--- egress US-GH-IP ---"
+          curl -s --max-time 20 http://ip-api.com/json | head -c 400 || echo "(ip-api недоступен)"
+          echo ""
+
+      - name: Fetch canonical poster from ydrive
+        run: |
+          mkdir -p pinterest/cookies pinterest/outputs
+          rclone copyto "ydrive:Content factory/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
+          test -s pinterest/publish_pinterest.py && echo "✓ poster fetched"
+
+      - name: Write Pinterest cookies from secret
+        env:
+          PINTEREST_COOKIES: ${{ secrets.PINTEREST_COOKIES }}
+        run: |
+          printf '%s\n' "$PINTEREST_COOKIES" > pinterest/cookies/pinterest_cookies.txt
+          echo "cookie lines: $(grep -c pinterest.com pinterest/cookies/pinterest_cookies.txt)"
+
+      - name: Install Playwright + Chromium
+        run: |
+          pip install --quiet playwright python-dotenv
+          python -m playwright install --with-deps chromium
+
+      - name: Resolve image (ЯД art > runner path > placeholder)
+        run: |
+          set -euo pipefail
+          if [ -n "${{ inputs.image_yd }}" ]; then
+            rclone copyto "ydrive:Content factory/${{ inputs.image_yd }}" pinterest/outputs/art.png
+            test -s pinterest/outputs/art.png || { echo "❌ арт с ЯД не скачался"; exit 1; }
+            echo "✓ арт с ЯД: ${{ inputs.image_yd }} ($(stat -c%s pinterest/outputs/art.png) bytes)"
+            echo "IMG=pinterest/outputs/art.png" >> "$GITHUB_ENV"
+          elif [ -n "${{ inputs.image }}" ]; then
+            echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
+          else
+            echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" \
+              | base64 -d > pinterest/outputs/placeholder.png
+            echo "IMG=pinterest/outputs/placeholder.png" >> "$GITHUB_ENV"
+          fi
+
+      - name: Run poster (DIRECT, no proxy)
+        run: |
+          DRY="--dry-run"
+          [ "${{ inputs.confirm }}" = "true" ] && DRY=""
+          echo "mode: ${DRY:-PUBLISH}  (egress = US-GH datacenter, БЕЗ прокси телефона)"
+          python pinterest/publish_pinterest.py \
+            --image "$IMG" \
+            --board "${{ inputs.board }}" \
+            --desc "${{ inputs.desc }}" \
+            $DRY
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinterest-screenshots-direct
+          path: pinterest/outputs/*.png
+          if-no-files-found: warn
