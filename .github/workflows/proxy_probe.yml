@@ -28,14 +28,22 @@ jobs:
       - name: Control — runner egress IP (should be US/datacenter)
         run: |
           echo "--- GH runner native egress ---"
-          curl -s --max-time 25 https://ifconfig.co/json || echo "control failed"
+          curl -s --max-time 25 http://ip-api.com/json || echo "control failed"
 
       - name: Egress through phone SOCKS (should be RU residential)
         run: |
           PROXY="socks5h://${{ secrets.PROXY_USER }}:${{ secrets.PROXY_PASS }}@${{ secrets.PHONE_TAILNET_IP }}:1080"
           echo "--- via phone proxy ---"
-          OUT=$(curl -s --max-time 50 --proxy "$PROXY" https://ifconfig.co/json)
+          # curl exit 7 = не достучались до SOCKS (gost на телефоне не слушает :1080).
+          if ! curl -s --max-time 30 --proxy "$PROXY" http://ip-api.com/json -o /tmp/egress.json; then
+            rc=$?
+            echo "❌ НЕ удалось подключиться к SOCKS телефона (curl exit $rc)."
+            echo "   Телефон в тайннете (ping выше прошёл), но gost на :1080 не отвечает."
+            echo "   → На телефоне (Termux) переподними gost (см. project_phone_proxy)."
+            exit 1
+          fi
+          OUT=$(cat /tmp/egress.json)
           echo "$OUT"
-          echo "$OUT" | grep -qi '"country_iso": *"RU"' \
+          echo "$OUT" | grep -qi '"countryCode": *"RU"' \
             && echo "✅ PROXY OK — egress is RU residential" \
-            || { echo "❌ proxy egress is NOT RU (or unreachable)"; exit 1; }
+            || { echo "❌ gost отвечает, но egress НЕ RU"; exit 1; }
