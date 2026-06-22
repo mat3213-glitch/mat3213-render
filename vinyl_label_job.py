@@ -30,7 +30,7 @@ if not JOB_ID:
     sys.exit("JOB_ID not set")
 REMOTE = "ydrive"
 CF = "Content factory"
-JOB_YD = f"{CF}/render_jobs/{JOB_ID}"
+JOB_YD = f"{CF}/cloud_io/render_jobs/{JOB_ID}"
 WORK = Path("/tmp/vlabel"); WORK.mkdir(parents=True, exist_ok=True)
 W, H = 1080, 1920
 COVER = f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H}"

@@ -29,7 +29,7 @@ if not JOB_ID:
 
 REMOTE   = "ydrive"
 CF       = "Content factory"
-JOB_YD   = f"{CF}/render_jobs/{JOB_ID}"
+JOB_YD   = f"{CF}/cloud_io/render_jobs/{JOB_ID}"
 WORKDIR  = Path("/tmp/sb_job")
 CLIPS    = WORKDIR / "clips"
 SHOTS    = WORKDIR / "shots"
@@ -71,7 +71,7 @@ def pull_clip(path: str) -> Path | None:
     local = CLIPS / name
     if local.exists():
         return local
-    if yd_get(f"{CF}/{path}", local):
+    if yd_get(f"{CF}/assets/{path}", local):
         return local
     print(f"  ✗ не стянул клип {path}", flush=True)
     return None

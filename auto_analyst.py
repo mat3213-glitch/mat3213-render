@@ -48,8 +48,8 @@ RUBRIC_PATH = HERE / "analyst_rubric.yaml"
 MIMO = Path.home() / ".mimocode" / "bin" / "mimo"
 
 YD = "ydrive:Content factory"
-YD_QUEUE_PENDING = f"{YD}/CreativeLab/analyst_queue/pending"
-YD_QUEUE_DONE = f"{YD}/CreativeLab/analyst_queue/done"
+YD_QUEUE_PENDING = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
+YD_QUEUE_DONE = f"{YD}/cloud_io/CreativeLab/analyst_queue/done"
 YD_TOOLS = f"{YD}/verified_tools"
 YD_BOARD = f"{YD}/verified_tools/ADOPTION_BOARD.md"
 YD_SCOUT = f"{YD}/repo_scout"   # находки repo_scout (если есть)
