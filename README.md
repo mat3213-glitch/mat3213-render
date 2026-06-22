@@ -10,7 +10,7 @@
 
 ## Конвенция job'ов
 
-Многие рендер-воркфлоу читают задание с ЯД: `Content factory/render_jobs/<JOB_ID>/`
+Многие рендер-воркфлоу читают задание с ЯД: `Content factory/cloud_io/render_jobs/<JOB_ID>/`
 с `job.json` (+ `track.mp3`, `src_NN.mp4`). Результат и `status.txt` пишутся туда же.
 
 ```jsonc
