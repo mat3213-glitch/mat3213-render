@@ -59,8 +59,8 @@ jobs:
       - name: Upload to YD
         run: |
           TS=$(date +%Y%m%d_%H%M%S)
-          rclone copy /tmp/reve_outputs/ "ydrive:Content factory/Instrument/Reve/outputs/${TS}/"
-          echo "Uploaded to ydrive:Content factory/Instrument/Reve/outputs/${TS}/"
+          rclone copy /tmp/reve_outputs/ "ydrive:Content factory/mirror/Instrument/Reve/outputs/${TS}/"
+          echo "Uploaded to ydrive:Content factory/mirror/Instrument/Reve/outputs/${TS}/"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

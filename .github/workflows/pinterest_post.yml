@@ -62,7 +62,7 @@ jobs:
       - name: Fetch canonical poster from ydrive
         run: |
           mkdir -p pinterest/cookies pinterest/outputs
-          rclone copyto "ydrive:Content factory/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
+          rclone copyto "ydrive:Content factory/mirror/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
           test -s pinterest/publish_pinterest.py && echo "✓ poster fetched"
 
       - name: Write Pinterest cookies from secret

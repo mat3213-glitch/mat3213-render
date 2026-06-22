@@ -24,7 +24,7 @@ from pathlib import Path
 
 YD = "ydrive:Content factory"
 YD_FEED = f"{YD}/cloud_io/memory_os_feed"
-YD_AUDIT = f"{YD}/AUDIT"
+YD_AUDIT = f"{YD}/mirror/AUDIT"
 GH_URL = "https://models.github.ai/inference/chat/completions"
 GH_MODELS = ("openai/gpt-4o-mini", "meta/llama-3.3-70b-instruct")
 REPO = os.environ.get("GITHUB_REPOSITORY", "mat3213-glitch/mat3213-render")
@@ -106,7 +106,7 @@ def pull_feed() -> list:
 
 
 def pull_checkpoint() -> str:
-    if rclone("copyto", f"{YD}/memory/CHECKPOINT.md", "/tmp/CHECKPOINT.md", timeout=60).returncode == 0:
+    if rclone("copyto", f"{YD}/mirror/memory/CHECKPOINT.md", "/tmp/CHECKPOINT.md", timeout=60).returncode == 0:
         return Path("/tmp/CHECKPOINT.md").read_text(errors="ignore")[:5000]
     return ""
 
