@@ -72,7 +72,7 @@ jobs:
       - name: Upload preview to YaDisk
         run: |
           STAMP=$(date +%Y%m%d_%H%M%S)
-          rclone copyto preview.mp4 "ydrive:Content factory/tsx_sandbox/${{ github.event.inputs.composition }}_${STAMP}.mp4"
+          rclone copyto preview.mp4 "ydrive:Content factory/cloud_io/tsx_sandbox/${{ github.event.inputs.composition }}_${STAMP}.mp4"
 
       - name: Ping preview to Telegram
         env:
