@@ -3,46 +3,59 @@
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 7,
-      "reason": "Тёплый, атмосферный, кинематографичный — хорош для даунтемпо"
+      "score": 8,
+      "reason": "Тёплый приглушённый тон, кинематографичная глубина без дешёвого каста"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 6,
-      "reason": "Холодноватый, но атмосферный, подходит для ночных треков"
+      "score": 7,
+      "reason": "Прохладный приглушённый, дорого смотрится, атмосферно"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 7,
-      "reason": "Похож на первый, но баланс тепла чуть глубже"
+      "reason": "Похож на первый, чуть мягче — дополняет ротацию"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
       "score": 4,
-      "reason": "Зелёный каст выглядит как дешёвый фильтр"
+      "reason": "Зелёный каст ощущается как дешёвый фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
       "score": 5,
-      "reason": "Слишком плоско, нет глубины и характера"
+      "reason": "Нейтрально, но плосковато — нет характера под даунтемпо"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": true,
       "score": 6,
-      "reason": "Тёплый, мягкий, но чуть недостаточно глубины"
+      "reason": "Мягче первого, но сохраняет глубину и тёплый характер"
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "keep": false,
+      "score": 3,
+      "reason": "Зелёный каст ещё ярче — не наш визуал"
+    },
+    {
+      "name": "scout_cool_mid_soft",
+      "keep": true,
+      "score": 7,
+      "reason": "Прохладная мягкость, дорого, атмосферно для гаража"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
     "scout_cool_mid_muted",
     "scout_warm_night_muted_2",
-    "scout_warm_mid_soft"
+    "scout_warm_mid_soft",
+    "scout_cool_mid_soft"
   ],
-  "_generated": "2026-06-21",
+  "_generated": "2026-06-22",
   "_judge": "mimo-auto"
 }

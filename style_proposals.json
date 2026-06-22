@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-06-21",
+  "_generated": "2026-06-22",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
@@ -12,7 +12,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "22959684.jpg"
+      "_src": "76607602.jpg"
     },
     {
       "name": "scout_cool_mid_muted",
@@ -24,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "96893117.jpg"
+      "_src": "19832626.jpg"
     },
     {
       "name": "scout_warm_night_muted_2",
@@ -36,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "76200936.jpg"
+      "_src": "19576137.jpg"
     },
     {
       "name": "scout_green_night_soft",
@@ -48,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "62845481.jpg"
+      "_src": "35559075.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -60,7 +60,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "37124389.jpg"
+      "_src": "36759491.jpg"
     },
     {
       "name": "scout_warm_mid_soft",
@@ -72,7 +72,31 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "4915733.jpg"
+      "_src": "76681960.jpg"
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "note": "scout: green mid soft",
+      "eq": "contrast=1.06:saturation=1.0:brightness=0.013:gamma=0.986",
+      "balance": "gs=0.049:bs=-0.042:gm=0.1:bm=-0.1:rh=0.069:gh=0.097:bh=-0.1",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "72086868.jpg"
+    },
+    {
+      "name": "scout_cool_mid_soft",
+      "note": "scout: cool mid soft",
+      "eq": "contrast=0.91:saturation=0.89:brightness=-0.038:gamma=1.041",
+      "balance": "rs=-0.039:bs=0.051:rm=-0.061:gm=0.016:bm=0.045:rh=-0.079:gh=0.061:bh=0.018",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "22197107.jpg"
     }
   ]
 }
