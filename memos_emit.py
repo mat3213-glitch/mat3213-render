@@ -3,7 +3,7 @@
 memos_emit.py — репорт события/ошибки в memory_os-фид на ЯД (для GH Actions / рендеров).
 
 Автономный (stdlib + rclone, без зависимости от пакета memory_os): пишет JSONL-строку и
-заливает в ydrive:Content factory/memory_os_feed/. Локальный коллектор (memory_os.emit.ingest)
+заливает в ydrive:Content factory/cloud_io/memory_os_feed/. Локальный коллектор (memory_os.emit.ingest)
 вольёт её в БД перед рефлексией — так ошибки/инсайты облачных ранов попадают в самообучение.
 
 Использование (в шаге воркфлоу):
@@ -31,6 +31,6 @@ fn = f"/tmp/memos_{rid}_{att}_{int(time.time() * 1000) % 100000}.jsonl"
 with open(fn, "w", encoding="utf-8") as f:
     f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
-subprocess.run(["rclone", "copyto", fn, f"ydrive:Content factory/memory_os_feed/{os.path.basename(fn)}"],
+subprocess.run(["rclone", "copyto", fn, f"ydrive:Content factory/cloud_io/memory_os_feed/{os.path.basename(fn)}"],
                check=False)
 print("emitted:", os.path.basename(fn), rec["status"])

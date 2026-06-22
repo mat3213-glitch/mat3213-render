@@ -23,7 +23,7 @@ import urllib.request
 from pathlib import Path
 
 YD = "ydrive:Content factory"
-YD_FEED = f"{YD}/memory_os_feed"
+YD_FEED = f"{YD}/cloud_io/memory_os_feed"
 YD_AUDIT = f"{YD}/AUDIT"
 GH_URL = "https://models.github.ai/inference/chat/completions"
 GH_MODELS = ("openai/gpt-4o-mini", "meta/llama-3.3-70b-instruct")
