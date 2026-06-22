@@ -4,57 +4,43 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Тёплый приглушённый тон, кинематографичная глубина без дешёвого каста"
+      "reason": "Цинематографично, тёплые тона平衡中和冷 teal, дорого."
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": true,
-      "score": 7,
-      "reason": "Прохладный приглушённый, дорого смотрится, атмосферно"
+      "keep": false,
+      "score": 6,
+      "reason": "Слегка плосковато, мало глубины,.safe."
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 7,
-      "reason": "Похож на первый, чуть мягче — дополняет ротацию"
+      "reason": "Хороший баланс, чуть тусклее оригинала, но цельно."
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст ощущается как дешёвый фильтр"
+      "score": 5,
+      "reason": "Зелёный каст заметен, ощущение дешёвого фильтра."
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
-      "score": 5,
-      "reason": "Нейтрально, но плосковато — нет характера под даунтемпо"
+      "score": 4,
+      "reason": "Слишком нейтрально, нет характера, safe."
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": true,
-      "score": 6,
-      "reason": "Мягче первого, но сохраняет глубину и тёплый характер"
-    },
-    {
-      "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 3,
-      "reason": "Зелёный каст ещё ярче — не наш визуал"
-    },
-    {
-      "name": "scout_cool_mid_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Прохладная мягкость, дорого, атмосферно для гаража"
+      "score": 9,
+      "reason": "Тёплый glow на фоне teal, глубина, дорого, идеально."
     }
   ],
   "recommend_merge": [
-    "scout_warm_night_muted",
-    "scout_cool_mid_muted",
-    "scout_warm_night_muted_2",
     "scout_warm_mid_soft",
-    "scout_cool_mid_soft"
+    "scout_warm_night_muted",
+    "scout_warm_night_muted_2"
   ],
   "_generated": "2026-06-22",
   "_judge": "mimo-auto"
