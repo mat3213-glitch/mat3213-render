@@ -27,7 +27,7 @@ if not JOB_ID:
     sys.exit("JOB_ID not set")
 
 REMOTE  = "ydrive"
-JOBS_YD = "Content factory/render_jobs"
+JOBS_YD = "Content factory/cloud_io/render_jobs"
 JOB_YD  = f"{JOBS_YD}/{JOB_ID}"
 WORKDIR = Path("/tmp/image_teaser_job")
 WORKDIR.mkdir(parents=True, exist_ok=True)

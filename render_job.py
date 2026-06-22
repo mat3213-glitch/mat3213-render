@@ -4,13 +4,13 @@ render_job.py — GitHub Actions runner для BLEND-рендера.
 
 YaDisk контракт:
   Вход (ноут кладёт перед trigger):
-    Content factory/render_jobs/<JOB_ID>/clips/*.mp4  — стилизованные клипы
-    Content factory/render_jobs/<JOB_ID>/track.mp3    — аудио-трек
-    Content factory/render_jobs/<JOB_ID>/job.json     — параметры рендера
+    Content factory/cloud_io/render_jobs/<JOB_ID>/clips/*.mp4  — стилизованные клипы
+    Content factory/cloud_io/render_jobs/<JOB_ID>/track.mp3    — аудио-трек
+    Content factory/cloud_io/render_jobs/<JOB_ID>/job.json     — параметры рендера
 
   Выход (раннер кладёт по завершению):
-    Content factory/render_jobs/<JOB_ID>/result.mp4   — готовое видео
-    Content factory/render_jobs/<JOB_ID>/status.txt   — "done" или "error: ..."
+    Content factory/cloud_io/render_jobs/<JOB_ID>/result.mp4   — готовое видео
+    Content factory/cloud_io/render_jobs/<JOB_ID>/status.txt   — "done" или "error: ..."
 
 job.json:
   {"track_dur": 196.78, "out_name": "ty_prosti_blend.mp4"}
@@ -32,7 +32,7 @@ from pathlib import Path
 JOB_ID = os.environ["JOB_ID"]
 
 REMOTE = "ydrive"
-JOB_YD = f"Content factory/render_jobs/{JOB_ID}"
+JOB_YD = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 
 
 # ── rclone YaDisk ─────────────────────────────────────────────────────────────

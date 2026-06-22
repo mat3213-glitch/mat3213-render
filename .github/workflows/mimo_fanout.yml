@@ -2,7 +2,7 @@ name: mimo fanout worker
 
 # 4-й воркер оркестра fan-out (см. Instrument/AgentQueue/fanout.py, воркер gh-mimo).
 # Принимает task_id + prompt, гоняет mimo (mimocode) headless через free-client,
-# кладёт результат JSON на ЯД: Content factory/mimo_ci/fanout_out/<task_id>.json.
+# кладёт результат JSON на ЯД: Content factory/cloud_io/mimo_ci/fanout_out/<task_id>.json.
 # Каждый диспатч = отдельный ран = настоящая облачная параллель (без SQLite-локов,
 # без нагрузки на бук). Бинарь+auth тянутся с приватной ЯД, НЕ из секретов.
 
@@ -45,10 +45,10 @@ jobs:
         run: |
           set -e
           mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
           chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
 
       - name: Run mimo
         id: run
@@ -93,5 +93,5 @@ jobs:
           out.write_text(json.dumps(res, ensure_ascii=False, indent=2), encoding="utf-8")
           print(json.dumps(res, ensure_ascii=False)[:500])
           PY
-          rclone copyto /tmp/result.json "ydrive:Content factory/mimo_ci/fanout_out/${TASK_ID}.json"
+          rclone copyto /tmp/result.json "ydrive:Content factory/cloud_io/mimo_ci/fanout_out/${TASK_ID}.json"
           echo "→ ydrive: mimo_ci/fanout_out/${TASK_ID}.json"

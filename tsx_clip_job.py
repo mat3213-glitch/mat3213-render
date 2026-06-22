@@ -23,7 +23,7 @@ if not JOB_ID:
     sys.exit("JOB_ID not set")
 
 REMOTE  = "ydrive"
-JOB_YD  = f"Content factory/render_jobs/{JOB_ID}"
+JOB_YD  = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 WORK    = Path("/tmp/tsx_clip"); WORK.mkdir(parents=True, exist_ok=True)
 REPO    = Path(__file__).resolve().parent
 REMOTION = REPO / "remotion"

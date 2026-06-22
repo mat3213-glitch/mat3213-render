@@ -100,7 +100,7 @@ jobs:
         if: steps.mode.outputs.queue == 'true'
         run: |
           set -euo pipefail
-          PENDING="ydrive:Content factory/pinterest_queue/pending"
+          PENDING="ydrive:Content factory/cloud_io/pinterest_queue/pending"
           NEXT=$(rclone lsf "$PENDING/" 2>/dev/null | grep '\.json$' | sort | head -1 || true)
           if [ -z "$NEXT" ]; then
             echo "QUEUE_EMPTY=1" >> "$GITHUB_ENV"
@@ -181,8 +181,8 @@ jobs:
       - name: Archive queue item to done (на успехе)
         if: steps.mode.outputs.queue == 'true' && env.QUEUE_EMPTY != '1' && env.PIN_URL != ''
         run: |
-          rclone moveto "ydrive:Content factory/pinterest_queue/pending/$Q_FILE" \
-                        "ydrive:Content factory/pinterest_queue/done/$Q_FILE" \
+          rclone moveto "ydrive:Content factory/cloud_io/pinterest_queue/pending/$Q_FILE" \
+                        "ydrive:Content factory/cloud_io/pinterest_queue/done/$Q_FILE" \
             && echo "✓ джоб $Q_FILE → done/"
 
       - name: Notify Telegram (личка admin)

@@ -24,7 +24,7 @@ if not JOB_ID:
     sys.exit("JOB_ID not set")
 
 REMOTE  = "ydrive"
-JOBS_YD = "Content factory/render_jobs"
+JOBS_YD = "Content factory/cloud_io/render_jobs"
 JOB_YD  = f"{JOBS_YD}/{JOB_ID}"
 WORK    = Path("/tmp/vzrosly_job"); WORK.mkdir(parents=True, exist_ok=True)
 REPO    = Path(__file__).resolve().parent

@@ -5,8 +5,8 @@ name: freellm fanout worker
 # STATELESS бутстрапит его (ключи из секретов → seed по API, без UI, без персист-БД),
 # прогоняет батч промптов через /v1 и кладёт результат JSON на ЯД.
 # US-IP раннера открывает ВСЕ провайдеры (Groq/Cerebras тоже, которые RU-IP режет).
-# Батч-вход: ЯД Content factory/freellm_ci/in/<batch_id>.json
-# Результат:  ЯД Content factory/freellm_ci/out/<batch_id>.json
+# Батч-вход: ЯД Content factory/cloud_io/freellm_ci/in/<batch_id>.json
+# Результат:  ЯД Content factory/cloud_io/freellm_ci/out/<batch_id>.json
 
 on:
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
           BATCH_ID: ${{ inputs.batch_id }}
         run: |
           set -e
-          rclone copyto "ydrive:Content factory/freellm_ci/in/${BATCH_ID}.json" batch.json
+          rclone copyto "ydrive:Content factory/cloud_io/freellm_ci/in/${BATCH_ID}.json" batch.json
           echo "batch tasks: $(python3 -c 'import json;print(len(json.load(open("batch.json"))))')"
 
       - name: Clone freellmapi (pinned)
@@ -102,9 +102,9 @@ jobs:
           BATCH_ID: ${{ inputs.batch_id }}
         run: |
           if [ -f out.json ]; then
-            rclone copyto out.json "ydrive:Content factory/freellm_ci/out/${BATCH_ID}.json"
+            rclone copyto out.json "ydrive:Content factory/cloud_io/freellm_ci/out/${BATCH_ID}.json"
             echo "uploaded out/${BATCH_ID}.json"
           else
             echo '{"error":"no out.json — see run log"}' > err.json
-            rclone copyto err.json "ydrive:Content factory/freellm_ci/out/${BATCH_ID}.json"
+            rclone copyto err.json "ydrive:Content factory/cloud_io/freellm_ci/out/${BATCH_ID}.json"
           fi

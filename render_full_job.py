@@ -4,13 +4,13 @@ render_full_job.py — GitHub Actions runner для FULL_RENDER пайплайн
 
 YaDisk контракт:
   Вход (ноут кладёт перед trigger):
-    Content factory/render_jobs/<JOB_ID>/art.png       — обложка
-    Content factory/render_jobs/<JOB_ID>/track.mp3     — аудио-трек
-    Content factory/render_jobs/<JOB_ID>/job.json      — {"text": "...", "out_name": "..."}
+    Content factory/cloud_io/render_jobs/<JOB_ID>/art.png       — обложка
+    Content factory/cloud_io/render_jobs/<JOB_ID>/track.mp3     — аудио-трек
+    Content factory/cloud_io/render_jobs/<JOB_ID>/job.json      — {"text": "...", "out_name": "..."}
 
   Выход (раннер кладёт по завершению):
-    Content factory/render_jobs/<JOB_ID>/<out_name>    — готовое видео
-    Content factory/render_jobs/<JOB_ID>/status.txt    — "done" или "error: ..."
+    Content factory/cloud_io/render_jobs/<JOB_ID>/<out_name>    — готовое видео
+    Content factory/cloud_io/render_jobs/<JOB_ID>/status.txt    — "done" или "error: ..."
 
 Env vars (GitHub Secrets + workflow inputs):
   YDRIVE_CLIENT_ID / YDRIVE_CLIENT_SECRET / YDRIVE_TOKEN  — через rclone
@@ -27,7 +27,7 @@ from FULL_RENDER import render
 
 JOB_ID = os.environ["JOB_ID"]
 REMOTE = "ydrive"
-JOB_YD = f"Content factory/render_jobs/{JOB_ID}"
+JOB_YD = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 
 
 def yd_get(remote_path: str, local: Path) -> bool:

@@ -56,5 +56,5 @@ jobs:
         env:
           JOB_ID: ${{ inputs.job_id }}
         run: |
-          rclone rcat "ydrive:Content factory/render_jobs/$JOB_ID/status.txt" \
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/status.txt" \
             <<< "error: workflow failed" || true

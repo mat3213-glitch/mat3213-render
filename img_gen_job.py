@@ -27,7 +27,7 @@ URL    = os.environ.get("IMG_WORKER_URL", "https://yaromat-img.mat3213.workers.d
 SECRET = os.environ.get("IMG_WORKER_SECRET", "")
 
 REMOTE  = "ydrive"
-JOB_YD  = f"Content factory/render_jobs/{JOB_ID}"
+JOB_YD  = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 WORK    = Path("/tmp/img_gen_job"); WORK.mkdir(parents=True, exist_ok=True)
 
 MODELS = {

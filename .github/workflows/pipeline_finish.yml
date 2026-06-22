@@ -23,8 +23,8 @@ jobs:
       - name: Download files from YD
         run: |
           mkdir -p "$HOME/work"
-          rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_e2e/" "$HOME/work/"
-          rclone copy "ydrive:Content factory/CreativeLab/outputs/TASK_storyboard_md/storyboard_to_md.py" "$HOME/work/"
+          rclone copy "ydrive:Content factory/cloud_io/CreativeLab/outputs/TASK_pipeline_e2e/" "$HOME/work/"
+          rclone copy "ydrive:Content factory/cloud_io/CreativeLab/outputs/TASK_storyboard_md/storyboard_to_md.py" "$HOME/work/"
           ls "$HOME/work/"
 
       - name: Step 5 - storyboard_to_md
@@ -38,8 +38,8 @@ jobs:
 
       - name: Upload to YD
         run: |
-          rclone copy "$HOME/work/pipeline_review.md" "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
-          rclone copy "$HOME/work/pipeline_report.md" "ydrive:Content factory/CreativeLab/outputs/TASK_pipeline_finish/"
+          rclone copy "$HOME/work/pipeline_review.md" "ydrive:Content factory/cloud_io/CreativeLab/outputs/TASK_pipeline_finish/"
+          rclone copy "$HOME/work/pipeline_report.md" "ydrive:Content factory/cloud_io/CreativeLab/outputs/TASK_pipeline_finish/"
           echo "Done"
 
       - uses: actions/upload-artifact@v4

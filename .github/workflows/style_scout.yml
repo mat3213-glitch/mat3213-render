@@ -59,10 +59,10 @@ jobs:
         run: |
           set -e
           mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
           chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/mimo_ci/installation_id"  "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/mimo_ci/mimo-free-client" "$HOME/.local/share/mimocode/mimo-free-client"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"  "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client" "$HOME/.local/share/mimocode/mimo-free-client"
 
       - name: Judge candidates (mimo)
         env:
