@@ -33,7 +33,7 @@ except ImportError:
 
 HERE = Path(__file__).resolve().parent
 DB_PATH = HERE / "embeddings.lance"
-CATALOG_YD = "ydrive:Content factory/footage_catalog"
+CATALOG_YD = "ydrive:Content factory/assets/footage_catalog"
 SIGLIP_MODEL = "google/siglip-base-patch16-224"
 
 

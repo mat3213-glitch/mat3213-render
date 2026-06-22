@@ -15,7 +15,7 @@ from playwright.sync_api import sync_playwright
 YL=os.environ["YADISK_LOGIN"]; YP=os.environ["YADISK_PASSWORD"]
 IMG_REMOTE=os.environ["IMG_REMOTE"]
 PROMPT=os.environ.get("PROMPT","slow subtle cinematic motion, gentle drift, film grain, no text, no people")
-DEST=os.environ.get("DEST_FOLDER","Content factory/veofree_i2v/batch")
+DEST=os.environ.get("DEST_FOLDER","Content factory/cloud_io/veofree_i2v/batch")
 OUT=os.environ.get("OUT_NAME","i2v_clip.mp4");  OUT = OUT if OUT.endswith(".mp4") else OUT+".mp4"
 ASPECT=os.environ.get("ASPECT","9:16")
 URL="https://veoaifree.com/photo-and-image-to-video-generator/"

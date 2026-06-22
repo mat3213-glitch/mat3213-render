@@ -144,7 +144,7 @@ def main():
     load_env()
 
     today = date.today().isoformat()
-    dest_base = f"Content factory/veofree_pool/{today}"
+    dest_base = f"Content factory/cloud_io/veofree_pool/{today}"
 
     random.shuffle(VIDEO_PROMPTS)
     prompts = VIDEO_PROMPTS[:N_VID]

@@ -49,8 +49,8 @@ RATIO = os.environ.get("RATIO", "9:16")
 
 # Пулы фото на ЯД
 PHOTO_POOLS = [
-    "ydrive:Content factory/qwen_pool/",
-    "ydrive:Content factory/pexels_pool/",
+    "ydrive:Content factory/cloud_io/qwen_pool/",
+    "ydrive:Content factory/cloud_io/pexels_pool/",
     "ydrive:Content factory/openverse_pool/",
 ]
 
@@ -199,7 +199,7 @@ def main():
     load_env()
 
     today = date.today().isoformat()
-    yd_dest = f"Content factory/hunyuan_pool/{today}"
+    yd_dest = f"Content factory/cloud_io/hunyuan_pool/{today}"
     work_dir = Path(f"/tmp/hunyuan_daily_{today}")
     work_dir.mkdir(parents=True, exist_ok=True)
 

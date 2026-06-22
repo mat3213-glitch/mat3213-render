@@ -119,7 +119,7 @@ def run_self_test() -> bool:
     try:
         # --- Тест 1: gen с промптом ---
         r1 = register(
-            path="Content factory/qwen_pool/2026-06-16/img_01.png",
+            path="Content factory/cloud_io/qwen_pool/2026-06-16/img_01.png",
             pool="qwen_pool",
             type_="image",
             source="gen",
@@ -135,7 +135,7 @@ def run_self_test() -> bool:
 
         # --- Тест 2: external → tags=[] ---
         r2 = register(
-            path="Content factory/pexels_pool/2026-06-16/photo.jpg",
+            path="Content factory/cloud_io/pexels_pool/2026-06-16/photo.jpg",
             pool="pexels_pool",
             type_="image",
             source="external",
@@ -148,7 +148,7 @@ def run_self_test() -> bool:
 
         # --- Тест 3: повторный register → не дублируется ---
         r3 = register(
-            path="Content factory/qwen_pool/2026-06-16/img_01.png",
+            path="Content factory/cloud_io/qwen_pool/2026-06-16/img_01.png",
             pool="qwen_pool",
             type_="image",
             source="gen",

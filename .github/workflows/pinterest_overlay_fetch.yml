@@ -17,7 +17,7 @@ on:
       dest_folder:
         description: 'Папка на ЯД'
         required: false
-        default: 'Content factory/overlay_assets/pinterest'
+        default: 'Content factory/assets/overlay_assets/pinterest'
 
 jobs:
   fetch:

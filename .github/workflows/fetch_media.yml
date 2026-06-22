@@ -9,7 +9,7 @@ on:
       dest_folder:
         description: 'ЯД destination folder'
         required: false
-        default: 'Content factory/runner_fetch/batch'
+        default: 'Content factory/cloud_io/runner_fetch/batch'
 
 jobs:
   fetch:

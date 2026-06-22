@@ -25,7 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-YD = "ydrive:Content factory/footage_catalog"
+YD = "ydrive:Content factory/assets/footage_catalog"
 _CACHE: list | None = None
 
 

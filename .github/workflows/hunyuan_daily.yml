@@ -39,7 +39,7 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
       - name: Pull Hunyuan session from ЯД
-        run: rclone copyto "ydrive:Content factory/hunyuan_ci/hunyuan_session.json" hunyuan/hunyuan_session.json
+        run: rclone copyto "ydrive:Content factory/cloud_io/hunyuan_ci/hunyuan_session.json" hunyuan/hunyuan_session.json
       - name: Install deps
         run: pip install -q requests cos-python-sdk-v5
       - name: Generate (Hunyuan i2v)

@@ -6,7 +6,7 @@ Runner-side media fetcher (GitHub Actions, US-IP) — обходит блоки,
 Env (GitHub Secrets / inputs):
   YADISK_LOGIN / YADISK_PASSWORD — WebDAV
   URLS_JSON   — JSON-список [{"url":..., "type":"pexels|pinterest|direct", "name":"file"}]
-  DEST_FOLDER — папка на ЯД (напр. "Content factory/runner_fetch/batch1")
+  DEST_FOLDER — папка на ЯД (напр. "Content factory/cloud_io/runner_fetch/batch1")
 
 type:
   pexels|direct — прямой requests-download (раннер обходит CF-403 Pexels)
@@ -19,7 +19,7 @@ from urllib.parse import quote as urlquote
 YADISK_LOGIN = os.environ["YADISK_LOGIN"]
 YADISK_PASS  = os.environ["YADISK_PASSWORD"]
 URLS = json.loads(os.environ.get("URLS_JSON", "[]"))
-DEST = os.environ.get("DEST_FOLDER", "Content factory/runner_fetch/batch")
+DEST = os.environ.get("DEST_FOLDER", "Content factory/cloud_io/runner_fetch/batch")
 WEBDAV = "https://webdav.yandex.ru"
 AUTH = (YADISK_LOGIN, YADISK_PASS)
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"

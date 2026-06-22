@@ -284,11 +284,11 @@ def main():
 
     if not args.local:
         if ok:
-            yd_put(sheet, f"Content factory/style_scout/{ts}/style_scout_{ts}.jpg")
+            yd_put(sheet, f"Content factory/cloud_io/style_scout/{ts}/style_scout_{ts}.jpg")
             tg_photo(sheet, f"Style Scout {ts}: {len(cands)} новых лук-кандидатов "
                             f"({', '.join(c['name'] for c in cands)}). "
                             f"ОК? → merge в styles.json. Предложения в репо: style_proposals.json")
-        yd_put(PROPOSALS, f"Content factory/style_scout/{ts}/style_proposals.json")
+        yd_put(PROPOSALS, f"Content factory/cloud_io/style_scout/{ts}/style_proposals.json")
 
 
 if __name__ == "__main__":

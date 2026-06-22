@@ -3,7 +3,7 @@
 qwen_daily.py — ежедневный авто-генератор картинок и видео через Qwen.
 
 Генерирует N_IMG картинок + N_VID видео по вайб-промптам,
-заливает на ЯД в Content factory/qwen_pool/<YYYY-MM-DD>/,
+заливает на ЯД в Content factory/cloud_io/qwen_pool/<YYYY-MM-DD>/,
 шлёт TG-уведомления старт/финиш.
 
 Запуск:
@@ -156,7 +156,7 @@ def main():
     load_env()
 
     today = date.today().isoformat()
-    yd_base = f"Content factory/qwen_pool/{today}"
+    yd_base = f"Content factory/cloud_io/qwen_pool/{today}"
     work = WORK_DIR / today
     work.mkdir(parents=True, exist_ok=True)
 

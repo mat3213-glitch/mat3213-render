@@ -46,7 +46,7 @@ jobs:
             > "$HOME/.config/rclone/rclone.conf"
 
       - name: Pull Qwen session from ЯД
-        run: rclone copyto "ydrive:Content factory/qwen_ci/qwen_session.json" qwen/qwen_session.json
+        run: rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
 
       - name: Install Playwright
         run: |

@@ -19,7 +19,7 @@ ENV (GH secrets / workflow inputs):
   PIN_CHAT_ID (default -1003946370426), PIN_THREAD_ID (default 228 = "pinterest yaromat")
   QUERIES        — запросы через перевод строки или ';' (есть дефолты)
   PER_QUERY      — сколько пинов на запрос (default 8)
-  DEST_FOLDER    — папка на ЯД (default "Content factory/overlay_assets/pinterest")
+  DEST_FOLDER    — папка на ЯД (default "Content factory/assets/overlay_assets/pinterest")
   rclone ydrive  — настроен воркфлоу из YDRIVE_* секретов
 """
 
@@ -35,7 +35,7 @@ import urllib.request
 from pathlib import Path
 
 REMOTE = "ydrive"
-DEST = os.environ.get("DEST_FOLDER", "Content factory/overlay_assets/pinterest")
+DEST = os.environ.get("DEST_FOLDER", "Content factory/assets/overlay_assets/pinterest")
 PER_QUERY = int(os.environ.get("PER_QUERY", "8"))
 WORKDIR = Path("/tmp/pin_ovl"); WORKDIR.mkdir(parents=True, exist_ok=True)
 
