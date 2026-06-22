@@ -1,104 +1,104 @@
-# Repo Scout — 2026-06-15T20:41:00.907065
+# Repo Scout — 2026-06-22T15:11:36.233293
 
 Всего в шортлисте: 25
 
-- **chatfire-AI/huobao-drama** ⭐12727 [video]
+- **chatfire-AI/huobao-drama** ⭐12823 [video]
   - https://github.com/chatfire-AI/huobao-drama
-  - 💡 Автоматизирует генерацию коротких драм на основе одного предложения. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание короткометражных драм из одного предложения. Может быть полезен для генерации видеоконтента для проекта yaromat.
   - 📄 🎬 火宝短剧 - 基于AI的一站式短剧生成平台 《一句话生成完整短剧，从剧本到成片全自动化》  Huobao Drama - An AI-Powered End-to-End Short Drama Generator "One Sentence to Complete Drama: Fully Automated f
-- **HKUDS/ViMax** ⭐10127 [video]
+- **HKUDS/ViMax** ⭐10554 [video]
   - https://github.com/HKUDS/ViMax
-  - 💡 Автоматизирует генерацию видео с помощью ИИ. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание видео с помощью ИИ. Может быть полезен для генерации видеоконтента для проекта yaromat.
   - 📄 "ViMax: Agentic Video Generation (Director, Screenwriter, Producer, and Video Generator All-in-One)"
-- **vietnh1009/ASCII-generator** ⭐8269 [video]
+- **vietnh1009/ASCII-generator** ⭐8270 [video]
   - https://github.com/vietnh1009/ASCII-generator
-  - 💡 Автоматизирует генерацию ASCII-графики из изображений и видео. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом.
+  - 💡 Автоматизирует создание ASCII-графики из изображений и видео. Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом.
   - 📄 ASCII generator (image to text, image to image, video to video)
-- **OpenShot/openshot-qt** ⭐5884 [video]
+- **OpenShot/openshot-qt** ⭐5913 [video]
   - https://github.com/OpenShot/openshot-qt
   - 💡 Автоматизирует редактирование видео. Может быть полезен для постобработки видеоконтента для проекта yaromat.
   - 📄 OpenShot Video Editor is an award-winning free and open-source video editor for Linux, Mac, and Windows, and is dedicated to delivering high quality video editi
-- **Picsart-AI-Research/Text2Video-Zero** ⭐4247 [video]
+- **Picsart-AI-Research/Text2Video-Zero** ⭐4244 [video]
   - https://github.com/Picsart-AI-Research/Text2Video-Zero
-  - 💡 Автоматизирует генерацию видео из текста с помощью ИИ. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание видео из текста с помощью ИИ. Может быть полезен для генерации видеоконтента для проекта yaromat.
   - 📄 [ICCV 2023 Oral] Text-to-Image Diffusion Models are Zero-Shot Video Generators
-- **SamurAIGPT/AI-Youtube-Shorts-Generator** ⭐3885 [video]
+- **SamurAIGPT/AI-Youtube-Shorts-Generator** ⭐3964 [video]
   - https://github.com/SamurAIGPT/AI-Youtube-Shorts-Generator
-  - 💡 Автоматизирует генерацию коротких видео для YouTube из длинных видео. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание коротких видео для YouTube из длинных видео. Может быть полезен для проекта yaromat для создания коротких видеороликов.
   - 📄 Open-source alternative to Opus Clip, Vidyo.ai, Klap & SubMagic. Turn long-form YouTube videos into viral 9:16 shorts using LLM highlight detection, Whisper tra
-- **abhiTronix/vidgear** ⭐3714 [video]
+- **abhiTronix/vidgear** ⭐3716 [video]
   - https://github.com/abhiTronix/vidgear
-  - 💡 Автоматизирует обработку видео. Может быть полезен для постобработки видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует обработку видео. Может быть полезен для проекта yaromat для обработки и редактирования видеоконтента.
   - 📄 A High-performance cross-platform Video Processing Python framework powerpacked with unique trailblazing features :fire:
-- **cirosantilli/china-dictatorship** ⭐3050 [automation]
+- **cirosantilli/china-dictatorship** ⭐3066 [automation]
   - https://github.com/cirosantilli/china-dictatorship
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 反中共政治宣传库。Anti Chinese government propaganda. 住在中国真名用户的网友请别给星星，不然你要被警察请喝茶。常见问答集，新闻集和饭店和音乐建议。卐习万岁卐。冠状病毒审查郝海东新疆改造中心六四事件法轮功 996.ICU709大抓捕巴拿马文件邓家贵低端人口西藏骚乱。Friends wh
-- **Pulover/PuloversMacroCreator** ⭐1996 [automation]
+- **Pulover/PuloversMacroCreator** ⭐1997 [automation]
   - https://github.com/Pulover/PuloversMacroCreator
-  - 💡 Автоматизирует создание макросов для автоматизации задач. Может быть полезен для автоматизации рутинных задач в проекте yaromat.
+  - 💡 Автоматизирует создание макросов для автоматизации действий. Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 Automation Utility - Recorder & Script Generator
-- **gege-circle/.github** ⭐1916 [automation]
+- **gege-circle/.github** ⭐1923 [automation]
   - https://github.com/gege-circle/.github
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 这里是GitHub的草场，也是戈戈圈爱好者的交流地，主要讨论动漫、游戏、科技、人文、生活等所有话题，欢迎各位小伙伴们在此讨论趣事。This is GitHub grassland, and the community place for Gege circle lovers, mainly discusses anim
 - **chrisneagu/FTC-Skystone-Dark-Angels-Romania-2020** ⭐286 [automation]
   - https://github.com/chrisneagu/FTC-Skystone-Dark-Angels-Romania-2020
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 NOTICE This repository contains the public FTC SDK for the SKYSTONE (2019-2020) competition season. If you are looking for the current season's FTC SDK software
 - **DuxSec/videoGenerator** ⭐279 [social]
   - https://github.com/DuxSec/videoGenerator
-  - 💡 Автоматизирует генерацию видео с музыкой. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание видео с музыкой. Может быть полезен для проекта yaromat для создания видеоконтента.
   - 📄 Instagram Reels, Youtube shorts, tiktok video maker generator and uploader with music. Creates a video with an intro and main video containing a quote nicely fo
-- **ammaarreshi/openjourney** ⭐252 [video]
+- **ammaarreshi/openjourney** ⭐253 [video]
   - https://github.com/ammaarreshi/openjourney
-  - 💡 Автоматизирует генерацию видео и изображений с помощью ИИ. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание видео и изображений с помощью ИИ. Может быть полезен для проекта yaromat для генерации видеоконтента.
   - 📄 Open-source clone of the MidJourney web interface featuring real AI image and video generation powered by Google's Gemini SDK. Use Imagen 4 to generate images a
 - **Sfedfcv/redesigned-pancake** ⭐238 [automation]
   - https://github.com/Sfedfcv/redesigned-pancake
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 Skip to content github / docs Code Issues 80 Pull requests 35 Discussions Actions Projects 2 Security Insights Merge branch 'main' into 1862-Add-Travis-CI-migra
 - **EtiennePerot/gladosvoicegen** ⭐212 [automation]
   - https://github.com/EtiennePerot/gladosvoicegen
-  - 💡 Автоматизирует генерацию голоса GLaDOS. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом.
+  - 💡 Автоматизирует создание голоса GLaDOS. Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 GLaDOS voice generator - Windows/Melodyne GUI automation code
 - **jettbrains/-L-** ⭐144 [automation]
   - https://github.com/jettbrains/-L-
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 W3C Strategic Highlights  September 2019  This report was prepared for the September 2019 W3C Advisory Committee Meeting (W3C Member link). See the accompanying
-- **kameleo-io/kameleo** ⭐138 [automation]
+- **kameleo-io/kameleo** ⭐143 [automation]
   - https://github.com/kameleo-io/kameleo
-  - 💡 Автоматизирует создание анти-детект браузера для веб-скрейпинга. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Автоматизирует создание браузера для веб-скрейпинга и автоматизации. Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 Anti-detect browser for web scraping and automation. Engine-level fingerprint masking for Chromium and Firefox. Self-hosted, Docker-ready. Integrates with Selen
 - **linalinn/kicad-render** ⭐117 [video]
   - https://github.com/linalinn/kicad-render
-  - 💡 Автоматизирует рендеринг 3D-изображений из KiCad. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Автоматизирует создание 3D-изображений из KiCad. Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 github action for rendering kicad 3D images
 - **klonnet23/helloy-word** ⭐88 [automation]
   - https://github.com/klonnet23/helloy-word
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄     {   "releases": {     "2.0.4": [       "[Fixed] Refresh for Enterprise repositories did not handle API error querying branches - #7713",       "[Fixed] Miss
-- **qzw881130/AI-NovelFlow** ⭐82 [automation]
+- **qzw881130/AI-NovelFlow** ⭐84 [automation]
   - https://github.com/qzw881130/AI-NovelFlow
-  - 💡 Автоматизирует генерацию видео из текста с помощью ИИ. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание видео из романов с помощью ИИ. Может быть полезен для проекта yaromat для генерации видеоконтента.
   - 📄 NovelFlow 是一个将小说自动转换为视频的 AI 平台。文生图、图生图、图生视频都是基于开源模型及B站大佬分享的工作流。（NovelFlow is an AI platform that automatically converts novels into videos. Text-to-image, image
 - **rramatchandran/big-o-performance-java** ⭐82 [automation]
   - https://github.com/rramatchandran/big-o-performance-java
-  - 💡 Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 # big-o-performance A simple html app to demonstrate performance costs of data structures.  - Clone the project - Navigate to the root of the project in a termi
-- **adithya-s-k/Storyblocks** ⭐68 [video]
+- **adithya-s-k/Storyblocks** ⭐69 [video]
   - https://github.com/adithya-s-k/Storyblocks
-  - 💡 Автоматизирует генерацию видео из текста с помощью ИИ. Может быть полезен для создания видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует создание видео из текста с помощью ИИ. Может быть полезен для проекта yaromat для генерации видеоконтента.
   - 📄 ✨ Experience the enchantment of Story Blocks: an open-source project merging AI text generation and image synthesis to create captivating video narratives. 📚🎥 W
 - **y-t-bot/youtube-bot** ⭐41 [automation]
   - https://github.com/y-t-bot/youtube-bot
-  - 💡 Автоматизирует взаимодействие с YouTube. Может быть полезен для автоматизации публикации видеоконтента для проекта yaromat.
+  - 💡 Автоматизирует взаимодействие с YouTube. Может быть полезен для проекта yaromat для автоматического постинга видеоконтента.
   - 📄 youtube bot
 - **Z786ZA/instagram-scraper** ⭐39 [automation]
   - https://github.com/Z786ZA/instagram-scraper
-  - 💡 Автоматизирует сбор данных из Instagram. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
+  - 💡 Автоматизирует сбор данных из Instagram. Вряд ли пригодится для проекта, поскольку не связан напрямую с музыкальным контентом или видеопrocessingом.
   - 📄 instagram scraper engagement insights 
 - **y-t-bot/youtube-view-bot** ⭐37 [automation]
   - https://github.com/y-t-bot/youtube-view-bot
-  - 💡 Автоматизирует просмотры видео на YouTube. Для проекта вряд ли пригодится, поскольку может быть расценен как накрутка просмотров.
+  - 💡 Автоматизирует просмотры видео на YouTube. Вряд ли пригодится для проекта, поскольку может быть расценен как накрутка просмотров.
   - 📄 youtube view bot 
