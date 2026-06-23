@@ -1,57 +1,82 @@
 [
   {
-    "label": "ffmpeg python automation",
-    "category": "video",
-    "query": "ffmpeg python video automation OR pipeline"
+    "label": "free LLM openai-compatible api",
+    "category": "orchestration",
+    "query": "free LLM api openai compatible no key OR gateway"
   },
   {
-    "label": "beat synced video",
-    "category": "video",
-    "query": "beat sync video OR music visualizer OR audio reactive"
+    "label": "llm router gateway proxy",
+    "category": "orchestration",
+    "query": "llm gateway router proxy multi provider openai compatible"
   },
   {
-    "label": "AI video generation",
-    "category": "video",
-    "query": "text to video OR image to video generation open source"
+    "label": "free inference endpoint aggregator",
+    "category": "orchestration",
+    "query": "free ai inference endpoint aggregator OR pool OR rotation"
   },
   {
-    "label": "reels shorts generator",
-    "category": "video",
-    "query": "shorts OR reels generator automation"
+    "label": "llm orchestration agents free",
+    "category": "orchestration",
+    "query": "llm orchestration multi agent framework free local"
   },
   {
-    "label": "audio beat detection",
+    "label": "headless llm agent cli",
+    "category": "orchestration",
+    "query": "headless llm agent cli coding free vision"
+  },
+  {
+    "label": "openai compatible inference server",
+    "category": "orchestration",
+    "query": "openai compatible inference server self-hosted free proxy"
+  },
+  {
+    "label": "ffmpeg cli video editing",
+    "category": "video",
+    "query": "ffmpeg cli video editing filter automation"
+  },
+  {
+    "label": "scene detect shot boundary",
+    "category": "video",
+    "query": "scene detection shot boundary opencv python cpu"
+  },
+  {
+    "label": "video transitions glsl ffmpeg",
+    "category": "video",
+    "query": "video transition glsl shader ffmpeg cli"
+  },
+  {
+    "label": "datamosh glitch bitstream",
+    "category": "video",
+    "query": "datamosh glitch video bitstream motion vector"
+  },
+  {
+    "label": "auto video editing silence",
+    "category": "video",
+    "query": "automatic video editing silence removal cut python"
+  },
+  {
+    "label": "procedural motion graphics code",
+    "category": "video",
+    "query": "procedural motion graphics code generative animation render"
+  },
+  {
+    "label": "audio processing python",
     "category": "audio",
-    "query": "beat detection OR onset OR tempo librosa OR aubio"
+    "query": "audio processing python pydub librosa pedalboard cli"
   },
   {
-    "label": "social media scheduler",
-    "category": "social",
-    "query": "social media scheduler self-hosted autopost"
+    "label": "transcription whisper cpu",
+    "category": "audio",
+    "query": "subtitle transcription whisper cpu fast align"
   },
   {
-    "label": "playwright automation",
-    "category": "automation",
-    "query": "playwright automation scraper bot python"
+    "label": "image aesthetic scoring",
+    "category": "vision",
+    "query": "image aesthetic quality scoring predictor cpu"
   },
   {
-    "label": "content pipeline orchestration",
-    "category": "workflow",
-    "query": "content pipeline orchestration automation"
-  },
-  {
-    "label": "github actions media render",
-    "category": "workflow",
-    "query": "github actions ffmpeg OR video render"
-  },
-  {
-    "label": "telegram bot framework",
-    "category": "community",
-    "query": "telegram bot framework python media"
-  },
-  {
-    "label": "video uniquization",
-    "category": "video",
-    "query": "video uniquify OR deduplication OR variation generator"
+    "label": "imagemagick procedural image",
+    "category": "vision",
+    "query": "imagemagick wand python procedural image typography"
   }
 ]
