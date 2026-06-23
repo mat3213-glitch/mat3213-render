@@ -35,7 +35,13 @@ RU-доступные, без карты/KYC (расширяют пул ворк
 НЕ брать: GPU-тяжёлое, платный монолит, нарушает ToS."""
 
 
-def litellm_brainstorm(n=12):
+# Мейнстрим, который brainstorm и так знает — НЕ предлагать (только заезженное даёт):
+MAINSTREAM_BAN = ("ffmpeg, opencv, pillow/PIL, whisper, pytorch, tensorflow, yt-dlp, "
+                  "litellm, langchain, llama.cpp, stable-diffusion, comfyui, moviepy, numpy, scipy, "
+                  "requests, flask, fastapi, transformers, gradio, streamlit")
+
+
+def litellm_brainstorm(n=12, known=None):
     import litellm
     litellm.drop_params = True
     if os.environ.get("GITHUB_TOKEN") and not os.environ.get("GITHUB_API_KEY"):
@@ -45,9 +51,13 @@ def litellm_brainstorm(n=12):
         "openrouter/meta-llama/llama-3.3-70b-instruct:free",
         "github/gpt-4o-mini",
     ]
-    prompt = (PROFILE + f"\n\nПредложи {n} КОНКРЕТНЫХ реально существующих живых GitHub-репозиториев "
-              "под этот профиль, разнообразных (не только самые популярные — ищи рычаг). Только список "
-              "ПОЛНЫХ URL вида https://github.com/owner/repo, по одному на строку, без описаний и нумерации.")
+    avoid = f"\nУЖЕ ЕСТЬ (НЕ повторять): {', '.join(sorted(known)[:60])}." if known else ""
+    prompt = (PROFILE + f"\n\nПредложи {n} КОНКРЕТНЫХ реально существующих живых GitHub-репозиториев под профиль.\n"
+              "ГЛАВНОЕ — НЕОЧЕВИДНОЕ, высокий рычаг: нишевое/узкоспециальное, свежее (2025-2026), недооценённое "
+              "(не самые звёздные). ИЗБЕГАЙ мейнстрима, который и так все знают: " + MAINSTREAM_BAN + "."
+              + avoid +
+              "\nНе обёртки/биндинги вокруг известного, а самостоятельные рычаги. "
+              "Только список ПОЛНЫХ URL https://github.com/owner/repo, по одному на строку, без описаний и нумерации.")
     for m in models:
         try:
             r = litellm.completion(model=m, messages=[{"role": "user", "content": prompt}],
@@ -97,8 +107,13 @@ def slug(u):
 
 
 def main():
-    cands = litellm_brainstorm() + grok_signals_urls()
     seen = existing_slugs()
+    # читаемые имена уже проверенного (github__com__owner__repo → owner/repo) для анти-повтора
+    known = set()
+    for s in seen:
+        s2 = s.replace("github__com__", "")
+        known.add(s2.replace("__", "/"))
+    cands = litellm_brainstorm(known=known) + grok_signals_urls()
     out, uniq = [], set()
     for u in cands:
         u = u.rstrip("/")
