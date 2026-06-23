@@ -8,7 +8,8 @@ name: signal hunt (litellm + Grok bridge)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 9 * * *"   # ежедневно 09:00 UTC (~12:00 МСК / 16:00 НСК)
+    - cron: "0 13 * * *"   # 13:00 UTC = 20:00 НСК — ПОСЛЕ Grok Task (18:02 НСК) + буфер
+                           # на его опоздания (бывает +1ч+), чтобы мост схватил СЕГОДНЯШНИЙ grok_*.json
 
 permissions:
   contents: read
