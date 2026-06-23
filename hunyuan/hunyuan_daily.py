@@ -51,7 +51,7 @@ RATIO = os.environ.get("RATIO", "9:16")
 PHOTO_POOLS = [
     "ydrive:Content factory/cloud_io/qwen_pool/",
     "ydrive:Content factory/cloud_io/pexels_pool/",
-    "ydrive:Content factory/openverse_pool/",
+    "ydrive:Content factory/cloud_io/openverse_pool/",
 ]
 
 # Вайб движения: мягкий, без смены сцены
