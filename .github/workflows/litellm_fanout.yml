@@ -1,0 +1,55 @@
+name: litellm fanout worker
+
+# Воркер оркестра fan-out (см. Instrument/AgentQueue/fanout.py, воркер litellm-gh).
+# litellm как унифицированный роутер к free-провайдерам с фолбэком, на US-IP раннере
+# (открывает Groq/Gemini, которые RU-IP режет). БЕЗ proxy-сервера — SDK-вызовы.
+# Вход:  ЯД Content factory/cloud_io/litellm_ci/in/<batch_id>.json
+# Выход: ЯД Content factory/cloud_io/litellm_ci/out/<batch_id>.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_id:
+        description: "id батча (имя in/out файла на ЯД)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # render-репо: даёт litellm_runner.py
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Install litellm
+        run: pip install -q litellm
+
+      - name: Run batch
+        env:
+          # секреты-ключи провайдеров (добавить в render-репо Settings → Secrets):
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_API_KEY:     ${{ secrets.GH_MODELS_TOKEN }}
+          LITELLM_GH_MODELS:  ${{ vars.LITELLM_GH_MODELS }}
+        run: python3 litellm_runner.py "${{ inputs.batch_id }}"
