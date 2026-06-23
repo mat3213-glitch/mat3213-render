@@ -1,9 +1,9 @@
-name: signal hunt (litellm + Grok bridge)
+name: grok bridge (signals → analyst)
 
-# РЕАЛЬНАЯ замена фейк-автономии Grok (он симулировал пуши, см. project_grok_signals).
-# Ежедневно на US-IP раннере: litellm-brainstorm кандидатов + мост из ручных Grok-сигналов
-# → дедуп против verified_tools → ЯД analyst_queue/pending → диспатч auto_analyst (matrix).
-# Заземление: auto_analyst реально клонит/курлит каждый URL → выдуманное отсеивается.
+# МОСТ Grok→auto_analyst (без LLM-brainstorm — он выдумывал, выпилен).
+# Берёт source_link из свежего ручного grok_*.json → дедуп vs verified_tools →
+# ЯД analyst_queue/pending → диспатч auto_analyst (matrix --from-queue, тред 1653 GROK SCOUT).
+# Песочница auto_analyst заземляет: реально клонит/курлит, мёртвое отсеивается.
 
 on:
   workflow_dispatch:
@@ -13,10 +13,9 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 jobs:
-  hunt:
+  bridge:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,15 +38,8 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Install litellm
-        run: pip install -q litellm
-
-      - name: Hunt + bridge + dispatch analyst
+      - name: Bridge Grok signals → analyst queue → dispatch
         env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
-          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
-          GITHUB_TOKEN:       ${{ secrets.GH_MODELS_TOKEN }}
-          GH_DISPATCH_TOKEN:  ${{ secrets.GH_MODELS_TOKEN }}
-          LITELLM_GH_MODELS:  ${{ vars.LITELLM_GH_MODELS }}
+          GITHUB_TOKEN:      ${{ secrets.GH_MODELS_TOKEN }}
+          GH_DISPATCH_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
         run: python3 signal_hunt.py

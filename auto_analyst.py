@@ -60,7 +60,7 @@ OUTDIR = Path("/tmp/analyst_out")
 TG_WORKER = os.environ.get("CLOUDFLARE_WORKER", "")
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("SCOUT_CHAT_ID", "")
-TG_THREAD = "1653"   # GROK SCOUT — разборы находок/инструментов (отделено от 634 STYLE SCOUT = визуальные луки)
+TG_THREAD = os.environ.get("SCOUT_THREAD", "1653")  # тред задаётся диспатчером: 1653=GROK SCOUT, 1699=REPO SCOUT
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 
 

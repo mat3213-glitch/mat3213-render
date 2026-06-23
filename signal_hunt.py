@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""signal_hunt.py — РЕАЛЬНЫЙ автономный скаут (замена фейк-автономии Grok).
+"""signal_hunt.py — МОСТ Grok→auto_analyst (ТОЛЬКО мост, без LLM-brainstorm).
 
-Grok оказался симулятором (нет background-раннера, пушил «понарошку»). Это — настоящая
-ежедневная замена на GH Actions (US-IP). Два источника кандидатов:
-  1. litellm-brainstorm: free-LLM на US-IP раннере (Groq и др.) по профилю+рубрике предлагает
-     8-15 URL инструментов/LLM-эндпоинтов. LLM = генератор идей, ЗАЗЕМЛЕНИЕ = auto_analyst
-     (мёртвые/выдуманные URL отсеются на fetch, реальные получат балл).
-  2. МОСТ Grok→auto_analyst: source_link'и из свежего signals/incoming/grok_<date>.json
-     (ручной Grok отдаёт ИНСТРУМЕНТЫ без media_url → визуальный analyze их не берёт → ведём сюда).
-Дедуп против verified_tools/ → пишем в ЯД analyst_queue/pending/hunt_<date>.txt →
-диспатчим auto_analyst.yml (matrix --from-queue) → вердикты в тред 634 + уведомления.
+История: brainstorm на litellm выпилен — LLM без реального поиска либо повторяет
+очевидное, либо ВЫДУМЫВАЕТ (проверка 2026-06-23: 0/13 неочевидных репо реальны).
+Дискавери = заземлённый поиск: repo_scout (GitHub Search) + ручной Grok (X/Reddit/Habr).
+
+Этот скрипт = «перекладыватель ссылок»: берёт source_link из свежего
+signals/incoming/grok_<date>.json (что прислал ручной Grok — реальные находки) →
+дедуп против verified_tools → ЯД analyst_queue/pending/ → диспатч auto_analyst.yml
+(matrix --from-queue, тред 1653 GROK SCOUT). Песочница auto_analyst заземляет: реально
+клонит/курлит каждый URL, мёртвое отсеивается.
 """
 import base64
 import json
 import os
-import re
 import subprocess
 import urllib.request
 from datetime import datetime
@@ -24,52 +23,8 @@ QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
 TOOLS = f"{YD}/verified_tools"
 SIGNALS_REPO = "mat3213-glitch/mat3213-signals"
 RENDER_REPO = "mat3213-glitch/mat3213-render"
+GROK_THREAD = "1653"   # GROK SCOUT
 GH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
-
-PROFILE = """Ищем БЕСПЛАТНЫЕ инструменты/нейросети для AI-фабрики музыкальных клипов (электроника).
-ОСОБЫЙ УПОР: free-LLM для ОРКЕСТРОВКИ — gateway/router/CLI/free-tier API, OpenAI-совместимые,
-RU-доступные, без карты/KYC (расширяют пул воркеров fanout.py).
-ТАКЖЕ: CPU/CLI медиа-крафт (БЕЗ GPU) — нарезка/переходы/грейд/глитч/процедурная анимация/
-типографика/аудио-обработка/транскрипция/эстетик-скоринг (экосистема ffmpeg/OpenCV/PIL).
-Критерий 100/100: бесплатно + CPU/без GPU + препарируемо (модуль/CLI) + прямо в стек + дешёвая интеграция.
-НЕ брать: GPU-тяжёлое, платный монолит, нарушает ToS."""
-
-
-# Мейнстрим, который brainstorm и так знает — НЕ предлагать (только заезженное даёт):
-MAINSTREAM_BAN = ("ffmpeg, opencv, pillow/PIL, whisper, pytorch, tensorflow, yt-dlp, "
-                  "litellm, langchain, llama.cpp, stable-diffusion, comfyui, moviepy, numpy, scipy, "
-                  "requests, flask, fastapi, transformers, gradio, streamlit")
-
-
-def litellm_brainstorm(n=12, known=None):
-    import litellm
-    litellm.drop_params = True
-    if os.environ.get("GITHUB_TOKEN") and not os.environ.get("GITHUB_API_KEY"):
-        os.environ["GITHUB_API_KEY"] = os.environ["GITHUB_TOKEN"]
-    models = [m for m in os.environ.get("LITELLM_GH_MODELS", "").split(",") if m.strip()] or [
-        "groq/llama-3.3-70b-versatile",
-        "openrouter/meta-llama/llama-3.3-70b-instruct:free",
-        "github/gpt-4o-mini",
-    ]
-    avoid = f"\nУЖЕ ЕСТЬ (НЕ повторять): {', '.join(sorted(known)[:60])}." if known else ""
-    prompt = (PROFILE + f"\n\nПредложи {n} КОНКРЕТНЫХ реально существующих живых GitHub-репозиториев под профиль.\n"
-              "ГЛАВНОЕ — НЕОЧЕВИДНОЕ, высокий рычаг: нишевое/узкоспециальное, свежее (2025-2026), недооценённое "
-              "(не самые звёздные). ИЗБЕГАЙ мейнстрима, который и так все знают: " + MAINSTREAM_BAN + "."
-              + avoid +
-              "\nНе обёртки/биндинги вокруг известного, а самостоятельные рычаги. "
-              "Только список ПОЛНЫХ URL https://github.com/owner/repo, по одному на строку, без описаний и нумерации.")
-    for m in models:
-        try:
-            r = litellm.completion(model=m, messages=[{"role": "user", "content": prompt}],
-                                   timeout=120, max_tokens=800)
-            txt = r.choices[0].message.content or ""
-            urls = re.findall(r"https://github\.com/[A-Za-z0-9_.\-]+/[A-Za-z0-9_.\-]+", txt)
-            if urls:
-                print(f"[brainstorm] {m}: {len(urls)} URL")
-                return urls
-        except Exception as e:
-            print(f"[brainstorm] {m} fail: {str(e)[:120]}")
-    return []
 
 
 def grok_signals_urls():
@@ -81,6 +36,7 @@ def grok_signals_urls():
         files = json.load(urllib.request.urlopen(req, timeout=30))
         groks = sorted(f["name"] for f in files if f["name"].startswith("grok_"))
         if not groks:
+            print("нет grok_*.json")
             return []
         latest = groks[-1]
         req2 = urllib.request.Request(
@@ -90,10 +46,10 @@ def grok_signals_urls():
         items = doc.get("candidates") or doc.get("items") or []
         urls = [it.get("source_link", "") for it in items
                 if str(it.get("source_link", "")).startswith("https://github.com/")]
-        print(f"[bridge] {latest}: {len(urls)} github URL")
+        print(f"[мост] {latest}: {len(urls)} github URL")
         return urls
     except Exception as e:
-        print(f"[bridge] fail: {str(e)[:120]}")
+        print(f"[мост] fail: {str(e)[:140]}")
         return []
 
 
@@ -108,33 +64,25 @@ def slug(u):
 
 def main():
     seen = existing_slugs()
-    # читаемые имена уже проверенного (github__com__owner__repo → owner/repo) для анти-повтора
-    known = set()
-    for s in seen:
-        s2 = s.replace("github__com__", "")
-        known.add(s2.replace("__", "/"))
-    cands = litellm_brainstorm(known=known) + grok_signals_urls()
     out, uniq = [], set()
-    for u in cands:
+    for u in grok_signals_urls():
         u = u.rstrip("/")
-        if u in uniq:
+        if u in uniq or slug(u) in seen:
             continue
         uniq.add(u)
-        if slug(u) in seen:
-            continue  # уже в verified_tools — не гоняем повторно
         out.append(u)
     if not out:
-        print("нет новых кандидатов (всё уже проверено или пусто)")
+        print("нет новых ссылок от Grok (всё уже проверено или файла нет)")
         return
     out = out[:15]
     date = datetime.now().strftime("%Y-%m-%d")
     open("hunt.txt", "w").write("\n".join(out) + "\n")
-    subprocess.run(["rclone", "copyto", "hunt.txt", f"{QUEUE}/hunt_{date}.txt"], check=True)
-    print(f"в очередь: {len(out)} URL → {QUEUE}/hunt_{date}.txt")
+    subprocess.run(["rclone", "copyto", "hunt.txt", f"{QUEUE}/grok_{date}.txt"], check=True)
+    print(f"в очередь: {len(out)} URL → {QUEUE}/grok_{date}.txt")
     for u in out:
         print("  +", u)
-    # диспатч auto_analyst (пустой targets → --from-queue в воркфлоу)
-    body = json.dumps({"ref": "main", "inputs": {"targets": ""}}).encode()
+    # диспатч auto_analyst (пустой targets → --from-queue; тред 1653 GROK SCOUT)
+    body = json.dumps({"ref": "main", "inputs": {"targets": "", "thread": GROK_THREAD}}).encode()
     req = urllib.request.Request(
         f"https://api.github.com/repos/{RENDER_REPO}/actions/workflows/auto_analyst.yml/dispatches",
         data=body, method="POST",
@@ -142,9 +90,9 @@ def main():
                  "Accept": "application/vnd.github+json"})
     try:
         urllib.request.urlopen(req, timeout=30)
-        print("auto_analyst диспатчнут (--from-queue)")
+        print(f"auto_analyst диспатчнут (--from-queue, тред {GROK_THREAD})")
     except Exception as e:
-        print(f"dispatch fail (очередь подхватит недельный cron): {str(e)[:120]}")
+        print(f"dispatch fail (очередь подхватит cron): {str(e)[:140]}")
 
 
 if __name__ == "__main__":

@@ -17,6 +17,10 @@ on:
         description: "URL через пробел (пусто = взять из очереди ЯД analyst_queue/pending/)"
         required: false
         type: string
+      thread:
+        description: "TG-тред разборов (1653=GROK SCOUT, 1699=REPO SCOUT; пусто=1653)"
+        required: false
+        type: string
   schedule:
     - cron: "0 9 * * 1"   # пн 09:00 UTC — автономный проход
 
@@ -51,7 +55,7 @@ jobs:
         run: |
           ARGS=()
           if [ -n "$TARGETS" ]; then ARGS+=(--targets "$TARGETS"); fi
-          if [ "$EVENT" = "schedule" ]; then ARGS+=(--from-scout --from-queue); fi
+          if [ "$EVENT" = "schedule" ]; then ARGS+=(--from-queue); fi   # repo_scout сам гонит свои находки (свой тред)
           if [ ${#ARGS[@]} -eq 0 ]; then ARGS+=(--from-queue); fi
           OUT=$(python3 auto_analyst.py --list-targets "${ARGS[@]}")
           echo "targets: $OUT"
@@ -95,6 +99,7 @@ jobs:
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
+          SCOUT_THREAD:        ${{ inputs.thread }}
         run: python3 auto_analyst.py --targets "${{ matrix.target }}"
       - name: Report to memory_os feed
         if: always()

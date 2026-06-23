@@ -2,7 +2,7 @@ name: Repo Scout
 
 on:
   schedule:
-    - cron: "0 10 * * 1"   # понедельник 10:00 UTC (GH schedule может задерживать)
+    - cron: "0 10 * * *"   # ЕЖЕДНЕВНО 10:00 UTC = 17:00 НСК (GH schedule может задерживать)
   workflow_dispatch: {}
 
 permissions:
@@ -29,7 +29,7 @@ jobs:
           CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SCOUT_CHAT_ID: ${{ secrets.SCOUT_CHAT_ID }}
-          SCOUT_THREAD_ID: ${{ secrets.SCOUT_THREAD_ID }}
+          SCOUT_THREAD_ID: "1699"   # REPO SCOUT — дайджест находок (отдельно от GROK SCOUT 1653)
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: python repo_scout.py --top 25
@@ -45,3 +45,17 @@ jobs:
             git commit -m "repo-scout: update seen state [skip ci]"
             git push
           fi
+
+      - name: Send finds to analyst sandbox (REPO SCOUT thread 1699)
+        env:
+          GH_DISPATCH_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+        run: |
+          URLS=$(grep -oE "https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" repo_scout_latest.md 2>/dev/null | sort -u | head -15 | tr '\n' ' ')
+          if [ -z "$URLS" ]; then echo "нет новых находок для анализа"; exit 0; fi
+          echo "→ в песочницу auto_analyst (тред 1699): $URLS"
+          curl -s -X POST \
+            -H "Authorization: token $GH_DISPATCH_TOKEN" \
+            -H "User-Agent: curl/8.0" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/mat3213-glitch/mat3213-render/actions/workflows/auto_analyst.yml/dispatches" \
+            -d "{\"ref\":\"main\",\"inputs\":{\"targets\":\"$URLS\",\"thread\":\"1699\"}}" \
+            -w "dispatch HTTP %{http_code}\n"
