@@ -1,3 +1,44 @@
-# Repo Scout — 2026-06-24T13:00:47.755751
+# Repo Scout — 2026-06-24T13:12:59.041401
 
-Всего в шортлисте: 0
+Всего в шортлисте: 10
+
+- **piyush-tyagi-13/llm-keypool** ⭐46 [misc]
+  - https://github.com/piyush-tyagi-13/llm-keypool
+  - 💡 Автоматизирует управление ключами API для доступа к языковым моделям, может быть полезен для проекта yaromat в части оптимизации доступа к AI-видео и фото генерации.
+  - 📄 Free-tier LLM API key pool with rotation, cooldown handling, and an OpenAI-compatible proxy. Use with Hermes Agent or any OpenAI-compatible tool - no paid API k
+- **andreimerfu/pllm** ⭐19 [misc]
+  - https://github.com/andreimerfu/pllm
+  - 💡 Предоставляет высокопроизводительный шлюз для языковых моделей, может быть полезен для проекта yaromat в части улучшения производительности AI-видео и фото генерации.
+  - 📄 High-performance LLM Gateway built in Go - OpenAI compatible proxy with multi-provider support, adaptive routing, and enterprise features
+- **jmanhype/req_llm_gateway** ⭐3 [misc]
+  - https://github.com/jmanhype/req_llm_gateway
+  - 💡 Реализует прокси для языковых моделей с поддержкой нескольких провайдеров, может быть полезен для проекта yaromat в части обеспечения надежного доступа к AI-видео и фото генерации.
+  - 📄 OpenAI-compatible LLM proxy with telemetry and multi-provider routing
+- **rickcrawford/tokenomics** ⭐3 [misc]
+  - https://github.com/rickcrawford/tokenomics
+  - 💡 Предоставляет обратный прокси для OpenAI, позволяющий контролировать доступ к языковым моделям, может быть полезен для проекта yaromat в части обеспечения безопасности и контроля доступа к AI-видео и фото генерации.
+  - 📄 An OpenAI-compatible reverse proxy you run yourself. It gives you the features of an AI gateway (guardrails, budgets, rate limits, multi-provider routing) but u
+- **anatissera/claude-on-nim** ⭐1 [misc]
+  - https://github.com/anatissera/claude-on-nim
+  - 💡 Для проекта вряд ли пригодится, поскольку представляет собой автономного агента, работающего с NVIDIA и не имеющего прямого отношения к задачам проекта yaromat.
+  - 📄 An autonomous AI agent powered by the Claude Agent SDK, running inference on NVIDIA's free NIM endpoints with automated code verification (linting, type-checkin
+- **SAYOUNCDR/GhostContext** ⭐1 [misc]
+  - https://github.com/SAYOUNCDR/GhostContext
+  - 💡 Для проекта вряд ли пригодится, поскольку представляет собой движок для автозаполнения кода в VS Code и не имеет прямого отношения к задачам проекта yaromat.
+  - 📄 A low-latency, context-aware AI tab-completion engine for VS Code. Features a high-performance inference proxy supporting BYOK (FIM-compatible endpoints), telem
+- **kpihx-labs/k-ai** ⭐0 [misc]
+  - https://github.com/kpihx-labs/k-ai
+  - 💡 Предоставляет суверенный шлюз для языковых моделей, может быть полезен для проекта yaromat в части обеспечения независимого доступа к AI-видео и фото генерации.
+  - 📄 Sovereign LLM gateway — 100% Go, OpenAI-compatible proxy with multi-provider routing
+- **k1y0miiii/llm-gateway** ⭐0 [misc]
+  - https://github.com/k1y0miiii/llm-gateway
+  - 💡 Реализует самохостящийся шлюз для языковых моделей, может быть полезен для проекта yaromat в части обеспечения экономичности и гибкости доступа к AI-видео и фото генерации.
+  - 📄 Self-hostable, token-frugal OpenAI-compatible LLM gateway — multi-provider routing, virtual keys + budgets, caching, cost accounting, JTF compression.
+- **dorucioclea/LocalAIPlatform** ⭐0 [workflow]
+  - https://github.com/dorucioclea/LocalAIPlatform
+  - 💡 Предоставляет самохостящуюся платформу для языковых моделей, может быть полезен для проекта yaromat в части обеспечения локального и независимого доступа к AI-видео и фото генерации без необходимости GPU.
+  - 📄 🤖 Self-hosted, community-driven, local OpenAI compatible API. Drop-in replacement for OpenAI running LLMs on consumer-grade hardware. Free Open Source OpenAI al
+- **chrolloolucilferr/GroqChatbot** ⭐0 [automation]
+  - https://github.com/chrolloolucilferr/GroqChatbot
+  - 💡 Для проекта вряд ли пригодится, поскольку представляет собой терминального чат-бота и не имеет прямого отношения к задачам проекта yaromat по автоматизации музыкального контента.
+  - 📄 This project is a terminal-based chatbot built using Groq API and Llama3/Mixtral models.  Features: Simple and clean Python code  Real-time chatbot responses us
