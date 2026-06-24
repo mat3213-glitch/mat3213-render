@@ -23,6 +23,7 @@ import json
 import math
 import os
 import re
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -62,6 +63,10 @@ RELEVANCE_TERMS = [
     "instagram", "tiktok", "youtube", "scheduler", "scheduling", "pipeline",
     "scraper", "scraping", "tempo", "onset", "playlist", "visualizer",
     "playwright", "autopost", "beat-sync", "music-video",
+    "llm", "agent", "agents", "gateway", "inference", "proxy", "openai", "api",
+    "model", "models", "orchestration", "self-hosted", "local", "router", "aggregator",
+    "glsl", "shader", "datamosh", "glitch", "aesthetic", "imagemagick", "whisper",
+    "transcription", "subtitle", "motion", "procedural", "diffusion", "comfyui",
 ]
 _REL_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in RELEVANCE_TERMS) + r")\b")
 
@@ -118,6 +123,12 @@ def search_github(query: str, per_page: int = 5) -> list[dict]:
     r = requests.get("https://api.github.com/search/repositories",
                      params={"q": query, "sort": "stars", "order": "desc", "per_page": per_page},
                      headers=gh_headers(), timeout=30)
+    if r.status_code in (403, 429):
+        # вторичный rate-limit GitHub Search → подождать и повторить один раз
+        time.sleep(8)
+        r = requests.get("https://api.github.com/search/repositories",
+                         params={"q": query, "sort": "stars", "order": "desc", "per_page": per_page},
+                         headers=gh_headers(), timeout=30)
     if r.status_code != 200:
         print(f"  search HTTP {r.status_code} for '{query[:40]}'")
         return []
@@ -157,6 +168,7 @@ def build_candidates(max_per_query: int = 5) -> list[dict]:
     seen: set[str] = set()
     out: list[dict] = []
     for q in load_queries():
+        time.sleep(2.5)  # антидот вторичному rate-limit Search API
         for repo in search_github(str(q["query"]).strip(), per_page=max_per_query):
             fn = str(repo.get("full_name") or "")
             if not fn or fn in seen or not is_relevant(repo):
