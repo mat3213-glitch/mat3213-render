@@ -56,9 +56,9 @@ jobs:
       - name: Generate (Qwen)
         working-directory: qwen
         env:
-          # при schedule контекст inputs пуст → fallback на боевой объём (1 фото + 2 видео)
+          # при schedule контекст inputs пуст → fallback на боевой объём (1 фото + 1 видео)
           N_IMG:               ${{ inputs.n_img || '1' }}
-          N_VID:               ${{ inputs.n_vid || '2' }}
+          N_VID:               ${{ inputs.n_vid || '1' }}
           RATIO:               ${{ inputs.ratio || '16:9' }}
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
