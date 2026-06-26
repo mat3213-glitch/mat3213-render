@@ -1,0 +1,62 @@
+name: Plastic Gate Nightly (отбраковка пластика из пулов)
+
+# Вариант B (консенсус Claude+mimo): изолированный ночной гейт ПОСЛЕ генераций.
+# Проходит свежие пулы qwen/veofree/hunyuan за сегодня/вчера (UTC), гейтит каждый
+# через plastic_gate.py (mimo+рубрика Claude, enforce → пластик в _rejected/, обратимо).
+
+on:
+  workflow_dispatch:
+    inputs:
+      threshold:
+        description: 'Порог reject (score >=). Дефолт 55'
+        default: '55'
+      force:
+        description: 'Перегейтить даже уже гейченные пулы (1) или skip по gate_report (0)'
+        default: '0'
+  schedule:
+    - cron: '0 6 * * *'   # 06:00 UTC (13:00 NSK) — после qwen(02)/hunyuan(04)/veofree(каждые 3ч)
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone ffmpeg
+          pip install -q pillow
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Restore mimo binary + auth from ydrive
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+      - name: Run nightly gate
+        env:
+          THRESHOLD:          ${{ inputs.threshold || '55' }}
+          FORCE:              ${{ inputs.force || '0' }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID:         ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:       '5'
+        run: python -u plastic_gate_nightly.py
