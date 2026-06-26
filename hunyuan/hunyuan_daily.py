@@ -216,6 +216,14 @@ def main():
     random.shuffle(MOTION_PROMPTS)
     prompts = MOTION_PROMPTS[:N_VID]
 
+    # ── override: конкретные исходники + промпты движения через env (|||-разделитель) ──
+    _imgs = os.environ.get("CUSTOM_IMAGES", "").strip()
+    _prom = os.environ.get("CUSTOM_PROMPTS", "").strip()
+    if _imgs and _prom:
+        selected = [p.strip() for p in _imgs.split("|||") if p.strip()]
+        prompts  = [p.strip() for p in _prom.split("|||") if p.strip()]
+        print(f"[override] кастом: {len(selected)} фото + {len(prompts)} промптов")
+
     print(f"\nПлан на {today}: {len(selected)} видео из фото")
     for i, (photo, prompt) in enumerate(zip(selected, prompts), 1):
         print(f"  {i}. фото: {photo}")

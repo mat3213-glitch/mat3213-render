@@ -188,7 +188,13 @@ def main():
     img_prompts = IMAGE_PROMPTS[:N_IMG]
     vid_prompts = VIDEO_PROMPTS[:N_VID]
 
-    tg(f"🟢 Qwen daily начался\n{N_IMG} картинок + {N_VID} видео · ratio {RATIO}\nпул: {yd_base}")
+    # ── override: кастомные видео-промпты через env (|||-разделитель), для прицельной генерации ──
+    _cust = os.environ.get("VID_PROMPTS_CUSTOM", "").strip()
+    if _cust:
+        vid_prompts = [p.strip() for p in _cust.split("|||") if p.strip()]
+        print(f"[override] кастомные видео-промпты: {len(vid_prompts)} шт")
+
+    tg(f"🟢 Qwen daily начался\n{len(img_prompts)} картинок + {len(vid_prompts)} видео · ratio {RATIO}\nпул: {yd_base}")
 
     t0 = time.time()
     ok_img = ok_vid = fail = 0

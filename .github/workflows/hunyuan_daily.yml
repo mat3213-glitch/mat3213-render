@@ -12,6 +12,12 @@ on:
       ratio:
         description: 'Соотношение сторон'
         default: '9:16'
+      custom_images:
+        description: 'Конкретные исходники с ЯД (путь от Content factory/..., |||-разделитель)'
+        default: ''
+      custom_prompts:
+        description: 'Промпты движения под каждый исходник (|||-разделитель)'
+        default: ''
   schedule:
     - cron: '0 4 * * *'   # ежедневно 04:00 UTC (после Qwen 02); проба US-IP пройдена 16.06
 
@@ -47,6 +53,8 @@ jobs:
         env:
           N_VID:               ${{ inputs.n_vid || '2' }}
           RATIO:               ${{ inputs.ratio || '9:16' }}
+          CUSTOM_IMAGES:       ${{ inputs.custom_images || '' }}
+          CUSTOM_PROMPTS:      ${{ inputs.custom_prompts || '' }}
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}

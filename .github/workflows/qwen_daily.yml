@@ -15,6 +15,9 @@ on:
       ratio:
         description: 'Соотношение сторон'
         default: '16:9'
+      vid_prompts_custom:
+        description: 'Кастомные видео-промпты (|||-разделитель), для прицельной генерации'
+        default: ''
   schedule:
     - cron: '0 2 * * *'   # ежедневно 02:00 UTC (05:00 МСК); GH может задерживать (проба IP пройдена 16.06)
 
@@ -60,6 +63,7 @@ jobs:
           N_IMG:               ${{ inputs.n_img || '1' }}
           N_VID:               ${{ inputs.n_vid || '1' }}
           RATIO:               ${{ inputs.ratio || '16:9' }}
+          VID_PROMPTS_CUSTOM:  ${{ inputs.vid_prompts_custom || '' }}
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
