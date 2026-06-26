@@ -75,6 +75,18 @@ VIDEO_PROMPTS = [
     "slow drifting fog through dark forest, ethereal, no people",
     "curtain gently moving in wind in a dim empty room, soft light",
     "rain slowly running down a window pane at night, bokeh background",
+    "A foggy forest at dawn, soft light filtering through the trees, dew on moss-covered ground, no people, no text, film grain.",
+    "Rippling dark water under a muted sky, gentle waves reflecting shadows, a sense of stillness, no people, no text, film grain.",
+    "An abandoned industrial warehouse, rusted beams and peeling paint, shafts of light piercing through broken windows, no people, no text, film grain.",
+    "A desolate beach at twilight, rolling waves softly crashing, footprints in the sand fading away, no people, no text, film grain.",
+    "A misty mountain landscape, low-hanging clouds enveloping peaks, the silhouette of trees against a somber sky, no people, no text, film grain.",
+    "An empty room with cracked walls, light streaming through dusty blinds, shadows dancing slowly on the floor, no people, no text, film grain.",
+    "A quiet, rain-soaked street at night, reflections in puddles, wet asphalt glimmering under dim streetlights, no people, no text, film grain.",
+    "A withered garden in autumn, fallen leaves covering the ground, overgrown vines intertwining with rusted fences, no people, no text, film grain.",
+    "An abandoned train station, silent tracks leading into the fog, echoes of time lingering in the air, no people, no text, film grain.",
+    "A dimly lit attic filled with forgotten objects, dust particles floating in a beam of light, a sense of nostalgia, no people, no text, film grain.",
+    "A secluded cave with water pooling at the base, stalactites glistening in the faint light, an atmosphere of mystery, no people, no text, film grain.",
+    "A barren winter landscape, snow softly covering the ground, muted colors blending into the horizon, no people, no text, film grain.",
 ]
 
 
