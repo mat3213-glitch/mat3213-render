@@ -32,7 +32,7 @@ FONT    = str(REPO / "assets" / "Caveat.ttf")
 SCRATCH = str(REPO / "assets" / "scratch_overlay.mp4")
 GRIT    = str(REPO / "assets" / "grit_overlay.mp4")
 
-FMT = {"square": (1080, 1080), "vertical": (1080, 1920)}
+FMT = {"square": (1080, 1080), "vertical": (1080, 1920), "landscape": (1920, 1080)}
 FPS = 25
 BEAT = 60.0 / 87.0  # 0.6897s
 
