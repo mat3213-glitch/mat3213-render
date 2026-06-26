@@ -7,7 +7,7 @@ VeoFree i2v — ОДНА генерация видео из фото на про
 
 Env: YADISK_LOGIN/PASSWORD, IMG_REMOTE (путь кадра на ЯД), PROMPT, DEST_FOLDER, OUT_NAME, ASPECT (деф 9:16)
 """
-import os, time, subprocess, requests
+import os, sys, time, subprocess, requests
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -156,3 +156,4 @@ if not ok:
     yd_put(TMP/f"{OUT}.FAILED.txt", f"{DEST}/{OUT}.FAILED.txt")
     if (TMP/"fail.png").exists(): yd_put(TMP/"fail.png", f"{DEST}/{OUT}.fail.png")
 log("DONE ok" if ok else "DONE fail")
+sys.exit(0 if ok else 1)   # честный код: воркфлоу видит реальный исход аплоада

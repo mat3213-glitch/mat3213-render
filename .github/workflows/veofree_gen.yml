@@ -22,14 +22,26 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
       - name: Install Playwright
         run: |
           pip install -q requests playwright
           python -m playwright install --with-deps chromium
       - name: Generate
         env:
-          YADISK_LOGIN:    ${{ secrets.YADISK_LOGIN }}
-          YADISK_PASSWORD: ${{ secrets.YADISK_PASSWORD }}
           PROMPT:          ${{ inputs.prompt }}
           DEST_FOLDER:     ${{ inputs.dest_folder }}
           OUT_NAME:        ${{ inputs.out_name }}

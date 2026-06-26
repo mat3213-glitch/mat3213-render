@@ -8,32 +8,26 @@ Env (GitHub Secrets / inputs):
   DEST_FOLDER — папка ЯД (напр. "Content factory/cloud_io/veofree/2026-06-08_1200")
   OUT_NAME    — имя файла (напр. "clip_01.mp4")
 """
-import os, time, requests
+import os, sys, time, subprocess, requests
 from pathlib import Path
-from urllib.parse import quote as urlquote
 from playwright.sync_api import sync_playwright
 
-YL=os.environ["YADISK_LOGIN"]; YP=os.environ["YADISK_PASSWORD"]
 PROMPT=os.environ.get("PROMPT","slow cinematic drift through deep blue water, light rays into the dark, film grain, no text, no people")
 DEST=os.environ.get("DEST_FOLDER","Content factory/cloud_io/veofree/batch")
 OUT=os.environ.get("OUT_NAME","clip.mp4")
 if not OUT.endswith(".mp4"): OUT+=".mp4"
 URL="https://veoaifree.com/seedance-2-0-video-generator-free/"
-WEBDAV="https://webdav.yandex.ru"; AUTH=(YL,YP); TMP=Path("/tmp/veogen"); TMP.mkdir(exist_ok=True)
+TMP=Path("/tmp/veogen"); TMP.mkdir(exist_ok=True)
 
 def log(s): print(s,flush=True)
-def yd_mkcol(p):
-    c=""
-    for x in p.split("/"):
-        c=f"{c}/{x}" if c else x; requests.request("MKCOL",f"{WEBDAV}/{urlquote(c)}",auth=AUTH,timeout=30)
+# ЯД через rclone ydrive: (WebDAV мёртв → SSLError; copyto сам создаёт родительские папки)
+def yd_mkcol(p): pass  # no-op: rclone copyto создаёт дерево папок при заливке
 def yd_put(local,remote):
-    for _ in range(4):
-        try:
-            with open(local,"rb") as f:
-                if requests.put(f"{WEBDAV}/{urlquote(remote)}",data=f,auth=AUTH,timeout=600).status_code in (200,201,204):
-                    log(f"  up ok {remote}"); return True
-        except Exception as e: log(f"  up err {e}")
-        time.sleep(4)
+    for _ in range(3):
+        r=subprocess.run(["rclone","copyto",str(local),f"ydrive:{remote}"],
+                         capture_output=True,text=True,timeout=600)
+        if r.returncode==0: log(f"  up ok {remote}"); return True
+        log(f"  up err rc={r.returncode} {r.stderr[:200]}"); time.sleep(4)
     return False
 
 def paywall(pg):
@@ -107,3 +101,4 @@ if not ok:
     yd_put(TMP/f"{OUT}.FAILED.txt", f"{DEST}/{OUT}.FAILED.txt")
     if (TMP/"fail.png").exists(): yd_put(TMP/"fail.png", f"{DEST}/{OUT}.fail.png")
 log("DONE ok" if ok else "DONE fail")
+sys.exit(0 if ok else 1)   # честный код: daily/воркфлоу видят реальный исход аплоада

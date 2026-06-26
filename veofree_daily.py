@@ -112,8 +112,7 @@ def run_veofree(prompt, dest_folder, out_name, dry=False):
         print(f"  [dry] PROMPT={prompt}")
         print(f"  [dry] DEST_FOLDER={dest_folder}")
         print(f"  [dry] OUT_NAME={out_name}")
-        print(f"  [dry] YADISK_LOGIN={gen_env.get('YADISK_LOGIN', '?')}")
-        print(f"  [dry] YADISK_PASSWORD={'***' if gen_env.get('YADISK_PASSWORD') else '?'}")
+        print(f"  [dry] аплоад через rclone ydrive: (конфиг rclone в воркфлоу)")
         return True
 
     print(f"\n{'='*60}")
