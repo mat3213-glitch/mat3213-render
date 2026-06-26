@@ -1,0 +1,56 @@
+name: Plastic Gate (отбраковка пластика из пула)
+
+on:
+  workflow_dispatch:
+    inputs:
+      pool:
+        description: 'Путь пула от "Content factory/" (напр. cloud_io/qwen_pool/2026-06-26)'
+        required: true
+      threshold:
+        description: 'Порог reject (score >= порога). Дефолт 55'
+        default: '55'
+      enforce:
+        description: 'Двигать отбракованные в _rejected/ (1) или только отчёт (0)'
+        default: '0'
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone ffmpeg
+          pip install -q pillow
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Restore mimo binary + auth from ydrive
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+      - name: Run plastic_gate.py
+        env:
+          POOL:      ${{ inputs.pool }}
+          THRESHOLD: ${{ inputs.threshold }}
+          ENFORCE:   ${{ inputs.enforce }}
+        run: python -u plastic_gate.py
