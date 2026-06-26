@@ -1,0 +1,53 @@
+name: qwen-coder fanout worker
+
+# Воркер qwen-coder-gh: гоняет qwen_chat.py (текстовый чат через chat.qwen.ai)
+# на US-IP раннере GH Actions с Playwright+Chromium.
+# Вход:  ЯД Content factory/cloud_io/qwen_coder_ci/in/<batch_id>.json
+# Выход: ЯД Content factory/cloud_io/qwen_coder_ci/out/<batch_id>.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_id:
+        description: "id батча (имя in/out файла на ЯД)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull Qwen session
+        run: rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+
+      - name: Install Playwright
+        run: |
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Run batch
+        run: python3 qwen_coder_runner.py "${{ inputs.batch_id }}"
