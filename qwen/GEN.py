@@ -77,7 +77,7 @@ def poll_for_url(cookies: dict, chat_id: str, timeout: int = 600) -> str:
         print(".", end="", flush=True)
         time.sleep(12)
     print(" timeout")
-    sys.exit(1)
+    sys.exit(2)   # 2 = именно таймаут поллинга (отличаем от exit(1) = ошибка/нет chat_id)
 
 
 async def generate(mode: str, prompt: str, ratio: str, out_path: Path,

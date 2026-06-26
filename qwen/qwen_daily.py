@@ -147,9 +147,15 @@ def run_gen(mode: str, prompt: str, out_path: Path) -> bool:
             return True
         else:
             print(f"[gen] FAIL (rc={r.returncode}, exists={out_path.exists()})")
+            # rc=2 от GEN.py = поллинг упёрся в таймаут (видео залипло) → прицельный TG-алерт
+            if r.returncode == 2:
+                tg(f"⏱ Qwen {mode}: генерация упёрлась в таймаут {poll_to}с (залипла на стороне Qwen)\n"
+                   f"промпт: {prompt[:90]}")
             return False
     except subprocess.TimeoutExpired:
         print(f"[gen] TIMEOUT {poll_to + 150}с")
+        tg(f"⏱ Qwen {mode}: subprocess убит по {poll_to + 150}с (GEN.py не вышел сам)\n"
+           f"промпт: {prompt[:90]}")
         return False
     except Exception as e:
         print(f"[gen] ERROR: {e}")
