@@ -89,8 +89,18 @@ def upload_image(s: requests.Session, image_path: Path) -> str:
         print("❌ Установи: pip install cos-python-sdk-v5")
         sys.exit(1)
 
-    info = s.post(f"{API_BASE}/api/vision_platform/resource/genUploadInfo",
-                  json={"resourceType": "image", "fileName": image_path.name}).json()
+    r = s.post(f"{API_BASE}/api/vision_platform/resource/genUploadInfo",
+               json={"resourceType": "image", "fileName": image_path.name})
+    try:
+        info = r.json()
+    except Exception:
+        info = None
+    # ответ может быть вложен в data (как cid) — развернуть
+    if isinstance(info, dict) and info.get("resourceId") is None and isinstance(info.get("data"), dict):
+        info = info["data"]
+    if not isinstance(info, dict):
+        print(f"❌ genUploadInfo пустой/невалидный ответ: HTTP {r.status_code}, body: {r.text[:500]}")
+        sys.exit(1)
 
     resource_id = info.get("resourceId")
     location = info.get("location")
