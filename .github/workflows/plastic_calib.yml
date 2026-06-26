@@ -24,7 +24,8 @@ jobs:
       - name: Install python deps
         run: |
           pip install -q numpy pillow opencv-python-headless scipy
-          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          # torch+torchvision ОБЯЗАТЕЛЬНО с одного CPU-индекса (иначе torchvision::nms конфликт)
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -q piq open_clip_torch
 
       - name: Configure rclone ydrive
