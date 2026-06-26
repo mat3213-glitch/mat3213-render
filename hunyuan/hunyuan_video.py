@@ -156,8 +156,15 @@ def start_t2v(s: requests.Session, cid: str, prompt: str, resolution: str) -> st
     }
     r = s.post(f"{API_BASE}/api/vision_platform/generation", json=payload)
     r.raise_for_status()
-    data = r.json()
-    print("  gen resp:", json.dumps(data, ensure_ascii=False)[:400])
+    try:
+        data = r.json()
+    except Exception:
+        data = None
+    print(f"  gen resp: HTTP {r.status_code} "
+          f"{json.dumps(data, ensure_ascii=False)[:400] if data is not None else r.text[:400]}")
+    if not isinstance(data, dict):
+        print("❌ generation: пустой/невалидный ответ сервера")
+        sys.exit(1)
     task_id = (data.get("taskId") or data.get("data", {}).get("taskId")
                or data.get("JobsDetail", {}).get("JobId"))
     if not task_id:
@@ -183,8 +190,15 @@ def start_i2v(s: requests.Session, cid: str, image_url: str, prompt: str, resolu
     }
     r = s.post(f"{API_BASE}/api/vision_platform/generation", json=payload)
     r.raise_for_status()
-    data = r.json()
-    print("  gen resp:", json.dumps(data, ensure_ascii=False)[:400])
+    try:
+        data = r.json()
+    except Exception:
+        data = None
+    print(f"  gen resp: HTTP {r.status_code} "
+          f"{json.dumps(data, ensure_ascii=False)[:400] if data is not None else r.text[:400]}")
+    if not isinstance(data, dict):
+        print("❌ generation: пустой/невалидный ответ сервера")
+        sys.exit(1)
     task_id = (data.get("taskId") or data.get("data", {}).get("taskId")
                or data.get("JobsDetail", {}).get("JobId"))
     if not task_id:
