@@ -128,16 +128,20 @@ def yd_put(local: Path, remote: str) -> bool:
 
 def run_gen(mode: str, prompt: str, out_path: Path) -> bool:
     """Запуск GEN.py. Возвращает True если файл создан."""
+    # видео генерится дольше 10 мин — даём поллингу 1200с, фото 300с;
+    # subprocess-обёртка чуть шире, чтобы GEN.py успел сам красиво выйти по таймауту
+    poll_to = 1200 if mode == "video" else 300
     cmd = [
         sys.executable, str(GEN_PY), mode, prompt,
         "--ratio", RATIO, "--out", str(out_path),
+        "--timeout", str(poll_to),
     ]
     print(f"\n{'='*60}")
     print(f"[gen] {mode}: {prompt[:70]}")
     print(f"[gen] cmd: {' '.join(cmd)}")
     print(f"{'='*60}")
     try:
-        r = subprocess.run(cmd, timeout=700, capture_output=False)
+        r = subprocess.run(cmd, timeout=poll_to + 150, capture_output=False)
         if r.returncode == 0 and out_path.exists() and out_path.stat().st_size > 1024:
             print(f"[gen] OK → {out_path} ({out_path.stat().st_size // 1024} KB)")
             return True
@@ -145,7 +149,7 @@ def run_gen(mode: str, prompt: str, out_path: Path) -> bool:
             print(f"[gen] FAIL (rc={r.returncode}, exists={out_path.exists()})")
             return False
     except subprocess.TimeoutExpired:
-        print(f"[gen] TIMEOUT 700с")
+        print(f"[gen] TIMEOUT {poll_to + 150}с")
         return False
     except Exception as e:
         print(f"[gen] ERROR: {e}")
@@ -217,6 +221,11 @@ def main():
     print(f"\n{'='*60}")
     print(f"ИТОГО: +{ok_img} img +{ok_vid} vid · ошибок {fail} · {dt}с")
     print(f"{'='*60}")
+
+    # честный exit-код: ран зелёный ТОЛЬКО если всё запрошенное реально сгенерилось
+    # (раньше воркфлоу рисовал success даже когда видео падало по таймауту)
+    if fail:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

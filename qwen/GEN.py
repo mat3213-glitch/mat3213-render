@@ -80,7 +80,8 @@ def poll_for_url(cookies: dict, chat_id: str, timeout: int = 600) -> str:
     sys.exit(1)
 
 
-async def generate(mode: str, prompt: str, ratio: str, out_path: Path, model: str = DEFAULT_MODEL):
+async def generate(mode: str, prompt: str, ratio: str, out_path: Path,
+                   model: str = DEFAULT_MODEL, poll_timeout: int = 0):
     if not SESSION_FILE.exists():
         print("Нет сессии. Сначала: python3 qwen/qwen_auth.py")
         sys.exit(1)
@@ -192,7 +193,9 @@ async def generate(mode: str, prompt: str, ratio: str, out_path: Path, model: st
     if ct not in (chat_type_expected, "unknown"):
         print(f"⚠️  Ожидали {chat_type_expected}, получили {ct}. Продолжаем...")
 
-    media_url = poll_for_url(cookies, chat_id, timeout=600)
+    # видео генерится дольше 10 мин — поллим дольше; фото быстрое
+    eff_timeout = poll_timeout or (1200 if mode == "video" else 300)
+    media_url = poll_for_url(cookies, chat_id, timeout=eff_timeout)
     print(f"URL: {media_url[:80]}...")
     download(media_url, out_path)
 
@@ -206,13 +209,15 @@ def main():
     parser.add_argument("--model", default=DEFAULT_MODEL,
                         help=f"Модель Qwen (по умолчанию {DEFAULT_MODEL})")
     parser.add_argument("--out", default="", help="Путь для сохранения файла")
+    parser.add_argument("--timeout", type=int, default=0,
+                        help="Таймаут поллинга результата, сек (0=авто: видео 1200, фото 300)")
     args = parser.parse_args()
 
     ts = int(time.time())
     ext = "mp4" if args.mode == "video" else "png"
     out_path = Path(args.out) if args.out else OUTPUTS / f"qwen_{args.mode}_{ts}.{ext}"
 
-    asyncio.run(generate(args.mode, args.prompt, args.ratio, out_path, args.model))
+    asyncio.run(generate(args.mode, args.prompt, args.ratio, out_path, args.model, args.timeout))
 
 
 if __name__ == "__main__":
