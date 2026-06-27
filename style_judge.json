@@ -4,45 +4,46 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Warm moody tone, slight color cast."
+      "reason": "Warm muted depth, cinematic, fits downtempo vibe."
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 8,
-      "reason": "Cool subdued vibe, fits downtempo aesthetic."
+      "score": 6,
+      "reason": "Cool muted works, but slightly clinical feel."
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": false,
+      "keep": true,
       "score": 7,
-      "reason": "Redundant with warm night muted, minor differences."
+      "reason": "Similar to warm muted, slightly less depth."
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 6,
-      "reason": "Green tint risks cheap filter appearance."
+      "score": 4,
+      "reason": "Green cast feels cheap, not premium aesthetic."
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 7,
-      "reason": "Balanced neutral tone, soft cinematic feel."
+      "score": 9,
+      "reason": "Neutral soft, premium feel, deep contemplative mood."
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": true,
-      "score": 8,
-      "reason": "Warm soft grade, cohesive and expensive feel."
+      "score": 7,
+      "reason": "Warm soft, accessible but slightly less dark."
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
     "scout_cool_mid_muted",
+    "scout_warm_night_muted_2",
     "scout_neutral_night_soft",
     "scout_warm_mid_soft"
   ],
-  "_generated": "2026-06-26",
+  "_generated": "2026-06-27",
   "_judge": "mimo-auto"
 }
