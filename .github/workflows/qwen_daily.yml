@@ -67,5 +67,5 @@ jobs:
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
-          TG_THREAD_ID:        '5'
+          TG_THREAD_ID:        '2182'
         run: python -u qwen_daily.py
