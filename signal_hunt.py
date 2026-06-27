@@ -8,7 +8,7 @@
 Этот скрипт = «перекладыватель ссылок»: берёт source_link из свежего
 signals/incoming/grok_<date>.json (что прислал ручной Grok — реальные находки) →
 дедуп против verified_tools → ЯД analyst_queue/pending/ → диспатч auto_analyst.yml
-(matrix --from-queue, тред 1653 GROK SCOUT). Песочница auto_analyst заземляет: реально
+(matrix --from-queue, тред 1699 REPO SCOUT). Песочница auto_analyst заземляет: реально
 клонит/курлит каждый URL, мёртвое отсеивается.
 """
 import base64
@@ -23,7 +23,7 @@ QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
 TOOLS = f"{YD}/verified_tools"
 SIGNALS_REPO = "mat3213-glitch/mat3213-signals"
 RENDER_REPO = "mat3213-glitch/mat3213-render"
-GROK_THREAD = "1653"   # GROK SCOUT
+REPO_THREAD = "1699"   # REPO SCOUT — github-репо от Grok = РЕПО-разбор (auto_analyst клонит репо, не твиты)
 GH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
 
 
@@ -81,8 +81,8 @@ def main():
     print(f"в очередь: {len(out)} URL → {QUEUE}/grok_{date}.txt")
     for u in out:
         print("  +", u)
-    # диспатч auto_analyst (пустой targets → --from-queue; тред 1653 GROK SCOUT)
-    body = json.dumps({"ref": "main", "inputs": {"targets": "", "thread": GROK_THREAD}}).encode()
+    # диспатч auto_analyst (пустой targets → --from-queue; тред 1699 REPO SCOUT)
+    body = json.dumps({"ref": "main", "inputs": {"targets": "", "thread": REPO_THREAD}}).encode()
     req = urllib.request.Request(
         f"https://api.github.com/repos/{RENDER_REPO}/actions/workflows/auto_analyst.yml/dispatches",
         data=body, method="POST",
@@ -90,7 +90,7 @@ def main():
                  "Accept": "application/vnd.github+json"})
     try:
         urllib.request.urlopen(req, timeout=30)
-        print(f"auto_analyst диспатчнут (--from-queue, тред {GROK_THREAD})")
+        print(f"auto_analyst диспатчнут (--from-queue, тред {REPO_THREAD})")
     except Exception as e:
         print(f"dispatch fail (очередь подхватит cron): {str(e)[:140]}")
 
