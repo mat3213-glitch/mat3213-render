@@ -1,0 +1,83 @@
+name: Director Eval (Groq vs Gemini)
+
+on:
+  workflow_dispatch:
+    inputs:
+      brief:
+        description: 'Имя брифа (own | other | all), пусто = все из bench/briefs/'
+        required: false
+        default: 'all'
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache apt
+        uses: actions/cache@v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-ffmpeg-rclone-${{ runner.os }}-v1
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-bench-${{ runner.os }}-v1
+
+      - name: Install Python deps
+        run: pip install aubio numpy scipy requests pyyaml
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run director_eval.py
+        env:
+          GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL:         llama-3.3-70b-versatile
+          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL:       gemini-2.5-flash
+          YDRIVE_OUT_PATH:    "Content factory/cloud_io/bench_runs/director_eval_${{ github.run_id }}"
+          BRIEF_ARG:          ${{ inputs.brief }}
+        run: |
+          if [ "$BRIEF_ARG" = "all" ] || [ -z "$BRIEF_ARG" ]; then
+            python -u bench/director_eval.py
+          else
+            python -u bench/director_eval.py "$BRIEF_ARG"
+          fi
+
+      - name: Upload artifacts (GH)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: director-eval-${{ github.run_id }}
+          path: |
+            bench/REPORT.md
+            bench/workspace/**/eval_log.json
+            bench/workspace/**/treatment.json
+            bench/workspace/**/storyboard_groq.json
+            bench/workspace/**/storyboard_gemini.json
+          if-no-files-found: warn
+          retention-days: 14

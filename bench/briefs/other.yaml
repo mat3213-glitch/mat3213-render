@@ -1,0 +1,23 @@
+track:
+  title: "Sloati - Elusive"
+  artist: "Sloati"
+  origin: "чужой"
+  bpm: "120"
+  key: "Am"
+  duration: "3:55"
+  language: "instrumental"
+  yadrive_path: "Content factory/music post/не моя/Sloati-Elusive.mp3"
+structure: {}
+content:
+  text: ""
+  core_emotion: ""
+  visual_mood: ""
+  narrative_angle: ""
+  mood_words: []
+production:
+  genre: "downtempo"
+constraints:
+  what_to_avoid:
+    - "лица"
+    - "неон"
+    - "синтетика"
