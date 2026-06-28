@@ -315,6 +315,8 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
         "duration": round(segs[-1]["track_pos"] + segs[-1]["duration"], 2) if segs else 0,
         "logline": treatment.get("logline", ""),
         "central_motif": treatment.get("central_motif", ""),
+        "archetype_id": treatment.get("archetype_id", ""),      # passthrough (план A: не re-load)
+        "archetype_name": treatment.get("archetype_name", ""),
         "avoid": treatment.get("avoid", []),
         "shots": out_shots,
     }
