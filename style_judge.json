@@ -4,46 +4,44 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Warm muted depth, cinematic, fits downtempo vibe."
+      "reason": "Тёплый мутед-грейд, дорого, глубина без уныния"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 6,
-      "reason": "Cool muted works, but slightly clinical feel."
+      "reason": "Холодный тон, монотонно, но допустимо"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
-      "score": 7,
-      "reason": "Similar to warm muted, slightly less depth."
+      "score": 8,
+      "reason": "Аналог первого, чуть мягче, в ротацию"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
       "score": 4,
-      "reason": "Green cast feels cheap, not premium aesthetic."
+      "reason": "Зелёный каст как дешёвый фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 9,
-      "reason": "Neutral soft, premium feel, deep contemplative mood."
+      "score": 7,
+      "reason": "Нейтрально-чисто, сдержанно, дорого"
     },
     {
       "name": "scout_warm_mid_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Warm soft, accessible but slightly less dark."
+      "keep": false,
+      "score": 5,
+      "reason": "Слишком ярко, насыщенность выдаёт вайб"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
-    "scout_cool_mid_muted",
     "scout_warm_night_muted_2",
-    "scout_neutral_night_soft",
-    "scout_warm_mid_soft"
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-06-27",
+  "_generated": "2026-06-28",
   "_judge": "mimo-auto"
 }
