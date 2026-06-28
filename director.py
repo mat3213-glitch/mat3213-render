@@ -47,6 +47,15 @@ MOTIONS     = {"static", "slow_push", "zoom_in", "zoom_out", "drift", "handheld"
 TRANSITIONS = {"cut", "crossfade", "dip_to_black"}
 SCALES      = {"wide", "medium", "macro"}
 
+# motion-пулы под энергию сегмента (совпадают с правилом разнообразия в SYSTEM).
+# Используются детерминированным rebalance_motion: LLM (особ. Groq) лепит slow_push на
+# 60-85% даже с промпт-каплом → код гарантирует разнообразие независимо от модели.
+ENERGY_MOTIONS = {
+    "low":    ["static", "slow_push", "drift"],
+    "medium": ["drift", "zoom_in", "tilt", "slow_push"],
+    "high":   ["handheld", "zoom_in", "zoom_out", "drift"],
+}
+
 SYSTEM = """Ты — режиссёр-раскадровщик музыкальных клипов yaromat (future garage/downtempo,
 инструментал, БЕЗ лиц). Тебе дан драматургический трактат (treatment) и РЕАЛЬНЫЙ музыкальный
 таймлайн — пронумерованные сегменты трека (с энергией). Разложи дугу трактата по кадрам:
@@ -217,6 +226,39 @@ def _resolve_cat(cat: str, orientation, seed_key, used: set,
     return out
 
 
+def rebalance_motion(shots: list[dict], cap_frac: float = 0.35) -> tuple[int, int]:
+    """Детерминированно ломает монотонность моторики LLM (мутирует shots на месте).
+    Гарантии: ни один motion не занимает > cap_frac кадров; нет >2 одинаковых подряд;
+    выбор замены — наименее использованный motion из энергопула сегмента (тай-брейк
+    по имени → стабильно). Выбор LLM уважается, пока он в рамках. → (cap, переписано)."""
+    n = len(shots)
+    if n < 3:
+        return (n, 0)
+    cap = max(2, int(n * cap_frac))
+    counts = {m: 0 for m in MOTIONS}
+    prev: list[str] = []
+    changed = 0
+    for sh in shots:
+        e = sh.get("energy") or "medium"
+        pool = ENERGY_MOTIONS.get(e, ENERGY_MOTIONS["medium"])
+        m = sh.get("motion") if sh.get("motion") in MOTIONS else "slow_push"
+        orig = m
+        bad = counts[m] >= cap or (len(prev) >= 2 and prev[-1] == m and prev[-2] == m)
+        if bad:
+            cands = [c for c in pool if (not prev or c != prev[-1]) and counts[c] < cap]
+            if not cands:
+                cands = [c for c in MOTIONS if (not prev or c != prev[-1]) and counts[c] < cap]
+            if not cands:
+                cands = [c for c in MOTIONS if not prev or c != prev[-1]] or list(MOTIONS)
+            m = min(cands, key=lambda c: (counts[c], c))
+        if m != orig:
+            changed += 1
+        counts[m] += 1
+        prev.append(m)
+        sh["motion"] = m
+    return (cap, changed)
+
+
 def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
              seed, orientation: str | None, visualizer: bool = False) -> dict:
     by_seg = {}
@@ -261,6 +303,11 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
             "base": base,
             "overlay": overlay,
         })
+
+    # детерминированная страховка разнообразия (LLM-промпт не всегда соблюдает кап)
+    cap, changed = rebalance_motion(out_shots)
+    print(f"[rebalance] motion-кап={cap} ({len(out_shots)} кадров), переписано {changed}",
+          file=sys.stderr)
 
     return {
         "track": treatment.get("track") or "",
