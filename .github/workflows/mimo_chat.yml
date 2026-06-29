@@ -1,0 +1,245 @@
+name: mimo chat bot
+
+# Облачный бот @ghmimo_bot без бука.
+# CF Worker (mat3213-cloudbot /mimo) получает TG-вебхук → dispatches этот workflow →
+# mimo headless считает задачу → результат уходит в TG через CF /bot<token>/sendMessage.
+# Память треда: ydrive:Content factory/cloud_io/mimo_bot/threads.json
+# Secrets нужны в render-репо: YDRIVE_*, CLOUDFLARE_WORKER, MIMO_BOT_TOKEN
+
+on:
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "TG chat_id"
+        required: true
+        type: string
+      thread_id:
+        description: "TG message_thread_id (пусто = нет)"
+        required: false
+        default: ""
+        type: string
+      message:
+        description: "Сообщение пользователя"
+        required: true
+        type: string
+      thread_key:
+        description: "Ключ треда для памяти (chat_id:thread_id)"
+        required: true
+        type: string
+      action:
+        description: "chat (default) | clear (сброс контекста треда)"
+        required: false
+        default: "chat"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  chat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      # ── ВЕТКА CLEAR: сбросить контекст треда ─────────────────────────────────
+      - name: Clear thread context
+        if: ${{ inputs.action == 'clear' }}
+        env:
+          CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
+          MIMO_BOT_TOKEN:    ${{ secrets.MIMO_BOT_TOKEN }}
+          CHAT_ID:           ${{ inputs.chat_id }}
+          THREAD_ID:         ${{ inputs.thread_id }}
+          THREAD_KEY:        ${{ inputs.thread_key }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+
+          key = os.environ["THREAD_KEY"]
+          threads_file = pathlib.Path("/tmp/threads.json")
+
+          subprocess.run(["rclone", "copyto",
+              "ydrive:Content factory/cloud_io/mimo_bot/threads.json",
+              str(threads_file)], capture_output=True)
+
+          threads = {}
+          if threads_file.exists():
+              try: threads = json.loads(threads_file.read_text())
+              except: pass
+          threads.pop(key, None)
+          threads_file.write_text(json.dumps(threads, ensure_ascii=False))
+          subprocess.run(["rclone", "copyto", str(threads_file),
+              "ydrive:Content factory/cloud_io/mimo_bot/threads.json"], check=True)
+
+          cf = os.environ.get("CLOUDFLARE_WORKER", "").rstrip("/")
+          token = os.environ.get("MIMO_BOT_TOKEN", "")
+          chat_id = os.environ.get("CHAT_ID", "")
+          thread_id = os.environ.get("THREAD_ID", "")
+          body = {"chat_id": chat_id, "text": "🆕 Контекст сброшен. Новая задача."}
+          if thread_id:
+              body["message_thread_id"] = int(thread_id)
+          req = urllib.request.Request(
+              f"{cf}/bot{token}/sendMessage",
+              data=json.dumps(body).encode(),
+              headers={"Content-Type": "application/json", "User-Agent": "curl/7.88.1"}
+          )
+          try:
+              urllib.request.urlopen(req, timeout=30)
+              print("TG: контекст сброшен, ответ отправлен")
+          except Exception as e:
+              print(f"TG sendMessage err: {e}")
+          PY
+
+      # ── ВЕТКА CHAT: запустить mimo ────────────────────────────────────────────
+      - name: Restore mimo binary from ydrive
+        if: ${{ inputs.action != 'clear' }}
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id" \
+            "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client" \
+            "$HOME/.local/share/mimocode/mimo-free-client"
+
+      - name: Build prompt with thread context
+        if: ${{ inputs.action != 'clear' }}
+        env:
+          THREAD_KEY: ${{ inputs.thread_key }}
+          MESSAGE:    ${{ inputs.message }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+
+          HIST_TURNS = 6
+          HIST_ANS_CHARS = 1200
+          PREAMBLE = (
+              "Ты — mimo, исполнитель задач yaromat в облаке. Выполни ТЕКУЩУЮ ЗАДАЧУ и верни результат:\n"
+              "код / расчёт / текст. Отвечай по делу, без воды. НЕ меняй файлы репозитория и не делай git —\n"
+              "только верни готовый артефакт (код в блоке, ответ текстом). Если задача неясна — задай "
+              "уточняющий вопрос вместо догадок.\n"
+          )
+
+          key = os.environ["THREAD_KEY"]
+          message = os.environ["MESSAGE"]
+
+          threads_file = pathlib.Path("/tmp/threads.json")
+          subprocess.run(["rclone", "copyto",
+              "ydrive:Content factory/cloud_io/mimo_bot/threads.json",
+              str(threads_file)], capture_output=True)
+
+          threads = {}
+          if threads_file.exists():
+              try: threads = json.loads(threads_file.read_text())
+              except: pass
+
+          hist = threads.get(key, [])[-HIST_TURNS:]
+          parts = [PREAMBLE]
+          if hist:
+              parts.append("\n=== Контекст прошлых шагов этого треда (для справки) ===")
+              for i, turn in enumerate(hist, 1):
+                  ans = (turn.get("a") or "")[:HIST_ANS_CHARS]
+                  parts.append(f"[{i}] Задача: {turn.get('q', '')}\n    Результат: {ans}")
+              parts.append("=== конец контекста ===\n")
+          parts.append(f"ТЕКУЩАЯ ЗАДАЧА:\n{message}")
+          prompt = "\n".join(parts)
+
+          # Сохраняем текущий threads.json для шага save_context
+          threads_file.write_text(json.dumps(threads, ensure_ascii=False))
+          pathlib.Path("/tmp/prompt.txt").write_text(prompt, encoding="utf-8")
+          print(f"Промпт: {len(prompt)} симв., история: {len(hist)} шагов")
+          PY
+
+      - name: Run mimo
+        if: ${{ inputs.action != 'clear' }}
+        id: run
+        run: |
+          MIMO="$HOME/.mimocode/bin/mimo"
+          mkdir -p /tmp/mimorun && cd /tmp/mimorun
+          PROMPT=$(cat /tmp/prompt.txt)
+          START=$(date +%s)
+          timeout 540 "$MIMO" run --pure --dangerously-skip-permissions "$PROMPT" \
+            > out.txt 2> err.txt </dev/null
+          RC=$?
+          END=$(date +%s)
+          sed -r 's/\x1B\[[0-9;]*[A-Za-z]//g' out.txt | grep -vE '^\s*>' | sed '/^\s*$/d' > clean.txt
+          echo "RC=$RC ELAPSED=$((END-START))"
+          echo "rc=$RC"                 >> "$GITHUB_OUTPUT"
+          echo "elapsed=$((END-START))" >> "$GITHUB_OUTPUT"
+
+      - name: Save context + send result to TG
+        if: ${{ inputs.action != 'clear' }}
+        env:
+          CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
+          MIMO_BOT_TOKEN:    ${{ secrets.MIMO_BOT_TOKEN }}
+          CHAT_ID:           ${{ inputs.chat_id }}
+          THREAD_ID:         ${{ inputs.thread_id }}
+          THREAD_KEY:        ${{ inputs.thread_key }}
+          MESSAGE:           ${{ inputs.message }}
+          RC:                ${{ steps.run.outputs.rc }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, urllib.request
+
+          key = os.environ["THREAD_KEY"]
+          message = os.environ["MESSAGE"]
+          rc = os.environ.get("RC") or "1"
+          cf = os.environ.get("CLOUDFLARE_WORKER", "").rstrip("/")
+          token = os.environ.get("MIMO_BOT_TOKEN", "")
+          chat_id = os.environ.get("CHAT_ID", "")
+          thread_id = os.environ.get("THREAD_ID", "")
+
+          clean = pathlib.Path("/tmp/mimorun/clean.txt")
+          err   = pathlib.Path("/tmp/mimorun/err.txt")
+          text = clean.read_text(encoding="utf-8", errors="replace").strip() if clean.exists() else ""
+          ok = (rc == "0") and bool(text)
+
+          if ok:
+              resp = text
+              # Обновляем контекст треда и льём на ЯД
+              threads_file = pathlib.Path("/tmp/threads.json")
+              threads = {}
+              if threads_file.exists():
+                  try: threads = json.loads(threads_file.read_text())
+                  except: pass
+              hist = threads.get(key, [])
+              hist.append({"q": message, "a": resp[:1200]})
+              threads[key] = hist[-6:]
+              threads_file.write_text(json.dumps(threads, ensure_ascii=False))
+              subprocess.run(["rclone", "copyto", str(threads_file),
+                  "ydrive:Content factory/cloud_io/mimo_bot/threads.json"], check=True)
+          else:
+              err_text = (err.read_text(errors="replace")[:300] if err.exists() else "")
+              resp = f"❌ gh-mimo: rc={rc} {err_text}".strip()
+
+          # Отправляем в TG (чанками по 3900 симв.)
+          for i in range(0, max(len(resp), 1), 3900):
+              chunk = resp[i:i + 3900] or "(пусто)"
+              body = {"chat_id": chat_id, "text": chunk}
+              if thread_id:
+                  body["message_thread_id"] = int(thread_id)
+              req = urllib.request.Request(
+                  f"{cf}/bot{token}/sendMessage",
+                  data=json.dumps(body).encode(),
+                  headers={"Content-Type": "application/json", "User-Agent": "curl/7.88.1"}
+              )
+              try:
+                  urllib.request.urlopen(req, timeout=30)
+                  print(f"TG ok (chunk {i // 3900 + 1})")
+              except Exception as e:
+                  print(f"TG err: {e}")
+          PY
