@@ -42,8 +42,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install rclone
-        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+      - name: Install rclone + ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone ffmpeg
 
       - name: Configure rclone ydrive
         env:
