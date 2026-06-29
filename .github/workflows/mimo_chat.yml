@@ -280,3 +280,51 @@ jobs:
               except Exception as e:
                   print(f"TG err: {e}")
           PY
+
+      # Краткая версия ответа голосом (edge-tts ru → ogg → sendVoice). Не критично: на ошибке молчим.
+      - name: Send voice reply
+        if: ${{ inputs.action != 'clear' && steps.run.outputs.rc == '0' }}
+        env:
+          CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
+          MIMO_BOT_TOKEN:    ${{ secrets.MIMO_BOT_TOKEN }}
+          CHAT_ID:           ${{ inputs.chat_id }}
+          THREAD_ID:         ${{ inputs.thread_id }}
+        run: |
+          pip install -q edge-tts requests || { echo "pip fail — пропуск голоса"; exit 0; }
+          python3 - <<'PY'
+          import os, asyncio, subprocess
+          try:
+              text = open("/tmp/mimorun/clean.txt", encoding="utf-8").read().strip()
+          except Exception:
+              text = ""
+          if not text:
+              print("нет текста для голоса"); raise SystemExit(0)
+          # краткая версия: ~400 симв, обрезка по концу предложения
+          short = text
+          if len(text) > 400:
+              short = text[:400]
+              cut = max(short.rfind("."), short.rfind("!"), short.rfind("?"), short.rfind("…"))
+              short = short[:cut + 1] if cut > 100 else short
+          try:
+              import edge_tts
+              asyncio.run(edge_tts.Communicate(short, "ru-RU-SvetlanaNeural").save("/tmp/reply.mp3"))
+              subprocess.run(["ffmpeg", "-y", "-i", "/tmp/reply.mp3", "-c:a", "libopus",
+                              "-b:a", "32k", "/tmp/reply.ogg"], check=True, capture_output=True)
+          except Exception as e:
+              print(f"TTS/ffmpeg err: {e}"); raise SystemExit(0)
+          try:
+              import requests
+              cf = os.environ["CLOUDFLARE_WORKER"].rstrip("/")
+              data = {"chat_id": os.environ["CHAT_ID"]}
+              tid = os.environ.get("THREAD_ID", "").strip()
+              if tid:
+                  data["message_thread_id"] = int(tid)
+              with open("/tmp/reply.ogg", "rb") as fh:
+                  # UA curl ОБЯЗАТЕЛЕН: CF Worker режет дефолтный requests-UA (403/1010)
+                  r = requests.post(f"{cf}/bot{os.environ['MIMO_BOT_TOKEN']}/sendVoice",
+                                    data=data, files={"voice": fh},
+                                    headers={"User-Agent": "curl/7.88.1"}, timeout=60)
+              print(f"sendVoice: {r.status_code}")
+          except Exception as e:
+              print(f"sendVoice err: {e}")
+          PY
