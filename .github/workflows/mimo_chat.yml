@@ -68,21 +68,12 @@ jobs:
           python3 - <<'PY'
           import json, os, pathlib, subprocess, urllib.request
 
+          import re
           key = os.environ["THREAD_KEY"]
-          threads_file = pathlib.Path("/tmp/threads.json")
-
-          subprocess.run(["rclone", "copyto",
-              "ydrive:Content factory/cloud_io/mimo_bot/threads.json",
-              str(threads_file)], capture_output=True)
-
-          threads = {}
-          if threads_file.exists():
-              try: threads = json.loads(threads_file.read_text())
-              except: pass
-          threads.pop(key, None)
-          threads_file.write_text(json.dumps(threads, ensure_ascii=False))
-          subprocess.run(["rclone", "copyto", str(threads_file),
-              "ydrive:Content factory/cloud_io/mimo_bot/threads.json"], check=True)
+          # per-thread файл (фикс гонки): один тред = один файл, удаляем только его
+          def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
+          remote = f"ydrive:Content factory/cloud_io/mimo_bot/threads/{safe_key(key)}.json"
+          subprocess.run(["rclone", "delete", remote], capture_output=True)
 
           cf = os.environ.get("CLOUDFLARE_WORKER", "").rstrip("/")
           token = os.environ.get("MIMO_BOT_TOKEN", "")
@@ -153,17 +144,17 @@ jobs:
           key = os.environ["THREAD_KEY"]
           message = os.environ["MESSAGE"]
 
-          threads_file = pathlib.Path("/tmp/threads.json")
-          subprocess.run(["rclone", "copyto",
-              "ydrive:Content factory/cloud_io/mimo_bot/threads.json",
-              str(threads_file)], capture_output=True)
-
-          threads = {}
-          if threads_file.exists():
-              try: threads = json.loads(threads_file.read_text())
+          # per-thread история (фикс гонки): читаем только файл этого треда
+          import re
+          def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
+          th_remote = f"ydrive:Content factory/cloud_io/mimo_bot/threads/{safe_key(key)}.json"
+          th_local = f"/tmp/_th_{safe_key(key)}.json"
+          subprocess.run(["rclone", "copyto", th_remote, th_local], capture_output=True)
+          hist = []
+          if pathlib.Path(th_local).exists():
+              try: hist = json.loads(pathlib.Path(th_local).read_text())[-HIST_TURNS:]
               except: pass
 
-          hist = threads.get(key, [])[-HIST_TURNS:]
           parts = [PREAMBLE]
           if hist:
               parts.append("\n=== Контекст прошлых шагов этого треда (для справки) ===")
@@ -174,8 +165,6 @@ jobs:
           parts.append(f"ТЕКУЩАЯ ЗАДАЧА:\n{message}")
           prompt = "\n".join(parts)
 
-          # Сохраняем текущий threads.json для шага save_context
-          threads_file.write_text(json.dumps(threads, ensure_ascii=False))
           pathlib.Path("/tmp/prompt.txt").write_text(prompt, encoding="utf-8")
           print(f"Промпт: {len(prompt)} симв., история: {len(hist)} шагов")
           PY
@@ -196,6 +185,33 @@ jobs:
           echo "RC=$RC ELAPSED=$((END-START))"
           echo "rc=$RC"                 >> "$GITHUB_OUTPUT"
           echo "elapsed=$((END-START))" >> "$GITHUB_OUTPUT"
+
+      # Детерминированный /close: пишем рефлексию в память mimo САМИ (не полагаясь на free-LLM)
+      - name: Persist /close reflection
+        if: ${{ inputs.action != 'clear' && contains(inputs.message, '/close') }}
+        run: |
+          python3 - <<'PY'
+          import subprocess, os, datetime, pathlib
+          clean = ""
+          p = pathlib.Path("/tmp/mimorun/clean.txt")
+          if p.exists():
+              clean = p.read_text(encoding="utf-8", errors="replace").strip()
+          rnotes = "ydrive:Content factory/cloud_io/mimo_sandbox/MEMORY/notes.md"
+          lnotes = "/tmp/_notes_close.md"
+          subprocess.run(["rclone", "copyto", rnotes, lnotes], capture_output=True)
+          utc = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+          entry = f"- [{utc}] /close: " + " ".join(clean[:200].split())
+          lines = pathlib.Path(lnotes).read_text(encoding="utf-8").splitlines() if pathlib.Path(lnotes).exists() else []
+          ins = 0
+          for i, l in enumerate(lines):
+              if l.lstrip().startswith(">"):   # после строки-подсказки (свежее сверху)
+                  ins = i + 1
+                  break
+          lines.insert(ins, entry)
+          pathlib.Path(lnotes).write_text("\n".join(lines) + "\n", encoding="utf-8")
+          subprocess.run(["rclone", "copyto", lnotes, rnotes], capture_output=True)
+          print(f"/close reflection persisted: {entry[:80]}")
+          PY
 
       - name: Save context + send result to TG
         if: ${{ inputs.action != 'clear' }}
@@ -226,18 +242,20 @@ jobs:
 
           if ok:
               resp = text
-              # Обновляем контекст треда и льём на ЯД
-              threads_file = pathlib.Path("/tmp/threads.json")
-              threads = {}
-              if threads_file.exists():
-                  try: threads = json.loads(threads_file.read_text())
+              # per-thread запись (фикс гонки): читаем/пишем только файл этого треда
+              import re
+              def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
+              th_remote = f"ydrive:Content factory/cloud_io/mimo_bot/threads/{safe_key(key)}.json"
+              th_local = f"/tmp/_th_{safe_key(key)}.json"
+              subprocess.run(["rclone", "copyto", th_remote, th_local], capture_output=True)
+              hist = []
+              if pathlib.Path(th_local).exists():
+                  try: hist = json.loads(pathlib.Path(th_local).read_text())
                   except: pass
-              hist = threads.get(key, [])
               hist.append({"q": message, "a": resp[:1200]})
-              threads[key] = hist[-6:]
-              threads_file.write_text(json.dumps(threads, ensure_ascii=False))
-              subprocess.run(["rclone", "copyto", str(threads_file),
-                  "ydrive:Content factory/cloud_io/mimo_bot/threads.json"], check=True)
+              hist = hist[-6:]
+              pathlib.Path(th_local).write_text(json.dumps(hist, ensure_ascii=False))
+              subprocess.run(["rclone", "copyto", th_local, th_remote], capture_output=True)
           else:
               err_text = (err.read_text(errors="replace")[:300] if err.exists() else "")
               resp = f"❌ gh-mimo: rc={rc} {err_text}".strip()
