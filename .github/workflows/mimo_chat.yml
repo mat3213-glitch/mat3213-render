@@ -127,11 +127,25 @@ jobs:
 
           HIST_TURNS = 6
           HIST_ANS_CHARS = 1200
+          SB = "ydrive:Content factory/cloud_io/mimo_sandbox"
+
+          # Впрыск на КАЖДЫЙ ход: конституция + срез памяти проекта + личная память mimo.
+          def yd_read(remote, default=""):
+              p = pathlib.Path("/tmp/" + remote.split("/")[-1])
+              r = subprocess.run(["rclone", "copyto", remote, str(p)], capture_output=True)
+              return p.read_text(encoding="utf-8", errors="replace") if (r.returncode == 0 and p.exists()) else default
+
+          rules   = yd_read(f"{SB}/RULES.md", "(RULES.md не найден — действуй осторожно, только в песочнице)")
+          brief   = yd_read(f"{SB}/PROJECT_BRIEF.md", "")
+          my_mem  = yd_read(f"{SB}/MEMORY/notes.md", "")
+
           PREAMBLE = (
-              "Ты — mimo, исполнитель задач yaromat в облаке. Выполни ТЕКУЩУЮ ЗАДАЧУ и верни результат:\n"
-              "код / расчёт / текст. Отвечай по делу, без воды. НЕ меняй файлы репозитория и не делай git —\n"
-              "только верни готовый артефакт (код в блоке, ответ текстом). Если задача неясна — задай "
-              "уточняющий вопрос вместо догадок.\n"
+              rules
+              + "\n\n=== СРЕЗ ПАМЯТИ ПРОЕКТА ===\n" + brief
+              + "\n\n=== ТВОЯ ЛИЧНАЯ ПАМЯТЬ (mimo_sandbox/MEMORY/notes.md) ===\n" + (my_mem or "(пусто)")
+              + "\n\nНАПОМИНАНИЕ: пиши/удаляй ТОЛЬКО в mimo_sandbox/ и /tmp; НЕ commit/push (это тимлид).\n"
+              "Если в сообщении есть '/close' — выполни ритуал закрытия из RULES (рефлексия → запись в свою\n"
+              "память notes.md через rclone → итог в ответе). После полезной работы дописывай вывод в notes.md.\n"
           )
 
           key = os.environ["THREAD_KEY"]
