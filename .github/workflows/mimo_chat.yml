@@ -301,34 +301,23 @@ jobs:
               text = ""
           if not text:
               print("нет текста для голоса"); raise SystemExit(0)
-          # для озвучки берём строку '🔊 ...' (краткое резюме без техники, mimo даёт сам).
+          # для озвучки: строка '\U0001F50A ...' если mimo дал, иначе весь текст без markdown-символов.
+          # Упрощено намеренно: не фильтруем по строкам (занулялось на раннере) — чистим символы и режем.
+          import re
+          mark = "\U0001F50A"
           short = ""
           for line in text.splitlines():
               s = line.strip()
-              if s.startswith("🔊"):
-                  short = s.lstrip("🔊").strip(" :—-")
+              if mark in s:
+                  short = s.split(mark, 1)[1].strip(" :—-")
                   break
           if not short:
-              # фолбэк: проза без код-блоков/таблиц/заголовков; буллет-маркеры СНИМАЕМ (не выбрасываем)
-              import re
-              clean = re.sub(r"`[^`]*`", "", text)
-              lines = []
-              for l in clean.splitlines():
-                  s = l.strip()
-                  if not s or s.startswith(("```", "|", "$", "#")):
-                      continue
-                  s = s.lstrip("—-*•·▪ ").strip()   # снять ведущий маркер списка
-                  if s:
-                      lines.append(s)
-              clean = " ".join(lines)
-              short = clean[:250].strip()
-              c = short.rfind(".")
-              if c > 80:
-                  short = short[:c + 1]
-              print("DBG fb lines:", len(lines), "clean_len:", len(clean), "short:", repr(short[:80]))
-          if not short.strip():
-              print("нет прозы для озвучки (ответ весь технический)"); raise SystemExit(0)
-          print("VOICE_OK short:", repr(short[:80]))
+              src = re.sub(r"`+", " ", text)               # убрать бэктики кода
+              src = re.sub(r"[#|>*_]", " ", src)            # убрать markdown-символы (НЕ строки целиком)
+              short = " ".join(src.split())[:220].strip()   # схлопнуть пробелы, обрезать
+          if not short:
+              print("нет текста для озвучки"); raise SystemExit(0)
+          print("VOICE short:", short[:80])
           try:
               import edge_tts
               asyncio.run(edge_tts.Communicate(short, "ru-RU-SvetlanaNeural").save("/tmp/reply.mp3"))
