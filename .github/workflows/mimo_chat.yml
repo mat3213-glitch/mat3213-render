@@ -313,18 +313,26 @@ jobs:
           except Exception as e:
               print(f"TTS/ffmpeg err: {e}"); raise SystemExit(0)
           try:
-              import requests
+              import urllib.request, json
+              # ogg → catbox (TG сам качает по URL) → sendVoice JSON через рабочий /bot* passthrough.
+              # (multipart через generic /bot* даёт 403 — JSON+URL это обходит, как текстовый sendMessage.)
+              cb = subprocess.run(["curl", "-s", "-F", "reqtype=fileupload",
+                                   "-F", "fileToUpload=@/tmp/reply.ogg",
+                                   "https://catbox.moe/user/api.php"], capture_output=True, text=True)
+              url = (cb.stdout or "").strip()
+              if not url.startswith("http"):
+                  print(f"catbox fail: {cb.stdout} {cb.stderr}"); raise SystemExit(0)
               cf = os.environ["CLOUDFLARE_WORKER"].rstrip("/")
-              data = {"chat_id": os.environ["CHAT_ID"]}
+              body = {"chat_id": os.environ["CHAT_ID"], "voice": url}
               tid = os.environ.get("THREAD_ID", "").strip()
               if tid:
-                  data["message_thread_id"] = int(tid)
-              with open("/tmp/reply.ogg", "rb") as fh:
-                  # UA curl ОБЯЗАТЕЛЕН: CF Worker режет дефолтный requests-UA (403/1010)
-                  r = requests.post(f"{cf}/bot{os.environ['MIMO_BOT_TOKEN']}/sendVoice",
-                                    data=data, files={"voice": fh},
-                                    headers={"User-Agent": "curl/7.88.1"}, timeout=60)
-              print(f"sendVoice: {r.status_code}")
+                  body["message_thread_id"] = int(tid)
+              req = urllib.request.Request(
+                  f"{cf}/bot{os.environ['MIMO_BOT_TOKEN']}/sendVoice",
+                  data=json.dumps(body).encode(),
+                  headers={"Content-Type": "application/json", "User-Agent": "curl/7.88.1"})
+              r = urllib.request.urlopen(req, timeout=60)
+              print(f"sendVoice: {r.status}")
           except Exception as e:
               print(f"sendVoice err: {e}")
           PY
