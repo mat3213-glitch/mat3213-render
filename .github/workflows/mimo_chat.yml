@@ -325,8 +325,10 @@ jobs:
               c = short.rfind(".")
               if c > 80:
                   short = short[:c + 1]
+              print("DBG fb lines:", len(lines), "clean_len:", len(clean), "short:", repr(short[:80]))
           if not short.strip():
               print("нет прозы для озвучки (ответ весь технический)"); raise SystemExit(0)
+          print("VOICE_OK short:", repr(short[:80]))
           try:
               import edge_tts
               asyncio.run(edge_tts.Communicate(short, "ru-RU-SvetlanaNeural").save("/tmp/reply.mp3"))
