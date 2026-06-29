@@ -140,6 +140,8 @@ jobs:
               + "\n\nНАПОМИНАНИЕ: пиши/удаляй ТОЛЬКО в mimo_sandbox/ и /tmp; НЕ commit/push (это тимлид).\n"
               "Если в сообщении есть '/close' — выполни ритуал закрытия из RULES (рефлексия → запись в свою\n"
               "память notes.md через rclone → итог в ответе). После полезной работы дописывай вывод в notes.md.\n"
+              "В САМОМ КОНЦЕ ответа добавь ОТДЕЛЬНУЮ строку, начинающуюся с '🔊 ' — краткое резюме сути\n"
+              "для озвучки голосом: 1-2 простых предложения на русском, БЕЗ кода, команд, путей и тех.деталей.\n"
           )
 
           key = os.environ["THREAD_KEY"]
@@ -299,12 +301,24 @@ jobs:
               text = ""
           if not text:
               print("нет текста для голоса"); raise SystemExit(0)
-          # краткая версия: ~400 симв, обрезка по концу предложения
-          short = text
-          if len(text) > 400:
-              short = text[:400]
+          # для озвучки берём строку '🔊 ...' (краткое резюме без техники, mimo даёт сам).
+          short = ""
+          for line in text.splitlines():
+              s = line.strip()
+              if s.startswith("🔊"):
+                  short = s.lstrip("🔊").strip(" :—-")
+                  break
+          if not short:
+              # фолбэк: первое предложение без код-блоков/технических символов
+              import re
+              clean = re.sub(r"`[^`]*`", "", text)
+              clean = "\n".join(l for l in clean.splitlines() if not l.strip().startswith(("```", "|", "$", "#")))
+              clean = clean.strip()
+              short = clean[:300]
               cut = max(short.rfind("."), short.rfind("!"), short.rfind("?"), short.rfind("…"))
-              short = short[:cut + 1] if cut > 100 else short
+              short = short[:cut + 1] if cut > 80 else short
+          if not short.strip():
+              print("нет краткого резюме для голоса"); raise SystemExit(0)
           try:
               import edge_tts
               asyncio.run(edge_tts.Communicate(short, "ru-RU-SvetlanaNeural").save("/tmp/reply.mp3"))
