@@ -84,16 +84,23 @@ def make_parallax_frames(still_path, depth, num_frames=150, size=960):
     crop = img_s[y1:y1 + size, x1:x1 + size].copy()
     cd = depth_s[y1:y1 + size, x1:x1 + size].astype(np.float32)
 
-    amp_x = size * 0.008   # ~7.7 px — едва заметно
-    amp_y = size * 0.005   # ~4.8 px
+    # Амплитуда параллакса — доля кадра, ТЮНИТСЯ через env PARALLAX_AMP (без правки кода).
+    # Дефолт 0.10 (макс. выраженное движение по запросу yaromat: «увеличь на максимум, статично»).
+    # Y берём 0.6 от X. На больших значениях возможны occlusion-артефакты по краям объектов —
+    # это естественный предел 2.5D-параллакса из одного кадра (это калибровочная ручка).
+    amp_frac = float(os.environ.get("PARALLAX_AMP") or "0.10")
+    amp_x = size * amp_frac
+    amp_y = size * amp_frac * 0.6
     yy, xx = np.mgrid[0:size, 0:size].astype(np.float32)
 
     frames = []
     for i in range(num_frames):
         t = i / max(1, num_frames - 1)          # 0..1
-        sx = amp_x * np.sin(np.pi * t)          # 0 → amp → 0: один мягкий проход
-        sy = amp_y * np.sin(np.pi * t * 0.5)    # медленный наклон по Y
-        dx = sx * cd                            # ближе (cd→1) двигается сильнее
+        ease = t * t * (3.0 - 2.0 * t)          # smoothstep 0..1 (плавный старт/стоп)
+        s = ease * 2.0 - 1.0                    # -1 → +1: МОНОТОННЫЙ проезд камеры через сцену
+        sx = amp_x * s
+        sy = amp_y * s * 0.5
+        dx = sx * cd                            # ближе (cd→1) двигается сильнее = параллакс
         dy = sy * cd
         map_x = (xx - dx).astype(np.float32)
         map_y = (yy - dy).astype(np.float32)

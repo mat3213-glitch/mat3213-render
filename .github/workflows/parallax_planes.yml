@@ -11,6 +11,10 @@ on:
         description: 'Подмножество стиллов через запятую (опц.)'
         required: false
         type: string
+      amp:
+        description: 'Амплитуда параллакса (доля кадра; дефолт 0.10 = макс. выраженно)'
+        required: false
+        type: string
 
 jobs:
   parallax:
@@ -51,6 +55,7 @@ jobs:
         env:
           JOB_ID: ${{ inputs.job_id }}
           STILLS: ${{ inputs.stills }}
+          PARALLAX_AMP: ${{ inputs.amp }}
         run: |
           ARGS=(--job-id "$JOB_ID")
           if [ -n "$STILLS" ]; then ARGS+=(--stills "$STILLS"); fi
