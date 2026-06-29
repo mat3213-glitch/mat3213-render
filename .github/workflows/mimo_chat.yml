@@ -138,6 +138,8 @@ jobs:
           rules   = yd_read(f"{SB}/RULES.md", "(RULES.md не найден — действуй осторожно, только в песочнице)")
           brief   = yd_read(f"{SB}/PROJECT_BRIEF.md", "")
           my_mem  = yd_read(f"{SB}/MEMORY/notes.md", "")
+          # защита от раздувания промпта: вшиваем только ХВОСТ памяти (последние 60 строк)
+          my_mem = "\n".join(my_mem.strip().splitlines()[-60:])
 
           PREAMBLE = (
               rules
