@@ -34,6 +34,7 @@ on:
 
 permissions:
   contents: read
+  actions: write   # mimo может dispatch рендер-воркфлоу в ЭТОМ репо (белый список в RULES)
 
 jobs:
   chat:
@@ -172,6 +173,8 @@ jobs:
       - name: Run mimo
         if: ${{ inputs.action != 'clear' }}
         id: run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # для `gh workflow run` рендеров (белый список в RULES)
         run: |
           MIMO="$HOME/.mimocode/bin/mimo"
           mkdir -p /tmp/mimorun && cd /tmp/mimorun
