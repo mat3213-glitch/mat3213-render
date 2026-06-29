@@ -301,7 +301,6 @@ jobs:
               text = ""
           if not text:
               print("нет текста для голоса"); raise SystemExit(0)
-          print("DEBUG has_marker:", "🔊" in text, "| len:", len(text), "| tail:", repr(text[-120:]))
           # для озвучки берём строку '🔊 ...' (краткое резюме без техники, mimo даёт сам).
           short = ""
           for line in text.splitlines():
@@ -310,11 +309,18 @@ jobs:
                   short = s.lstrip("🔊").strip(" :—-")
                   break
           if not short:
-              # фолбэк: проза без код-блоков/таблиц/заголовков, первые ~250 симв
+              # фолбэк: проза без код-блоков/таблиц/заголовков; буллет-маркеры СНИМАЕМ (не выбрасываем)
               import re
               clean = re.sub(r"`[^`]*`", "", text)
-              clean = " ".join(l.strip() for l in clean.splitlines()
-                               if l.strip() and not l.strip().startswith(("```", "|", "$", "#", "—", "-", "*")))
+              lines = []
+              for l in clean.splitlines():
+                  s = l.strip()
+                  if not s or s.startswith(("```", "|", "$", "#")):
+                      continue
+                  s = s.lstrip("—-*•·▪ ").strip()   # снять ведущий маркер списка
+                  if s:
+                      lines.append(s)
+              clean = " ".join(lines)
               short = clean[:250].strip()
               c = short.rfind(".")
               if c > 80:
