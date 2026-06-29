@@ -3,45 +3,45 @@
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 8,
-      "reason": "Тёплый мутед-грейд, дорого, глубина без уныния"
+      "score": 7,
+      "reason": "Тёплый мутный ночной тон, глубина без дешёвого каста"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 6,
-      "reason": "Холодный тон, монотонно, но допустимо"
+      "reason": "Холодный сдержанный, хорош для даунтемпо-интроспекции"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
-      "score": 8,
-      "reason": "Аналог первого, чуть мягче, в ротацию"
+      "score": 7,
+      "reason": "Аналогичен первому, дополняет ротацию"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
       "score": 4,
-      "reason": "Зелёный каст как дешёвый фильтр"
+      "reason": "Зелёный каст ощущается дешёвым фильтром"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Нейтрально-чисто, сдержанно, дорого"
+      "keep": false,
+      "score": 5,
+      "reason": "Слишком нейтрально, теряет глубину и характер"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": false,
       "score": 5,
-      "reason": "Слишком ярко, насыщенность выдаёт вайб"
+      "reason": "Слишком тёплый и светлый, теряет ночную атмосферу"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
     "scout_warm_night_muted_2",
-    "scout_neutral_night_soft"
+    "scout_cool_mid_muted"
   ],
-  "_generated": "2026-06-28",
+  "_generated": "2026-06-29",
   "_judge": "mimo-auto"
 }
