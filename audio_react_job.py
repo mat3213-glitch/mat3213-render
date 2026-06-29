@@ -87,11 +87,13 @@ def _run(TMP):
         ret, frame = cap.read()
         if not ret:
             break
+        # Внутренние коэффициенты подняты (2026-06-29: PoC v1 был незаметен). AR_AMP=1.0 → максимум:
+        # контраст/яркость до ±60%, зерно до ~150 sigma на басу. amp калибрует вниз от максимума.
         f = frame.astype(np.float32)
-        c = 1.0 + AR_AMP * (full_env[i] - 0.5)
-        bv = 1.0 + AR_AMP * 0.5 * (full_env[i] - 0.5)
+        c = 1.0 + AR_AMP * 1.2 * (full_env[i] - 0.5)
+        bv = 1.0 + AR_AMP * 1.2 * (full_env[i] - 0.5)
         out = (f - 128.0) * c + 128.0 * bv
-        noise_strength = 255.0 * (0.015 + AR_AMP * 0.12 * bass_env[i])
+        noise_strength = 255.0 * (0.02 + AR_AMP * 0.55 * bass_env[i])
         noise = np.random.randn(h, w, 1) * noise_strength
         out = out + noise
         out = np.clip(out, 0, 255).astype(np.uint8)
