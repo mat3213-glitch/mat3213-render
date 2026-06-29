@@ -177,7 +177,7 @@ jobs:
           mkdir -p /tmp/mimorun && cd /tmp/mimorun
           PROMPT=$(cat /tmp/prompt.txt)
           START=$(date +%s)
-          timeout 540 "$MIMO" run --pure --dangerously-skip-permissions "$PROMPT" \
+          timeout 1500 "$MIMO" run --pure --dangerously-skip-permissions "$PROMPT" \
             > out.txt 2> err.txt </dev/null
           RC=$?
           END=$(date +%s)
