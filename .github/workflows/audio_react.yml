@@ -1,0 +1,63 @@
+name: Audio React
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — папка render_jobs/<job_id>/ с готовым клипом на ЯД'
+        required: true
+        type: string
+      in_name:
+        description: 'Имя входного mp4 (опц., иначе первый *.mp4)'
+        required: false
+        type: string
+      amp:
+        description: 'Амплитуда audio-react (доля; дефолт 0.12)'
+        required: false
+        type: string
+
+jobs:
+  audio-react:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Install Python deps
+        run: pip install librosa opencv-python-headless numpy scipy soundfile
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run audio react
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          IN_NAME: ${{ inputs.in_name }}
+          AR_AMP: ${{ inputs.amp }}
+        run: python -u audio_react_job.py
+
+      - name: Write error status on failure
+        if: failure()
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/${{ inputs.job_id }}/status.txt" \
+            <<< "error: workflow failed" || true
