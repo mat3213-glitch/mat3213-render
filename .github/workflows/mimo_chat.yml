@@ -301,6 +301,7 @@ jobs:
               text = ""
           if not text:
               print("нет текста для голоса"); raise SystemExit(0)
+          print("DEBUG has_marker:", "🔊" in text, "| len:", len(text), "| tail:", repr(text[-120:]))
           # для озвучки берём строку '🔊 ...' (краткое резюме без техники, mimo даёт сам).
           short = ""
           for line in text.splitlines():
