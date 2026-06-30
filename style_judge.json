@@ -2,46 +2,45 @@
   "verdicts": [
     {
       "name": "scout_warm_night_muted",
-      "keep": true,
-      "score": 7,
-      "reason": "Тёплый мутный ночной тон, глубина без дешёвого каста"
+      "keep": false,
+      "score": 6,
+      "reason": "Cool blue cast reads slightly cheap, lacks warmth depth"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 6,
-      "reason": "Холодный сдержанный, хорош для даунтемпо-интроспекции"
+      "score": 8,
+      "reason": "Clean cool-neutral, sophisticated, no cheap artifacts"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": true,
-      "score": 7,
-      "reason": "Аналогичен первому, дополняет ротацию"
+      "keep": false,
+      "score": 5,
+      "reason": "Green-blue cast too pronounced, feels like filter"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст ощущается дешёвым фильтром"
+      "score": 3,
+      "reason": "Heavy green cast, cheap filter aesthetic, reject"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Слишком нейтрально, теряет глубину и характер"
+      "keep": true,
+      "score": 9,
+      "reason": "Balanced, premium feel, cinematic without pretension"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": false,
       "score": 5,
-      "reason": "Слишком тёплый и светлый, теряет ночную атмосферу"
+      "reason": "Yellow-green tint muddy, lacks refinement"
     }
   ],
   "recommend_merge": [
-    "scout_warm_night_muted",
-    "scout_warm_night_muted_2",
-    "scout_cool_mid_muted"
+    "scout_cool_mid_muted",
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-06-29",
+  "_generated": "2026-06-30",
   "_judge": "mimo-auto"
 }
