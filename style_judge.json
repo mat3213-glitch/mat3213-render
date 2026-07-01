@@ -2,45 +2,47 @@
   "verdicts": [
     {
       "name": "scout_warm_night_muted",
-      "keep": false,
-      "score": 6,
-      "reason": "Cool blue cast reads slightly cheap, lacks warmth depth"
+      "keep": true,
+      "score": 7,
+      "reason": "Тёплый, приглушённый, кинематографичный, дорого смотрится"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 8,
-      "reason": "Clean cool-neutral, sophisticated, no cheap artifacts"
+      "score": 7,
+      "reason": "Холодный тон, глубина, атмосферно, но можно"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": false,
-      "score": 5,
-      "reason": "Green-blue cast too pronounced, feels like filter"
+      "keep": true,
+      "score": 7,
+      "reason": "Хорошая вариация, чуть тёплее, в цельном стиле"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 3,
-      "reason": "Heavy green cast, cheap filter aesthetic, reject"
+      "score": 4,
+      "reason": "Зелёный каст ощущается как дешёвый фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 9,
-      "reason": "Balanced, premium feel, cinematic without pretension"
+      "keep": false,
+      "score": 5,
+      "reason": "Слишком плоско и нейтрально, нет глубины"
     },
     {
       "name": "scout_warm_mid_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Yellow-green tint muddy, lacks refinement"
+      "keep": true,
+      "score": 7,
+      "reason": "Тёплый, мягкий, кинематографичный, дорого"
     }
   ],
   "recommend_merge": [
+    "scout_warm_night_muted",
     "scout_cool_mid_muted",
-    "scout_neutral_night_soft"
+    "scout_warm_night_muted_2",
+    "scout_warm_mid_soft"
   ],
-  "_generated": "2026-06-30",
+  "_generated": "2026-07-01",
   "_judge": "mimo-auto"
 }
