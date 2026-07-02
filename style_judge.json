@@ -4,37 +4,37 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 7,
-      "reason": "Тёплый, приглушённый, кинематографичный, дорого смотрится"
+      "reason": "Тёплая глубина, кинематографичный мутный вайб, дорого смотрится"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 7,
-      "reason": "Холодный тон, глубина, атмосферно, но можно"
+      "reason": "Холодная атмосфера, мутность работает, внутренняя глубина"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 7,
-      "reason": "Хорошая вариация, чуть тёплее, в цельном стиле"
+      "reason": "Похож на первый, чуть теплее — хорош для ротации"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст ощущается как дешёвый фильтр"
+      "score": 5,
+      "reason": "Зеленоватый каст ощущается дёшево, не наш вайб"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
       "score": 5,
-      "reason": "Слишком плоско и нейтрально, нет глубины"
+      "reason": "Слишком плоский, нет глубины, скучновато"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": true,
       "score": 7,
-      "reason": "Тёплый, мягкий, кинематографичный, дорого"
+      "reason": "Тёплый мид-тон, мягкость к месту, целостно"
     }
   ],
   "recommend_merge": [
@@ -43,6 +43,6 @@
     "scout_warm_night_muted_2",
     "scout_warm_mid_soft"
   ],
-  "_generated": "2026-07-01",
+  "_generated": "2026-07-02",
   "_judge": "mimo-auto"
 }
