@@ -55,8 +55,13 @@ def apply_texture(
     scr_op = round(tex.uniform(0.5, 0.7), 2)
     grt_op = round(tex.uniform(0.4, 0.6), 2)
     
-    nz_str = tex.randint(style["grain"][0], style["grain"][1])
-    nz_seed = tex.randint(1, 99999)
+    # ЗЕРНО ВРЕМЕННО ОТКЛЮЧЕНО (yaromat 2026-07-03): один и тот же noise-паттерн читался
+    # однотипно на всех клипах. Пока без него — вернуть, когда будет за что зацепиться
+    # (per-track/per-scene вариативность зерна, не тот же noise=alls на каждом рендере).
+    grain_on = bool(style.get("grain"))
+    if grain_on:
+        nz_str = tex.randint(style["grain"][0], style["grain"][1])
+        nz_seed = tex.randint(1, 99999)
     scr_ss = round(tex.uniform(0.0, 4.0), 2)
     grt_ss = round(tex.uniform(0.0, 4.0), 2)
 
@@ -66,7 +71,9 @@ def apply_texture(
 
     # список непустых фрагментов постобработки, join через запятую — надёжнее ручной конкатенации
     # (лишняя/недостающая запятая на границе опциональных vignette/trim рвёт filter_complex).
-    tail_parts = [f"format=yuv420p", f"noise=alls={nz_str}:all_seed={nz_seed}:allf=t+u"]
+    tail_parts = ["format=yuv420p"]
+    if grain_on:
+        tail_parts.append(f"noise=alls={nz_str}:all_seed={nz_seed}:allf=t+u")
     if style.get("vignette"):
         tail_parts.append(f"vignette={style['vignette']}")
     if duration is not None:
@@ -119,8 +126,9 @@ def main():
     parser.add_argument("--h", type=int, required=True, help="Height")
     parser.add_argument("--fps", type=int, default=25, help="Frame rate")
     parser.add_argument("--duration", type=float, default=None, help="Duration (seconds). If not set, full length.")
-    parser.add_argument("--grain-min", type=int, required=True, help="Grain min")
-    parser.add_argument("--grain-max", type=int, required=True, help="Grain max")
+    parser.add_argument("--grain-min", type=int, default=None,
+                        help="Grain min (омит вместе с --grain-max = БЕЗ зерна, дефолт 2026-07-03)")
+    parser.add_argument("--grain-max", type=int, default=None, help="Grain max")
     parser.add_argument("--eq", type=str, required=True, help="FFmpeg eq parameters")
     parser.add_argument("--balance", type=str, default=None, help="FFmpeg colorbalance parameters")
     parser.add_argument("--vignette", type=str, default=None, help="FFmpeg vignette parameters")
@@ -129,7 +137,7 @@ def main():
     args = parser.parse_args()
 
     style = {
-        "grain": (args.grain_min, args.grain_max),
+        "grain": (args.grain_min, args.grain_max) if args.grain_min is not None and args.grain_max is not None else None,
         "eq": args.eq,
         "balance": args.balance,
         "vignette": args.vignette,

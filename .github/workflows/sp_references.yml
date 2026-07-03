@@ -1,0 +1,85 @@
+name: SP References (search + deconstruct)
+
+# Screenplay-pipeline стадии 1+2: поиск референсов на YouTube по вайбу+BPM трека + деконструкция
+# (хук/ритм/цвет/mimo-анализ/комментарии). US-раннер — YouTube-скачивание с RU-IP (бук) блокируется,
+# тот же паттерн что shorts_harvest. Вход: brief_full.yaml уже лежит на ЯД render_jobs/<job_id>/
+# (кладёт intake.py). Выход: references.json + reference_recipes.json туда же.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID (render_jobs/<job_id>/ уже содержит brief_full.yaml)'
+        required: true
+      top:
+        description: 'Сколько референсов искать (дефолт 5)'
+        default: '5'
+
+permissions:
+  contents: read
+
+jobs:
+  references:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone ffmpeg
+          pip install -q requests pyyaml pillow python-dotenv
+          pip install -q -U yt-dlp
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Restore mimo binary + auth from ydrive
+        run: |
+          set -e
+          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
+          chmod +x "$HOME/.mimocode/bin/mimo"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
+          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+
+      - name: Pull brief_full.yaml from job
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/brief_full.yaml" brief_full.yaml
+
+      - name: Stage 1 — reference_search
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+        run: |
+          python3 screenplay_pipeline/reference_search.py --brief brief_full.yaml \
+            --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}"
+
+      - name: Stage 2 — reference_deconstruct
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/references.json" references.json
+          python3 screenplay_pipeline/reference_deconstruct.py --references references.json --job-id "$JOB_ID"
+
+      - name: Report status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/references_status.txt" \
+            <<< "error: sp_references workflow failed" || true

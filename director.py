@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -239,6 +240,12 @@ def generate_shots(treatment: dict, bpm: float, segs: list[dict], cat_summary: s
 
 
 # ── сборка + резолв каталога ─────────────────────────────────────────────────
+# деньлист по тайтлу каталога (yaromat 2026-07-03: "токсичный красный" soundwave-клип
+# реально попал в рендер). Каталог маленький (55 записей) — держим явный список причин,
+# не гадаем эвристикой по цвету. Добавлять сюда по мере находок на гейте/QC.
+AVOID_TITLE_RE = re.compile(r"black and red", re.IGNORECASE)
+
+
 def _resolve_cat(cat: str, orientation, seed_key, used: set,
                  chroma: bool | None = None) -> dict | None:
     """Детерминированно подобрать клип каталога категории cat, избегая уже использованных.
@@ -248,6 +255,7 @@ def _resolve_cat(cat: str, orientation, seed_key, used: set,
     # ориентацию не зажимаем (вертикалей в каталоге мало — кропнем при рендере)
     cand = asset_catalog.pick(category=cat, orientation=orientation, n=12, seed=seed_key, chroma=chroma) \
         or asset_catalog.pick(category=cat, n=12, seed=seed_key, chroma=chroma)
+    cand = [c for c in cand if not AVOID_TITLE_RE.search(c.get("title", ""))] or cand
     cand = [c for c in cand if c["id"] not in used] or cand
     if not cand:
         return None
