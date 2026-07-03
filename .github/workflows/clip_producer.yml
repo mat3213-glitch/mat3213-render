@@ -39,7 +39,7 @@ jobs:
           key: pip-aubio-${{ runner.os }}-v1
 
       - name: Install Python deps
-        run: pip install aubio numpy scipy
+        run: pip install aubio numpy scipy "scenedetect[opencv]"
 
       - name: Configure rclone ydrive
         env:

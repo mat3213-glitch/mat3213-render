@@ -56,6 +56,24 @@ def yd_put(local: Path, remote_path: str) -> bool:
     )
     return r.returncode == 0
 
+def scene_qc(video: Path, expected_cuts: int) -> str:
+    """QC рендера (PySceneDetect): сравнивает реальные склейки с числом энерго-сегментов.
+    Не блокирует — предупреждение в status.txt при слипшихся/лишних сменах."""
+    try:
+        from scenedetect import detect, ContentDetector
+        found = len(detect(str(video), ContentDetector()))
+    except Exception as e:
+        return f"scene_qc: skipped ({e})"
+    if expected_cuts <= 0:
+        return f"scene_qc: found={found}"
+    ratio = found / expected_cuts
+    if ratio < 0.4:
+        return f"scene_qc: WARN слиплись сегменты (found={found}, expected~{expected_cuts})"
+    if ratio > 2.5:
+        return f"scene_qc: WARN лишние резкие смены (found={found}, expected~{expected_cuts})"
+    return f"scene_qc: ok (found={found}, expected~{expected_cuts})"
+
+
 def yd_put_text(text: str, remote_path: str):
     tmp = WORKDIR / "_status.txt"
     tmp.write_text(text)
@@ -244,7 +262,9 @@ def main():
     if not yd_put(result, f"{JOB_YD}/{out_name}"):
         sys.exit("Upload failed")
 
-    yd_put_text("done", f"{JOB_YD}/status.txt")
+    qc = scene_qc(result, len(seg_files))
+    print(f"  {qc}")
+    yd_put_text(f"done\n{qc}", f"{JOB_YD}/status.txt")
     print(f"\n✅ Done: {out_name} ({mb:.1f}MB)")
 
 

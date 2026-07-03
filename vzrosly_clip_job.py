@@ -77,6 +77,26 @@ def yd_put(local: Path, remote: str) -> bool:
     return subprocess.run(["rclone", "copyto", str(local), f"{REMOTE}:{remote}"],
                           capture_output=True, text=True).returncode == 0
 
+def scene_qc(video: Path, expected_cuts: int) -> str:
+    """QC рендера (PySceneDetect, скор repo_scout #5): сравнивает реально детектированные
+    склейки с ожидаемым числом сегментов таймлайна. Не блокирует — только предупреждает
+    в status.txt, если сцены слиплись (xfade съел переход) или расползлись (лишние резкие смены)."""
+    try:
+        from scenedetect import detect, ContentDetector
+        scenes = detect(str(video), ContentDetector())
+        found = len(scenes)
+    except Exception as e:
+        return f"scene_qc: skipped ({e})"
+    if expected_cuts <= 0:
+        return f"scene_qc: found={found}"
+    ratio = found / expected_cuts
+    if ratio < 0.4:
+        return f"scene_qc: WARN слиплись сегменты (found={found}, expected~{expected_cuts})"
+    if ratio > 2.5:
+        return f"scene_qc: WARN лишние резкие смены (found={found}, expected~{expected_cuts})"
+    return f"scene_qc: ok (found={found}, expected~{expected_cuts})"
+
+
 def yd_put_text(text: str, remote: str):
     t = WORK / "_s.txt"; t.write_text(text); yd_put(t, remote)
 
@@ -655,7 +675,9 @@ def main():
     print(f"  {out_name} {mb:.1f}MB")
     if not yd_put(result, f"{JOB_YD}/{out_name}"):
         yd_put_text("error: upload", f"{JOB_YD}/status.txt"); sys.exit("upload fail")
-    yd_put_text("done", f"{JOB_YD}/status.txt")
+    qc = scene_qc(result, len(seq))
+    print(f"  {qc}")
+    yd_put_text(f"done\n{qc}", f"{JOB_YD}/status.txt")
     print(f"✅ done {out_name} ({mb:.1f}MB)")
 
 

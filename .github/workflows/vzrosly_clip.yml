@@ -31,6 +31,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing ffmpeg rclone
+          pip install --quiet scenedetect[opencv]
 
       - name: Configure rclone ydrive
         env:
