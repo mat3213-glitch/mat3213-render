@@ -55,6 +55,15 @@ def build_scene_prompt(shot: dict) -> str:
     return ", ".join(parts)[:800]
 
 
+def build_still_query(shot: dict) -> str:
+    """Короткий запрос для Openverse (сток-стилл под Hunyuan i2v). Openverse (как YouTube Data
+    API) не любит длинные многословные запросы — держим 3-4 слова, берём только 'visual' (не
+    intent/cues, те часто на русском или слишком абстрактны для стокового поиска)."""
+    visual = shot.get("visual", "") or shot.get("base", {}).get("query", "")
+    words = [w for w in visual.replace(",", " ").split() if w.isascii()]
+    return " ".join(words[:4]) or "abstract atmospheric texture"
+
+
 def rclone_exists(remote_path: str) -> bool:
     r = subprocess.run(["rclone", "lsf", remote_path], capture_output=True, text=True)
     return r.returncode == 0 and bool(r.stdout.strip())
@@ -93,12 +102,14 @@ def dispatch_and_gate(job_id: str, idx: int, shot: dict, ratio: str, timeout: in
         print(f"  scene {idx}: движок '{engine}' не подключён (нет workflow)", file=sys.stderr)
         return None
     prompt = build_scene_prompt(shot)
+    still_query = build_still_query(shot)
 
     for attempt in range(1, max_retries + 1):
         print(f"  scene {idx} [{engine}] попытка {attempt}/{max_retries}: {prompt[:80]}...")
         try:
             submit(job_id=job_id, files={}, workflow=workflow,
-                  inputs={"scene_idx": str(idx), "prompt": prompt, "ratio": ratio})
+                  inputs={"scene_idx": str(idx), "prompt": prompt, "ratio": ratio,
+                         "still_query": still_query})
         except RuntimeError as e:
             print(f"  scene {idx}: dispatch failed: {e}", file=sys.stderr)
             continue
@@ -127,6 +138,10 @@ def main():
     ap.add_argument("--max-retries", type=int, default=MAX_RETRIES_DEFAULT)
     ap.add_argument("--poll", type=int, default=15, help="интервал поллинга ЯД (с)")
     ap.add_argument("--timeout", type=int, default=1200, help="таймаут на сцену (с)")
+    ap.add_argument("--max-hunyuan-per-run", type=int, default=8,
+                    help="консервативный потолок вызовов Hunyuan за один прогон (у Hunyuan есть "
+                         "дневной лимит генераций, точное число не известно — yaromat 2026-07-03, "
+                         "начинаем осторожно, не бьём пачками/параллельно)")
     ap.add_argument("-o", "--out", help="куда писать обновлённый storyboard.json (default: рядом)")
     args = ap.parse_args()
 
@@ -138,13 +153,24 @@ def main():
     ratio = RATIO_BY_FORMAT.get(storyboard.get("format", "square"), "1:1")
 
     tmpdir = Path(tempfile.mkdtemp(prefix="scene_dispatch_"))
-    ok, failed = 0, 0
+    ok, failed, hunyuan_calls = 0, 0, 0
     for shot in shots:
         idx = shot.get("idx")
         if idx is None:
             continue
+        engine = engine_for(shot)
+        # дневной лимит Hunyuan не известен точно — консервативный потолок ЗА ПРОГОН, чтобы
+        # один трек не сжёг всю дневную квоту (yaromat 2026-07-03). Каждая попытка (включая
+        # ретраи) считается отдельным вызовом.
+        if engine == "hunyuan" and hunyuan_calls + args.max_retries > args.max_hunyuan_per_run:
+            print(f"  scene {idx}: потолок Hunyuan за прогон исчерпан "
+                  f"({hunyuan_calls}/{args.max_hunyuan_per_run}) — пропуск", file=sys.stderr)
+            failed += 1
+            continue
         base = dispatch_and_gate(args.job_id, idx, shot, ratio, args.timeout, args.poll,
                                  args.max_retries, tmpdir)
+        if engine == "hunyuan":
+            hunyuan_calls += args.max_retries  # верхняя оценка (не знаем сколько попыток реально ушло)
         if base:
             shot["base"] = base
             ok += 1

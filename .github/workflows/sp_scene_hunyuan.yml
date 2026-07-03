@@ -1,6 +1,9 @@
 name: SP Scene Gen — Hunyuan
 
-# Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через Hunyuan (t2v/i2v).
+# Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через Hunyuan.
+# ⚠️ Hunyuan = ТОЛЬКО i2v (t2v стабильно 500'ит на api.hunyuan.tencent.com — проверено вживую
+# 2026-07-03 дважды, см. память [[project_hunyuan]], НЕ пробовать t2v снова). Стилл для оживления —
+# СТОК (Openverse, CC0), НЕ AI-генерация (yaromat: дешевле/не нужно при бесплатном стоке).
 # Диспатчится scene_dispatch.py по одному разу на сцену. Результат → render_jobs/<job_id>/
 # generated/scene_<idx>.mp4 (контракт base.kind='generated' в storyboard_render_job.py).
 
@@ -14,6 +17,10 @@ on:
         description: 'Индекс сцены (для имени файла scene_<idx>.mp4)'
       prompt:
         required: true
+        description: 'Промпт движения для i2v (что должно происходить в кадре)'
+      still_query:
+        required: true
+        description: 'Короткий (2-3 слова) поисковый запрос для стилла на Openverse'
       ratio:
         description: '16:9 | 9:16 | 1:1'
         default: '1:1'
@@ -51,13 +58,25 @@ jobs:
       - name: Pull Hunyuan session from ЯД
         run: rclone copyto "ydrive:Content factory/cloud_io/hunyuan_ci/hunyuan_session.json" hunyuan/hunyuan_session.json
 
-      - name: Generate scene
+      - name: Fetch stock still (Openverse)
+        env:
+          OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
+          OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
+        run: |
+          python3 screenplay_pipeline/fetch_still.py "${{ inputs.still_query }}" --out still.jpg
+
+      - name: Generate scene (Hunyuan i2v)
         env:
           JOB_ID: ${{ inputs.job_id }}
           SCENE_IDX: ${{ inputs.scene_idx }}
         run: |
+          RAW="scene_${SCENE_IDX}_raw.mp4"
           OUT="scene_${SCENE_IDX}.mp4"
-          python3 hunyuan/hunyuan_video.py "${{ inputs.prompt }}" --ratio "${{ inputs.ratio }}" --out "$OUT"
+          python3 hunyuan/hunyuan_video.py "${{ inputs.prompt }}" --image still.jpg \
+            --ratio "${{ inputs.ratio }}" --out "$RAW"
+          # кроп free-вотермарка «AI生成» — эталон из animate_planes.py::crop_watermark
+          ffmpeg -y -i "$RAW" -vf "crop=860:860:(in_w-860)/2:0,scale=960:960" \
+            -c:v libx264 -crf 20 -preset veryfast -an "$OUT"
           rclone copyto "$OUT" "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.mp4"
 
       - name: Report status on failure
