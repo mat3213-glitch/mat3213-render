@@ -1,0 +1,84 @@
+name: SP Scene Gen — VeoFree i2v
+
+# Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через VeoFree i2v (Seedance 2.0).
+# watermark-free, но лимит 1 генерация/IP — каждая сцена = отдельный workflow_dispatch (свежий
+# GH-раннер = свежий IP, обходит лимит естественно). Стилл — Openverse (сток, не AI-генерация,
+# тот же принцип что Hunyuan-путь). ВЫХОД ВСЕГДА 720x1280 (вертикаль) — см. [[project_video_gen_veofree]],
+# ratio-параметр сайта на выход не влияет несмотря на видимость.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+      scene_idx:
+        required: true
+      prompt:
+        required: true
+        description: 'Motion prompt для i2v'
+      still_query:
+        required: true
+        description: 'Короткий (2-3 слова) запрос для стилла на Openverse'
+      aspect:
+        default: '9:16'
+
+permissions:
+  contents: read
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch stock still (Openverse) + upload to ЯД
+        env:
+          OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
+          OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          python3 screenplay_pipeline/fetch_still.py "${{ inputs.still_query }}" --out still.jpg
+          rclone copyto still.jpg "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/still_${SCENE_IDX}.jpg"
+
+      - name: Generate scene (VeoFree i2v)
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+          IMG_REMOTE: Content factory/cloud_io/render_jobs/${{ inputs.job_id }}/generated/still_${{ inputs.scene_idx }}.jpg
+          PROMPT: ${{ inputs.prompt }}
+          DEST_FOLDER: Content factory/cloud_io/render_jobs/${{ inputs.job_id }}/generated
+          OUT_NAME: scene_${{ inputs.scene_idx }}.mp4
+          ASPECT: ${{ inputs.aspect }}
+        run: python3 veofree_i2v_gen.py
+
+      - name: Report status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.status.txt" \
+            <<< "error: sp_scene_veofree failed" || true
