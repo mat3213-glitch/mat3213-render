@@ -128,7 +128,10 @@ with sync_playwright() as pw:
             except Exception as e: log(f"click force={force}: {e}")
     log(f"generate clicked: {clicked}")
 
-    for _ in range(40):
+    # окно ожидания было 200с (40×5с) — поймали вживую 2026-07-03: генерация иногда занимает
+    # дольше (сайт бесплатный, время не гарантировано), реальный "timeout" при живом сервисе.
+    # Подняли до ~330с (66×5с) — воркфлоу-лимит 20 мин позволяет запас без риска.
+    for _ in range(66):
         pg.wait_for_timeout(5000)
         if paywall(pg): status="paywall"; break
         v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
