@@ -1,0 +1,72 @@
+name: SP Scene Gen — Qwen
+
+# Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через Qwen (t2v, chat.qwen.ai).
+# Квота видео ~4-5/день (см. [[project_qwen]]) — не долбить пачками. Прямой вызов GEN.py video,
+# не через qwen_daily.py (тот — пул-цикл, не per-scene).
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+      scene_idx:
+        required: true
+      prompt:
+        required: true
+      ratio:
+        description: '16:9 | 9:16 | 1:1'
+        default: '1:1'
+
+permissions:
+  contents: read
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull Qwen session from ЯД
+        run: rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+
+      - name: Generate scene (Qwen video)
+        working-directory: qwen
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          python3 GEN.py video "${{ inputs.prompt }}" --ratio "${{ inputs.ratio }}" \
+            --out "scene_${SCENE_IDX}.mp4" --timeout 1200
+          rclone copyto "scene_${SCENE_IDX}.mp4" \
+            "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.mp4"
+
+      - name: Report status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.status.txt" \
+            <<< "error: sp_scene_qwen failed" || true
