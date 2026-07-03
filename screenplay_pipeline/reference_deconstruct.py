@@ -71,23 +71,25 @@ def extract_json(t):
     return None
 
 
-def download_video(video: dict, tmpdir: str) -> str | None:
+def download_video(video: dict, tmpdir: str, cookies: str | None = None) -> str | None:
     url = video["url"]
     vid = video["video_id"]
     # ВНИМАНИЕ: "--skip-download-if-exists" НЕ СУЩЕСТВУЕТ в yt-dlp (проверено вживую: exit 2,
     # "no such option") — предыдущая версия падала мгновенно (<0.2с) на этом флаге на КАЖДОМ
     # референсе, маскируясь под "видео не скачалось" из-за молчаливого проглатывания stderr.
     # Убран. -w/--no-overwrites — реальный аналог (не перезаписывать), не нужен на tmpdir.
-    r = subprocess.run(
-        [
-            "yt-dlp", "--no-warnings",
-            "-f", "best[height<=480]/best",
-            "--write-comments", "--write-info-json",
-            "-o", os.path.join(tmpdir, f"{vid}.%(ext)s"),
-            url,
-        ],
-        capture_output=True, text=True, timeout=300,
-    )
+    # Формат/cookies — рецепт [[reference_yt_dlp_ci]]: единый прогрессивный файл (без ffmpeg-мержа
+    # видео+аудио отдельно, для анализа кадров хватает), cookies обходят бот-детект US-датацентра.
+    cmd = [
+        "yt-dlp", "--no-warnings",
+        "-f", "b[ext=mp4]/bv*[ext=mp4]+ba[ext=m4a]/b",
+        "--write-comments", "--write-info-json",
+        "-o", os.path.join(tmpdir, f"{vid}.%(ext)s"),
+    ]
+    if cookies:
+        cmd += ["--cookies", cookies]
+    cmd.append(url)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     for f in os.listdir(tmpdir):
         if f.startswith(vid) and f.endswith((".mp4", ".webm", ".mkv", ".mov")):
             return os.path.join(tmpdir, f)
@@ -191,6 +193,7 @@ def main():
     ap = argparse.ArgumentParser(description="Деконструктор референс-клипов: структура, хуки, визуал.")
     ap.add_argument("--references", required=True, help="путь к references.json")
     ap.add_argument("--job-id", required=True, help="ID задачи (для пути на Яндекс.Диск)")
+    ap.add_argument("--cookies", default=None, help="путь к YouTube cookies.txt (обход бот-детекта US-датацентра)")
     args = ap.parse_args()
 
     references = json.loads(Path(args.references).read_text(encoding="utf-8"))
@@ -206,7 +209,7 @@ def main():
         vid = ref["video_id"]
         print(f"[{i}/{len(references)}] {ref.get('title', vid)}")
         try:
-            vpath = download_video(ref, tmpdir)
+            vpath = download_video(ref, tmpdir, cookies=args.cookies)
             if not vpath:
                 print(f"  skip: видео не скачалось", file=sys.stderr)
                 errors += 1
