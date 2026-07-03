@@ -1,0 +1,70 @@
+name: SP Scene Gen — Hunyuan
+
+# Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через Hunyuan (t2v/i2v).
+# Диспатчится scene_dispatch.py по одному разу на сцену. Результат → render_jobs/<job_id>/
+# generated/scene_<idx>.mp4 (контракт base.kind='generated' в storyboard_render_job.py).
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+      scene_idx:
+        required: true
+        description: 'Индекс сцены (для имени файла scene_<idx>.mp4)'
+      prompt:
+        required: true
+      ratio:
+        description: '16:9 | 9:16 | 1:1'
+        default: '1:1'
+
+permissions:
+  contents: read
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone ffmpeg
+          pip install -q requests
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull Hunyuan session from ЯД
+        run: rclone copyto "ydrive:Content factory/cloud_io/hunyuan_ci/hunyuan_session.json" hunyuan/hunyuan_session.json
+
+      - name: Generate scene
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          OUT="scene_${SCENE_IDX}.mp4"
+          python3 hunyuan/hunyuan_video.py "${{ inputs.prompt }}" --ratio "${{ inputs.ratio }}" --out "$OUT"
+          rclone copyto "$OUT" "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.mp4"
+
+      - name: Report status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.status.txt" \
+            <<< "error: sp_scene_hunyuan failed" || true

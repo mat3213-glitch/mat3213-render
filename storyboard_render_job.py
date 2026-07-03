@@ -77,21 +77,36 @@ def pull_clip(path: str) -> Path | None:
     return None
 
 
+def pull_generated(path: str) -> Path | None:
+    """Сгенерированный AI-клип сцены (Фаза 1, base.kind='generated') — путь ОТНОСИТЕЛЬНО
+    JOB_YD (напр. 'generated/scene_003.mp4'), не манифест каталога. Кэш в CLIPS по имени файла
+    (совпадений между job'ами не бывает — имя включает job-специфичный scene-индекс)."""
+    name = Path(path).name
+    local = CLIPS / name
+    if local.exists():
+        return local
+    if yd_get(f"{JOB_YD}/{path}", local):
+        return local
+    print(f"  ✗ не стянул сгенерированный клип {path}", flush=True)
+    return None
+
+
 def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | None:
     """Кадр = base-футаж. Если у base ЗЕЛЁНАЯ зона (chroma) и есть fill → целевое наложение:
     фон-заливка (арт/он-тема) + винил с вырезанным зелёным сверху. БЕЗ футаж-на-футаж/оверлеев
-    ([[feedback_no_footage_on_footage]])."""
+    ([[feedback_no_footage_on_footage]]). base.kind=='generated' (Фаза 1 AI-генерация по сценам) —
+    клип уже готовая сцена без chroma, тянется из render_jobs/<JOB_ID>/generated/, не из каталога."""
     dur = max(0.4, float(shot["t_dur"]))
     base = shot.get("base") or {}
     bpath = base.get("path")
     if not bpath:
         print(f"  shot {i}: нет base.path — пропуск", flush=True)
         return None
-    bfile = pull_clip(bpath)
+    bfile = pull_generated(bpath) if base.get("kind") == "generated" else pull_clip(bpath)
     if not bfile:
         return None
     out = SHOTS / f"shot_{i:03d}.mp4"
-    chroma = base.get("chroma")
+    chroma = base.get("chroma") if base.get("kind") != "generated" else None
     common = ["-t", f"{dur:.3f}", "-r", "25", "-pix_fmt", "yuv420p",
               "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-an", str(out)]
     if chroma and fill:
