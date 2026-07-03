@@ -53,6 +53,11 @@ def build_query(brief: dict) -> str:
     # словом+числом слитно так, как строился запрос — YouTube ищет буквальное совпадение
     # фразы, а не парсит BPM семантически. BPM влияет на выбор genre/mood слов заранее
     # (вызывающий код может подобрать mood_words под темп), но НЕ идёт в текст запроса.
+    # ВАЖНО #2: кириллица в запросе тоже убивает результаты — проверено вживую (mixed
+    # RU/EN запрос "future garage nostalgic дождь на стекле, ночной город" → 0 результатов,
+    # тот же запрос БЕЗ кириллицы "future garage nostalgic" → 324k). Мини-бриф владелец пишет
+    # по-русски (visual_mood/narrative_angle обычно кириллица) — отбрасываем кириллицу из
+    # запроса ДЕТЕРМИНИРОВАННО (без LLM-перевода, это не одна из 3 разрешённых LLM-точек).
     c = brief.get("content", {})
     p = brief.get("production", {})
     genre = p.get("genre", "")
@@ -60,7 +65,15 @@ def build_query(brief: dict) -> str:
     mood0 = mood_words[0] if mood_words else ""
     visual_mood = c.get("visual_mood", "")
     parts = [genre, mood0, visual_mood]
-    return " ".join(p for p in parts if p)
+    raw = " ".join(p for p in parts if p)
+    no_cyrillic = re.sub(r"[а-яёА-ЯЁ]+", "", raw)
+    query = re.sub(r"[\s,]+", " ", no_cyrillic).strip(" ,")
+    if not query:
+        # весь бриф оказался кириллицей (genre/mood_words тоже могут быть по-русски) —
+        # без хоть какого-то английского токена запрос пуст. Фолбэк на голый жанр латиницей
+        # если такой найдётся в mood_words, иначе — общий "aesthetic ambient visual".
+        query = "aesthetic ambient visual"
+    return query
 
 
 def yt_search(query: str, max_results: int = 15) -> list[dict]:
