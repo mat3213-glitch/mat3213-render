@@ -74,12 +74,15 @@ def extract_json(t):
 def download_video(video: dict, tmpdir: str) -> str | None:
     url = video["url"]
     vid = video["video_id"]
-    subprocess.run(
+    # ВНИМАНИЕ: "--skip-download-if-exists" НЕ СУЩЕСТВУЕТ в yt-dlp (проверено вживую: exit 2,
+    # "no such option") — предыдущая версия падала мгновенно (<0.2с) на этом флаге на КАЖДОМ
+    # референсе, маскируясь под "видео не скачалось" из-за молчаливого проглатывания stderr.
+    # Убран. -w/--no-overwrites — реальный аналог (не перезаписывать), не нужен на tmpdir.
+    r = subprocess.run(
         [
             "yt-dlp", "--no-warnings",
             "-f", "best[height<=480]/best",
             "--write-comments", "--write-info-json",
-            "--skip-download-if-exists",
             "-o", os.path.join(tmpdir, f"{vid}.%(ext)s"),
             url,
         ],
@@ -88,6 +91,7 @@ def download_video(video: dict, tmpdir: str) -> str | None:
     for f in os.listdir(tmpdir):
         if f.startswith(vid) and f.endswith((".mp4", ".webm", ".mkv", ".mov")):
             return os.path.join(tmpdir, f)
+    print(f"  yt-dlp rc={r.returncode}: {(r.stderr or r.stdout)[-300:]}", file=sys.stderr)
     return None
 
 
