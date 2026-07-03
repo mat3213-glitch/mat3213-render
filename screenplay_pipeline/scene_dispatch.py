@@ -37,14 +37,28 @@ RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 
 ENGINE_WORKFLOWS = {
     "hunyuan": "sp_scene_hunyuan.yml",
-    # "veofree": "sp_scene_veofree.yml",   # TODO Фаза 1.1 — тот же паттерн, 1 workflow_dispatch на сцену (1 ген/IP)
-    # "qwen":    "sp_scene_qwen.yml",       # TODO Фаза 1.1 — t2v-only, нет i2v
+    "veofree": "sp_scene_veofree.yml",   # i2v, watermark-free, ВСЕГДА выход 9:16 (см. project_video_gen_veofree)
+    "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
 }
+ENGINE_ORDER = ["hunyuan", "veofree", "qwen"]  # round-robin по кругу; hunyuan первый пока не убедимся, что квота не исчерпана
 
 
 def engine_for(shot: dict) -> str:
-    """v1: единственный движок. Точка расширения round-robin по мере подключения qwen/veofree."""
-    return "hunyuan"
+    """Round-robin по idx — распределяет нагрузку между движками (устойчивость через
+    разнообразие: если один упёрся в дневной лимит/500, другие сцены не встанут)."""
+    idx = shot.get("idx", 0)
+    return ENGINE_ORDER[idx % len(ENGINE_ORDER)]
+
+
+def engine_inputs(engine: str, idx: int, prompt: str, still_query: str, ratio: str) -> dict:
+    """У каждого движка свой набор workflow_dispatch inputs — gh CLI падает на незаявленных -f."""
+    if engine == "hunyuan":
+        return {"scene_idx": str(idx), "prompt": prompt, "ratio": ratio, "still_query": still_query}
+    if engine == "veofree":
+        return {"scene_idx": str(idx), "prompt": prompt, "still_query": still_query, "aspect": "9:16"}
+    if engine == "qwen":
+        return {"scene_idx": str(idx), "prompt": prompt, "ratio": ratio}
+    return {"scene_idx": str(idx), "prompt": prompt}
 
 
 def build_scene_prompt(shot: dict) -> str:
@@ -108,8 +122,7 @@ def dispatch_and_gate(job_id: str, idx: int, shot: dict, ratio: str, timeout: in
         print(f"  scene {idx} [{engine}] попытка {attempt}/{max_retries}: {prompt[:80]}...")
         try:
             submit(job_id=job_id, files={}, workflow=workflow,
-                  inputs={"scene_idx": str(idx), "prompt": prompt, "ratio": ratio,
-                         "still_query": still_query})
+                  inputs=engine_inputs(engine, idx, prompt, still_query, ratio))
         except RuntimeError as e:
             print(f"  scene {idx}: dispatch failed: {e}", file=sys.stderr)
             continue
