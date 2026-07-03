@@ -26,7 +26,7 @@ import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "screenplay_pipeline"))
 try:
-    from pool_prompts import build_image_prompts, build_video_prompts
+    from pool_prompts import build_image_prompts, build_video_prompts, get_latest_track_brief
     _HAS_POOL_PROMPTS = True
 except Exception:
     _HAS_POOL_PROMPTS = False
@@ -193,10 +193,15 @@ def main():
     # генерить в пул по осмысленным промтам для сборки клипов, а не по шаблонным запросам") —
     # pool_prompts.py тянет реальный бриф последнего трека из screenplay-pipeline; если конвейер
     # пуст (нет ни одного brief_full.yaml на ЯД) — деградирует на generic-вайб сам внутри модуля.
+    scenario_driven = False  # yaromat 2026-07-03: "они копятся в отдельную папку или как поймём
+    # какие новые по сценарию" — метка: если реальный бриф трека найден, файлы получают префикс
+    # sc_ + в media_catalog прописывается source-трек, иначе обычное имя (старый generic-вайб).
     if _HAS_POOL_PROMPTS:
         try:
-            img_prompts = build_image_prompts(N_IMG)
-            vid_prompts = build_video_prompts(N_VID)
+            _brief = get_latest_track_brief()
+            scenario_driven = _brief is not None
+            img_prompts = build_image_prompts(N_IMG, _brief)
+            vid_prompts = build_video_prompts(N_VID, _brief)
         except Exception as e:
             print(f"[pool_prompts] упал ({e}) — фолбэк на старые шаблонные списки")
             random.shuffle(IMAGE_PROMPTS); random.shuffle(VIDEO_PROMPTS)
@@ -206,6 +211,9 @@ def main():
         random.shuffle(VIDEO_PROMPTS)
         img_prompts = IMAGE_PROMPTS[:N_IMG]
         vid_prompts = VIDEO_PROMPTS[:N_VID]
+    fname_prefix = "sc_" if scenario_driven else ""
+    print(f"[pool_prompts] scenario_driven={scenario_driven} (реальный бриф трека найден)"
+         if scenario_driven else "[pool_prompts] бриф не найден — generic-вайб (старый режим)")
 
     # ── override: кастомные видео-промпты через env (|||-разделитель), для прицельной генерации ──
     _cust = os.environ.get("VID_PROMPTS_CUSTOM", "").strip()
@@ -220,9 +228,9 @@ def main():
 
     # ── Картинки ──
     for i, prompt in enumerate(img_prompts, 1):
-        out = work / f"img_{i:02d}.png"
+        out = work / f"{fname_prefix}img_{i:02d}.png"
         if run_gen("image", prompt, out):
-            remote = f"{yd_base}/img_{i:02d}.png"
+            remote = f"{yd_base}/{fname_prefix}img_{i:02d}.png"
             if yd_put(out, remote):
                 ok_img += 1
                 print(f"  ✅ img_{i:02d} → ЯД")
@@ -237,9 +245,9 @@ def main():
 
     # ── Видео ──
     for i, prompt in enumerate(vid_prompts, 1):
-        out = work / f"vid_{i:02d}.mp4"
+        out = work / f"{fname_prefix}vid_{i:02d}.mp4"
         if run_gen("video", prompt, out):
-            remote = f"{yd_base}/vid_{i:02d}.mp4"
+            remote = f"{yd_base}/{fname_prefix}vid_{i:02d}.mp4"
             if yd_put(out, remote):
                 ok_vid += 1
                 print(f"  ✅ vid_{i:02d} → ЯД")

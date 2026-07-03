@@ -31,7 +31,7 @@ except Exception:
 
 sys.path.insert(0, str(_here.parent.parent / "screenplay_pipeline"))
 try:
-    from pool_prompts import build_motion_prompts
+    from pool_prompts import build_motion_prompts, get_latest_track_brief
     _HAS_POOL_PROMPTS = True
 except Exception:
     _HAS_POOL_PROMPTS = False
@@ -221,15 +221,19 @@ def main():
     random.shuffle(photos)
     selected = photos[:N_VID]
     # осмысленные промпты движения по реальному брифу трека — фолбэк на шаблоны внутри модуля
+    scenario_driven = False
     if _HAS_POOL_PROMPTS:
         try:
-            prompts = build_motion_prompts(N_VID)
+            _brief = get_latest_track_brief()
+            scenario_driven = _brief is not None
+            prompts = build_motion_prompts(N_VID, _brief)
         except Exception as e:
             print(f"[pool_prompts] упал ({e}) — фолбэк на старые шаблонные списки")
             random.shuffle(MOTION_PROMPTS); prompts = MOTION_PROMPTS[:N_VID]
     else:
         random.shuffle(MOTION_PROMPTS)
         prompts = MOTION_PROMPTS[:N_VID]
+    fname_prefix = "sc_" if scenario_driven else ""
 
     # ── override: конкретные исходники + промпты движения через env (|||-разделитель) ──
     _imgs = os.environ.get("CUSTOM_IMAGES", "").strip()
@@ -247,7 +251,7 @@ def main():
     if args.dry:
         print("\n=== DRY RUN — сетевые вызовы не выполняются ===\n")
         for i, (photo, prompt) in enumerate(zip(selected, prompts), 1):
-            out_name = f"vid_{i:02d}.mp4"
+            out_name = f"{fname_prefix}vid_{i:02d}.mp4"
             print(f"\n--- Видео {i}/{len(selected)} ---")
             print(f"  [dry] rclone copyto ydrive:{photo} /tmp/.../photo_{i:02d}.ext")
             print(f"  [dry] python3 hunyuan_video.py \"{prompt}\" --image photo_{i:02d}.ext --ratio {RATIO} --out {out_name}")
@@ -263,7 +267,7 @@ def main():
     fail = 0
 
     for i, (photo, prompt) in enumerate(zip(selected, prompts), 1):
-        out_name = f"vid_{i:02d}.mp4"
+        out_name = f"{fname_prefix}vid_{i:02d}.mp4"
         ext = Path(photo).suffix or ".jpg"
         local_photo = work_dir / f"photo_{i:02d}{ext}"
         local_out = work_dir / out_name

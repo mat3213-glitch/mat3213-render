@@ -32,7 +32,7 @@ except Exception:
 
 sys.path.insert(0, str(_here.parent / "screenplay_pipeline"))
 try:
-    from pool_prompts import build_video_prompts
+    from pool_prompts import build_video_prompts, get_latest_track_brief
     _HAS_POOL_PROMPTS = True
 except Exception:
     _HAS_POOL_PROMPTS = False
@@ -153,15 +153,19 @@ def main():
     dest_base = f"Content factory/cloud_io/veofree_pool/{today}"
 
     # осмысленные промпты по реальному брифу трека (см. qwen_daily.py) — фолбэк на шаблоны внутри модуля
+    scenario_driven = False
     if _HAS_POOL_PROMPTS:
         try:
-            prompts = build_video_prompts(N_VID)
+            _brief = get_latest_track_brief()
+            scenario_driven = _brief is not None
+            prompts = build_video_prompts(N_VID, _brief)
         except Exception as e:
             print(f"[pool_prompts] упал ({e}) — фолбэк на старые шаблонные списки")
             random.shuffle(VIDEO_PROMPTS); prompts = VIDEO_PROMPTS[:N_VID]
     else:
         random.shuffle(VIDEO_PROMPTS)
         prompts = VIDEO_PROMPTS[:N_VID]
+    fname_prefix = "sc_" if scenario_driven else ""
 
     print(f"План на {today}: {N_VID} видео")
     for i, p in enumerate(prompts, 1):
@@ -171,7 +175,7 @@ def main():
         print("\n=== DRY RUN — сетевые вызовы не выполняются ===\n")
         # в dry НЕ шлём TG (чтобы не было ложного «старт» в тред при проверке плана)
         for i, prompt in enumerate(prompts, 1):
-            out_name = f"vid_{i:02d}.mp4"
+            out_name = f"{fname_prefix}vid_{i:02d}.mp4"
             run_veofree(prompt, dest_base, out_name, dry=True)
         print("\n=== DRY RUN завершён ===")
         return
@@ -183,7 +187,7 @@ def main():
     fail = 0
 
     for i, prompt in enumerate(prompts, 1):
-        out_name = f"vid_{i:02d}.mp4"
+        out_name = f"{fname_prefix}vid_{i:02d}.mp4"
         if run_veofree(prompt, dest_base, out_name):
             ok += 1
             _register(f"{dest_base}/{out_name}", "veofree_pool", "video", prompt, today)
