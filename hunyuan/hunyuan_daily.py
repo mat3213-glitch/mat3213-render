@@ -29,6 +29,13 @@ try:
 except Exception:
     media_register = None
 
+sys.path.insert(0, str(_here.parent.parent / "screenplay_pipeline"))
+try:
+    from pool_prompts import build_motion_prompts
+    _HAS_POOL_PROMPTS = True
+except Exception:
+    _HAS_POOL_PROMPTS = False
+
 
 def _register(path, pool, mtype, prompt, date):
     """Регистрация в media_catalog (best-effort, не валит генерацию)."""
@@ -213,8 +220,16 @@ def main():
 
     random.shuffle(photos)
     selected = photos[:N_VID]
-    random.shuffle(MOTION_PROMPTS)
-    prompts = MOTION_PROMPTS[:N_VID]
+    # осмысленные промпты движения по реальному брифу трека — фолбэк на шаблоны внутри модуля
+    if _HAS_POOL_PROMPTS:
+        try:
+            prompts = build_motion_prompts(N_VID)
+        except Exception as e:
+            print(f"[pool_prompts] упал ({e}) — фолбэк на старые шаблонные списки")
+            random.shuffle(MOTION_PROMPTS); prompts = MOTION_PROMPTS[:N_VID]
+    else:
+        random.shuffle(MOTION_PROMPTS)
+        prompts = MOTION_PROMPTS[:N_VID]
 
     # ── override: конкретные исходники + промпты движения через env (|||-разделитель) ──
     _imgs = os.environ.get("CUSTOM_IMAGES", "").strip()

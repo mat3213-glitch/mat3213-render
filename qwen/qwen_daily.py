@@ -24,6 +24,13 @@ from pathlib import Path
 from datetime import date
 import requests
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "screenplay_pipeline"))
+try:
+    from pool_prompts import build_image_prompts, build_video_prompts
+    _HAS_POOL_PROMPTS = True
+except Exception:
+    _HAS_POOL_PROMPTS = False
+
 # Устойчивый импорт media_register (работает и из подпапки, и из корня репо)
 _here = Path(__file__).resolve()
 for _p in (_here.parent, _here.parent.parent):
@@ -182,11 +189,23 @@ def main():
     work = WORK_DIR / today
     work.mkdir(parents=True, exist_ok=True)
 
-    random.shuffle(IMAGE_PROMPTS)
-    random.shuffle(VIDEO_PROMPTS)
-
-    img_prompts = IMAGE_PROMPTS[:N_IMG]
-    vid_prompts = VIDEO_PROMPTS[:N_VID]
+    # осмысленные промпты (yaromat 2026-07-03: "переориентируй авто генерации... чтобы начали
+    # генерить в пул по осмысленным промтам для сборки клипов, а не по шаблонным запросам") —
+    # pool_prompts.py тянет реальный бриф последнего трека из screenplay-pipeline; если конвейер
+    # пуст (нет ни одного brief_full.yaml на ЯД) — деградирует на generic-вайб сам внутри модуля.
+    if _HAS_POOL_PROMPTS:
+        try:
+            img_prompts = build_image_prompts(N_IMG)
+            vid_prompts = build_video_prompts(N_VID)
+        except Exception as e:
+            print(f"[pool_prompts] упал ({e}) — фолбэк на старые шаблонные списки")
+            random.shuffle(IMAGE_PROMPTS); random.shuffle(VIDEO_PROMPTS)
+            img_prompts = IMAGE_PROMPTS[:N_IMG]; vid_prompts = VIDEO_PROMPTS[:N_VID]
+    else:
+        random.shuffle(IMAGE_PROMPTS)
+        random.shuffle(VIDEO_PROMPTS)
+        img_prompts = IMAGE_PROMPTS[:N_IMG]
+        vid_prompts = VIDEO_PROMPTS[:N_VID]
 
     # ── override: кастомные видео-промпты через env (|||-разделитель), для прицельной генерации ──
     _cust = os.environ.get("VID_PROMPTS_CUSTOM", "").strip()

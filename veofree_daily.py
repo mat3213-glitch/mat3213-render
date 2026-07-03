@@ -30,6 +30,13 @@ try:
 except Exception:
     media_register = None
 
+sys.path.insert(0, str(_here.parent / "screenplay_pipeline"))
+try:
+    from pool_prompts import build_video_prompts
+    _HAS_POOL_PROMPTS = True
+except Exception:
+    _HAS_POOL_PROMPTS = False
+
 
 def _register(path, pool, mtype, prompt, date):
     """Регистрация в media_catalog (best-effort, не валит генерацию)."""
@@ -145,8 +152,16 @@ def main():
     today = date.today().isoformat()
     dest_base = f"Content factory/cloud_io/veofree_pool/{today}"
 
-    random.shuffle(VIDEO_PROMPTS)
-    prompts = VIDEO_PROMPTS[:N_VID]
+    # осмысленные промпты по реальному брифу трека (см. qwen_daily.py) — фолбэк на шаблоны внутри модуля
+    if _HAS_POOL_PROMPTS:
+        try:
+            prompts = build_video_prompts(N_VID)
+        except Exception as e:
+            print(f"[pool_prompts] упал ({e}) — фолбэк на старые шаблонные списки")
+            random.shuffle(VIDEO_PROMPTS); prompts = VIDEO_PROMPTS[:N_VID]
+    else:
+        random.shuffle(VIDEO_PROMPTS)
+        prompts = VIDEO_PROMPTS[:N_VID]
 
     print(f"План на {today}: {N_VID} видео")
     for i, p in enumerate(prompts, 1):

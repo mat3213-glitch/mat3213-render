@@ -50,6 +50,14 @@ def engine_for(shot: dict) -> str:
     return ENGINE_ORDER[idx % len(ENGINE_ORDER)]
 
 
+# Qwen (t2v, "с нуля") ловлен вживую 2026-07-03 на генерации ЧИТАЕМОГО ТЕКСТА на предметах
+# (билет с надписями Departure/Platform/дата) — нарушает бренд-правило «без текста в кадре».
+# У chat.qwen.ai нет отдельного negative-prompt поля (единственное текстовое окно) — единственный
+# рычаг: усилить запрет прямо в промпте, с двух сторон (начало+конец — модели лучше держат края).
+QWEN_TEXT_SUPPRESS_PREFIX = "no readable text, no writing, no labels, no captions, blank surfaces, "
+QWEN_TEXT_SUPPRESS_SUFFIX = ", absolutely no text or lettering anywhere in frame, unmarked blank objects"
+
+
 def engine_inputs(engine: str, idx: int, prompt: str, still_query: str, ratio: str) -> dict:
     """У каждого движка свой набор workflow_dispatch inputs — gh CLI падает на незаявленных -f."""
     if engine == "hunyuan":
@@ -57,7 +65,8 @@ def engine_inputs(engine: str, idx: int, prompt: str, still_query: str, ratio: s
     if engine == "veofree":
         return {"scene_idx": str(idx), "prompt": prompt, "still_query": still_query, "aspect": "9:16"}
     if engine == "qwen":
-        return {"scene_idx": str(idx), "prompt": prompt, "ratio": ratio}
+        qwen_prompt = QWEN_TEXT_SUPPRESS_PREFIX + prompt + QWEN_TEXT_SUPPRESS_SUFFIX
+        return {"scene_idx": str(idx), "prompt": qwen_prompt, "ratio": ratio}
     return {"scene_idx": str(idx), "prompt": prompt}
 
 

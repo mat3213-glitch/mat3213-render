@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       n_vid:
-        description: 'Сколько видео (проба = 1, боевой = 2)'
+        description: 'Сколько видео (боевой = 1 — VeoFree лимит 1ген/IP, больше = трата раннер-минут зря)'
         default: '1'
   schedule:
-    - cron: '17 */3 * * *'   # каждые 3 часа (8/день), :17 чтобы уйти от пиковой очереди кронов в :00
+    - cron: '17 * * * *'   # каждый час (24/день), :17 чтобы уйти от пиковой очереди кронов в :00 (yaromat 2026-07-03: было 2 видео/3ч — исправлено на 1 видео/1ч)
 
 jobs:
   gen:
@@ -41,7 +41,7 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: Generate (VeoFree daily)
         env:
-          N_VID:               ${{ inputs.n_vid || '2' }}
+          N_VID:               ${{ inputs.n_vid || '1' }}
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
