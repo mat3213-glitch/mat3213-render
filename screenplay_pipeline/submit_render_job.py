@@ -47,10 +47,13 @@ def dispatch_workflow(workflow: str, inputs: dict[str, str], repo: str = DEFAULT
 
 def submit(job_id: str, files: dict[str, str], workflow: str, inputs: dict[str, str],
            repo: str = DEFAULT_REPO) -> None:
-    """files/inputs могут быть пустыми (напр. если job уже подготовлен другим шагом)."""
+    """files/inputs могут быть пустыми (напр. если job уже подготовлен другим шагом).
+    job_id ВСЕГДА добавляется в inputs автоматически — пойман вживую: вызов из scene_dispatch.py
+    без job_id в inputs дал HTTP 422 (required input not provided) на каждой сцене."""
     if files:
         upload_files(job_id, files)
-    dispatch_workflow(workflow, inputs, repo)
+    full_inputs = {"job_id": job_id, **inputs}
+    dispatch_workflow(workflow, full_inputs, repo)
 
 
 def main():
