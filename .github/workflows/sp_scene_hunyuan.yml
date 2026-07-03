@@ -42,7 +42,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing rclone ffmpeg
-          pip install -q requests
+          pip install -q requests cos-python-sdk-v5
 
       - name: Configure rclone ydrive
         env:
