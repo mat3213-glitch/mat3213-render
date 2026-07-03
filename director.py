@@ -173,8 +173,24 @@ overlay_category — ВСЕГДА null (футаж на футаж НЕ меша
 Конкретные клипы подберёт код. Мотив трактата выражаем РИТМОМ/масштабом/движением, а не литералом."""
 
 
+def _references_shot_block(references: list[dict] | None) -> str:
+    """Сжатая сводка референсов на уровне ПЛАНА/КАДРА (motion/color/composition) — для режиссёра
+    это точнее чем treatment.beats (тот уже прошёл через сценариста). Отбрасывает verdict=='мимо'."""
+    if not references:
+        return ""
+    usable = [r for r in references if r.get("verdict") != "мимо"]
+    if not usable:
+        return ""
+    items = [{"motion": r.get("motion", ""), "color": r.get("color", ""),
+              "composition": r.get("composition", ""), "rhythm": r.get("rhythm", "")}
+             for r in usable[:5]]
+    return ("\n\n=== РЕФЕРЕНСЫ (motion/color/composition реальных клипов похожего вайба) ===\n"
+            + json.dumps(items, ensure_ascii=False, indent=1)
+            + "\n(ориентир для motion/scale/transition отдельных кадров, не копировать дословно)")
+
+
 def build_prompt(treatment: dict, bpm: float, segs: list[dict], cat_summary: str,
-                 visualizer: bool = False) -> str:
+                 visualizer: bool = False, references: list[dict] | None = None) -> str:
     seg_lines = "\n".join(
         f"  seg {i}: t={s['track_pos']}с dur={s['duration']}с energy={s['energy']}"
         for i, s in enumerate(segs))
@@ -184,21 +200,38 @@ def build_prompt(treatment: dict, bpm: float, segs: list[dict], cat_summary: str
         + "\n\n=== TREATMENT ===\n" + json.dumps(treatment, ensure_ascii=False, indent=1)
         + f"\n\n=== ТАЙМЛАЙН ТРЕКА (bpm={bpm:.0f}, сегментов={len(segs)}) ===\n" + seg_lines
         + "\n\n=== ИНВЕНТАРЬ КАТАЛОГА ===\n" + cat_summary
+        + _references_shot_block(references)
         + f"\n\nВыдай РОВНО {len(segs)} кадров (по одному на seg 0..{len(segs)-1})."
     )
 
 
 def generate_shots(treatment: dict, bpm: float, segs: list[dict], cat_summary: str,
-                   visualizer: bool = False) -> list[dict]:
-    prompt = build_prompt(treatment, bpm, segs, cat_summary, visualizer)
-    raw = _call_groq(prompt) or _call_gemini(prompt)
-    if not raw:
-        sys.exit("Ни Groq, ни Gemini не ответили (проверь ключи/гео).")
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        raw = raw.strip().lstrip("`").replace("json", "", 1).strip().rstrip("`")
-        data = json.loads(raw)
+                   visualizer: bool = False, references: list[dict] | None = None) -> list[dict]:
+    prompt = build_prompt(treatment, bpm, segs, cat_summary, visualizer, references)
+    # ретрай на битый JSON — пойман вживую (2026-07-03): Gemini иногда отдаёт невалидный JSON
+    # даже с response_mime_type=json (чаще на длинных промптах, напр. с references-блоком).
+    # Один повторный вызов почти всегда чинит — не системная проблема, а разовая флуктуация.
+    data = None
+    last_err = None
+    for attempt in range(2):
+        raw = _call_groq(prompt) or _call_gemini(prompt)
+        if not raw:
+            sys.exit("Ни Groq, ни Gemini не ответили (проверь ключи/гео).")
+        try:
+            data = json.loads(raw)
+            break
+        except json.JSONDecodeError as e:
+            last_err = e
+            try:
+                raw2 = raw.strip().lstrip("`").replace("json", "", 1).strip().rstrip("`")
+                data = json.loads(raw2)
+                break
+            except json.JSONDecodeError as e2:
+                last_err = e2
+                print(f"[director] битый JSON от LLM (попытка {attempt+1}/2): {e2}", file=sys.stderr)
+                continue
+    if data is None:
+        sys.exit(f"LLM дважды вернул невалидный JSON: {last_err}")
     shots = data.get("shots") if isinstance(data, dict) else data
     if not isinstance(shots, list) or not shots:
         sys.exit("LLM не вернул shots[]")
@@ -351,6 +384,7 @@ def main():
                     help="пропустить первые N с (интро брать ЗАПРЕЩЕНО → ставить ≥ длины интро)")
     ap.add_argument("--visualizer", action="store_true",
                     help="base из каталога (vinil/soundwave), не внешний футаж — рил-визуалайзер")
+    ap.add_argument("--references", help="путь к reference_recipes.json (стадия 2, опционально)")
     ap.add_argument("-o", "--out", help="куда писать storyboard.json (default: рядом с treatment)")
     ap.add_argument("--print", action="store_true", dest="to_stdout")
     a = ap.parse_args()
@@ -379,7 +413,10 @@ def main():
 
     cat = catalog_summary()
     print(f"[director] каталог:\n{cat}")
-    shots = generate_shots(treatment, bpm, segs, cat, a.visualizer)
+    references = None
+    if a.references:
+        references = json.loads(Path(a.references).read_text(encoding="utf-8"))
+    shots = generate_shots(treatment, bpm, segs, cat, a.visualizer, references)
     storyboard = assemble(treatment, bpm, segs, shots, a.seed, a.orientation, a.visualizer)
     storyboard["format"] = "vertical" if a.orientation == "vertical" else (a.orientation or "landscape")
     storyboard["visualizer"] = a.visualizer
