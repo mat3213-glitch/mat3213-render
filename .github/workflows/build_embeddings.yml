@@ -33,14 +33,10 @@ jobs:
           YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
           YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
         run: |
-          mkdir -p ~/.config/rclone
-          cat > ~/.config/rclone/rclone.conf << EOF
-          [ydrive]
-          type = yandex
-          client_id = $YDRIVE_CLIENT_ID
-          client_secret = $YDRIVE_CLIENT_SECRET
-          token = $YDRIVE_TOKEN
-          EOF
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
 
       - name: Install system dependencies
         run: |

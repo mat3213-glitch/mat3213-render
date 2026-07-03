@@ -61,7 +61,7 @@ jobs:
         if: always()
         run: |
           if [ -f /tmp/mimo_pub_audit.md ]; then
-            rclone copyto /tmp/mimo_pub_audit.md "ydrive:Content factory/mirror/AUDIT/MIMO_PUB_AUDIT_2026-06-18.md"
+            rclone copyto /tmp/mimo_pub_audit.md "ydrive:Content factory/mirror/AUDIT/MIMO_PUB_AUDIT_$(date +%Y-%m-%d).md"
             echo "report uploaded to ydrive"
           else
             echo "NO report file produced"
