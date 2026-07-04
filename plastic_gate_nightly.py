@@ -36,6 +36,26 @@ def media_count(rel):
     r = sh(f'rclone lsf "{YD}/{rel}/" --max-depth 1 --include "*.mp4" --include "*.png" --include "*.jpg"')
     return len([x for x in r.stdout.splitlines() if x.strip()])
 
+def report_is_stale(rel):
+    """True если хоть один медиафайл новее gate_report.json — гейт проверял более раннюю
+    версию папки. Баг живьём 2026-07-04: veofree_daily.py теперь бьёт раз/час (24/день), а
+    этот гейт — раз/сутки (13:00 NSK). Успешный клип часто прилетает ПОСЛЕ разового гейта
+    и без этой проверки никогда больше не гейтится (has_report() навечно считает пул готовым)."""
+    r = sh(f'rclone lsjson "{YD}/{rel}/" --max-depth 1 --include "*.mp4" --include "*.png" --include "*.jpg"')
+    try:
+        items = json.loads(r.stdout)
+    except Exception:
+        return False
+    if not items:
+        return False
+    media_mtime = max(it["ModTime"] for it in items)
+    r2 = sh(f'rclone lsjson "{YD}/{rel}/gate_report.json"')
+    try:
+        report_mtime = json.loads(r2.stdout)[0]["ModTime"]
+    except Exception:
+        return True  # отчёт есть по has_report(), но не прочитать mtime — считаем протухшим, перегейтим
+    return media_mtime > report_mtime
+
 summary = []
 for pool in POOLS:
     for d in DATES:
@@ -45,9 +65,12 @@ for pool in POOLS:
         if media_count(rel) == 0:
             continue
         if has_report(rel) and not FORCE:
-            print(f"[skip] {rel} — уже гейчен (gate_report.json есть)")
-            summary.append(f"⏭ {pool}/{d}: уже гейчен")
-            continue
+            if report_is_stale(rel):
+                print(f"[re-gate] {rel} — gate_report.json протух (медиа новее отчёта)")
+            else:
+                print(f"[skip] {rel} — уже гейчен (gate_report.json есть)")
+                summary.append(f"⏭ {pool}/{d}: уже гейчен")
+                continue
         print(f"\n=== ГЕЙТ {rel} ===")
         env = dict(os.environ, POOL=rel, THRESHOLD=THRESHOLD, ENFORCE="1")
         r = subprocess.run(["python", "-u", GATE], env=env)
