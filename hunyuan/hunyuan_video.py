@@ -155,13 +155,16 @@ def start_t2v(s: requests.Session, cid: str, prompt: str, resolution: str) -> st
         "resolution": resolution,
     }
     r = s.post(f"{API_BASE}/api/vision_platform/generation", json=payload)
-    r.raise_for_status()
     try:
         data = r.json()
     except Exception:
         data = None
+    # Печатать тело ДО raise_for_status() — иначе исключение съедает r.text на 4xx/5xx и
+    # причина ошибки никогда не видна (gh-mimo диагностика 2026-07-04: старый порядок печати
+    # ПОСЛЕ raise_for_status делал эту диагностику мёртвым кодом на реальных 500-ках).
     print(f"  gen resp: HTTP {r.status_code} "
           f"{json.dumps(data, ensure_ascii=False)[:400] if data is not None else r.text[:400]}")
+    r.raise_for_status()
     if not isinstance(data, dict):
         print("❌ generation: пустой/невалидный ответ сервера")
         sys.exit(1)
@@ -187,15 +190,20 @@ def start_i2v(s: requests.Session, cid: str, image_url: str, prompt: str, resolu
         "n": 1,
         "image_url": image_url,
         "prompt": prompt,
+        # ДОБАВЛЕНО (gh-mimo диагностика 2026-07-04): start_t2v уже шлёт resolution, start_i2v —
+        # НЕ шлёт. Рабочая гипотеза причины стабильного 500 несколько дней подряд (не квота —
+        # куки/CID/COS-аплоад/signed URL всё работали, т.е. не auth): Tencent мог сделать
+        # resolution обязательным полем и для i2v тоже. Если нет — raw body ниже покажет что именно.
+        "resolution": resolution,
     }
     r = s.post(f"{API_BASE}/api/vision_platform/generation", json=payload)
-    r.raise_for_status()
     try:
         data = r.json()
     except Exception:
         data = None
     print(f"  gen resp: HTTP {r.status_code} "
           f"{json.dumps(data, ensure_ascii=False)[:400] if data is not None else r.text[:400]}")
+    r.raise_for_status()
     if not isinstance(data, dict):
         print("❌ generation: пустой/невалидный ответ сервера")
         sys.exit(1)
