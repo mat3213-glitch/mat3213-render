@@ -7,14 +7,27 @@ imagery_cues, диспатчит генерацию сцены на GH Actions (
 результат, гейтит через plastic_gate_core.judge_media() (ретрай до MAX_RETRIES при REJECT),
 переписывает shot.base на {"kind":"generated","path":"generated/scene_<idx>.mp4"}.
 
-v1: ВСЕ сцены → Hunyuan (единственный подключённый движок, API-based, самый надёжный).
-Точка расширения: ENGINE_FOR() — round-robin Qwen/VeoFree/Hunyuan, когда появятся
-sp_scene_qwen.yml/sp_scene_veofree.yml (тот же паттерн, что sp_scene_hunyuan.yml).
-Никакого LLM в этом файле — только детерминированная логика (по принципу пайплайна).
+РОУТИНГ ПО ЗНАЧИМОСТИ КАДРА (вариант C, развилка 2026-07-04, я+mimo-local независимо сошлись):
+climax-шоты (несут вес истории) → свежая AI-генерация как раньше; intro/body/outro (атмосфера/
+переходы, большинство кадров по счёту в energy-сегментированной раскадровке) → подбор из уже
+накопленного и протегированного AI-пула (pool_matcher.py/pool_tagger.py), НЕ новая генерация.
+Обоснование: LLM режиссёра сам решает число кадров по энергосегментам ПОЛНОГО трека (десятки
+шотов на 2-4-мин трек) — прогнать ВСЕ через генерацию упёрлось бы в лимит VeoFree (1 ген/IP/
+прогон) и дневную квоту Hunyuan на первом же реальном треке (та же стена, что уже ловили).
+hero_object для пул-подбора берётся из archetypes/library.yaml по storyboard["archetype_id"]
+(passthrough уже есть в director.py::assemble(), схема storyboard.json не менялась). Пул-клип
+гейтится тем же plastic_gate_core.judge_media() перед использованием (пул не панацея —
+найдены реальные пробелы в его собственном гейте на тегировании, см. project_screenplay_pipeline)
+и заливается в ТОТ ЖЕ generated/scene_<idx>.mp4 — storyboard_render_job.py не меняется вообще
+(pool-клип неотличим от AI-generated на этом этапе). --all-generated возвращает старое
+поведение (все шоты через AI-генерацию), если понадобится полный дорогой прогон.
+
+v1 генератора: round-robin Qwen/VeoFree/Hunyuan (sp_scene_*.yml, тот же паттерн). Никакого LLM
+в этом файле — только детерминированная логика (по принципу пайплайна).
 
 Usage:
   python3 scene_dispatch.py --storyboard path/to/storyboard.json --job-id JOB_ID \\
-    [--max-retries 3] [--poll 15] [--timeout 1200]
+    [--max-retries 3] [--poll 15] [--timeout 1200] [--all-generated]
 """
 
 import argparse
@@ -27,6 +40,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import plastic_gate_core as pgc
+import pool_matcher
 from submit_render_job import submit
 
 YD_ROOT = "ydrive:Content factory"
@@ -85,6 +99,68 @@ def build_still_query(shot: dict) -> str:
     visual = shot.get("visual", "") or shot.get("base", {}).get("query", "")
     words = [w for w in visual.replace(",", " ").split() if w.isascii()]
     return " ".join(words[:4]) or "abstract atmospheric texture"
+
+
+def load_hero_object(archetype_id: str) -> str:
+    """archetypes/library.yaml — тот же файл, что уже читают screenwriter.py/director.py.
+    hero_object передаётся через archetype_id (passthrough, уже есть в storyboard.json).
+    Fallback пустой строкой — main() подставит central_motif (ручные/тестовые storyboard
+    без archetype_id, как пул-рил этой сессии, не должны падать)."""
+    if not archetype_id:
+        return ""
+    lib_path = Path(__file__).resolve().parent.parent / "archetypes" / "library.yaml"
+    if not lib_path.exists():
+        return ""
+    try:
+        import yaml
+        data = yaml.safe_load(lib_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return ""
+    for a in data.get("archetypes", []):
+        if a.get("id") == archetype_id:
+            return a.get("hero_object", "")
+    return ""
+
+
+def pool_fill_shot(job_id: str, idx: int, shot: dict, hero_object: str,
+                    tmpdir: Path, used_pool_ids: set) -> dict | None:
+    """Атмосферный/переходный шот (section != climax) → подбор из тегированного AI-пула
+    (pool_matcher.py), НЕ свежая генерация. used_pool_ids не даёт повторить один физический
+    клип дважды в одном треке (мотив повторяется, конкретные кадры — разные, per yaromat).
+    Гейтится тем же judge_media() перед использованием (пул сам по себе не гарантия — нашли
+    реальный пробел в его же ночном гейте на тегировании этой сессией)."""
+    cues = shot.get("imagery_cues") or []
+    scale = shot.get("scale")
+    cand = pool_matcher.pick(hero_object=hero_object, imagery_cues=cues, scale=scale,
+                             n=6, seed=f"{job_id}-{idx}")
+    if not cand:  # scale-фильтр может быть слишком строг — второй заход без него
+        cand = pool_matcher.pick(hero_object=hero_object, imagery_cues=cues, n=6,
+                                 seed=f"{job_id}-{idx}")
+    cand = [c for c in cand if c["id"] not in used_pool_ids]
+    if not cand:
+        print(f"  scene {idx}: пул не дал кандидатов под hero={hero_object!r} — пропуск",
+              file=sys.stderr)
+        return None
+
+    for entry in cand[:3]:  # пробуем до 3 кандидатов, если первый не пройдёт гейт
+        local = pool_matcher.fetch(entry, tmpdir)
+        verdict = pgc.judge_media(str(local), threshold=GATE_THRESHOLD)
+        print(f"  scene {idx} [pool:{entry['engine']}] {entry['id']}: "
+              f"gate={verdict['verdict']} score={verdict['score']}")
+        if verdict["verdict"] == "REJECT":
+            continue
+        used_pool_ids.add(entry["id"])
+        dest_remote = f"{YD_ROOT}/cloud_io/render_jobs/{job_id}/generated/scene_{idx}.mp4"
+        r = subprocess.run(["rclone", "copyto", str(local), dest_remote],
+                          capture_output=True, text=True)
+        if r.returncode != 0:
+            print(f"  scene {idx}: не залил pool-клип на ЯД: {r.stderr[:120]}", file=sys.stderr)
+            return None
+        return {"kind": "generated", "path": f"generated/scene_{idx}.mp4",
+                "engine": f"pool:{entry['engine']}", "pool_id": entry["id"]}
+
+    print(f"  scene {idx}: все пул-кандидаты REJECT на гейте", file=sys.stderr)
+    return None
 
 
 def rclone_exists(remote_path: str) -> bool:
@@ -164,6 +240,9 @@ def main():
                     help="консервативный потолок вызовов Hunyuan за один прогон (у Hunyuan есть "
                          "дневной лимит генераций, точное число не известно — yaromat 2026-07-03, "
                          "начинаем осторожно, не бьём пачками/параллельно)")
+    ap.add_argument("--all-generated", action="store_true",
+                    help="старое поведение: ВСЕ шоты через AI-генерацию, пул не участвует "
+                         "(дорого — упрётся в лимиты на реальном треке, см. докстринг)")
     ap.add_argument("-o", "--out", help="куда писать обновлённый storyboard.json (default: рядом)")
     args = ap.parse_args()
 
@@ -174,25 +253,37 @@ def main():
         sys.exit("storyboard без shots")
     ratio = RATIO_BY_FORMAT.get(storyboard.get("format", "square"), "1:1")
 
+    archetype_id = storyboard.get("archetype_id", "")
+    hero_object = load_hero_object(archetype_id) or storyboard.get("central_motif", "")
+    print(f"hero_object для пул-подбора: {hero_object!r} (archetype_id={archetype_id!r})")
+
     tmpdir = Path(tempfile.mkdtemp(prefix="scene_dispatch_"))
+    used_pool_ids: set = set()
     ok, failed, hunyuan_calls = 0, 0, 0
     for shot in shots:
         idx = shot.get("idx")
         if idx is None:
             continue
-        engine = engine_for(shot)
-        # дневной лимит Hunyuan не известен точно — консервативный потолок ЗА ПРОГОН, чтобы
-        # один трек не сжёг всю дневную квоту (yaromat 2026-07-03). Каждая попытка (включая
-        # ретраи) считается отдельным вызовом.
-        if engine == "hunyuan" and hunyuan_calls + args.max_retries > args.max_hunyuan_per_run:
-            print(f"  scene {idx}: потолок Hunyuan за прогон исчерпан "
-                  f"({hunyuan_calls}/{args.max_hunyuan_per_run}) — пропуск", file=sys.stderr)
-            failed += 1
-            continue
-        base = dispatch_and_gate(args.job_id, idx, shot, ratio, args.timeout, args.poll,
-                                 args.max_retries, tmpdir)
-        if engine == "hunyuan":
-            hunyuan_calls += args.max_retries  # верхняя оценка (не знаем сколько попыток реально ушло)
+        section = shot.get("section", "")
+        use_pool = (section != "climax") and not args.all_generated
+
+        if use_pool:
+            base = pool_fill_shot(args.job_id, idx, shot, hero_object, tmpdir, used_pool_ids)
+        else:
+            engine = engine_for(shot)
+            # дневной лимит Hunyuan не известен точно — консервативный потолок ЗА ПРОГОН, чтобы
+            # один трек не сжёг всю дневную квоту (yaromat 2026-07-03). Каждая попытка (включая
+            # ретраи) считается отдельным вызовом.
+            if engine == "hunyuan" and hunyuan_calls + args.max_retries > args.max_hunyuan_per_run:
+                print(f"  scene {idx}: потолок Hunyuan за прогон исчерпан "
+                      f"({hunyuan_calls}/{args.max_hunyuan_per_run}) — пропуск", file=sys.stderr)
+                failed += 1
+                continue
+            base = dispatch_and_gate(args.job_id, idx, shot, ratio, args.timeout, args.poll,
+                                     args.max_retries, tmpdir)
+            if engine == "hunyuan":
+                hunyuan_calls += args.max_retries  # верхняя оценка (сколько попыток реально ушло — не знаем)
+
         if base:
             shot["base"] = base
             ok += 1
