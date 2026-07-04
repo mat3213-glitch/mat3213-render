@@ -95,7 +95,12 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
     """Кадр = base-футаж. Если у base ЗЕЛЁНАЯ зона (chroma) и есть fill → целевое наложение:
     фон-заливка (арт/он-тема) + винил с вырезанным зелёным сверху. БЕЗ футаж-на-футаж/оверлеев
     ([[feedback_no_footage_on_footage]]). base.kind=='generated' (Фаза 1 AI-генерация по сценам) —
-    клип уже готовая сцена без chroma, тянется из render_jobs/<JOB_ID>/generated/, не из каталога."""
+    клип уже готовая сцена без chroma, тянется из render_jobs/<JOB_ID>/generated/, не из каталога.
+
+    shot['speed'] (опционально, дефолт 1.0) — псевдо-слоу-мо через setpts (yaromat 2026-07-04):
+    <1.0 замедляет (0.75 = 75% скорости), даёт тот же экранный хронометраж на МЕНЬШЕМ числе
+    исходников — лекарство от тонкого дневного AI-пула. 1.0/отсутствие поля = старое поведение,
+    без изменений."""
     dur = max(0.4, float(shot["t_dur"]))
     base = shot.get("base") or {}
     bpath = base.get("path")
@@ -107,18 +112,20 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
         return None
     out = SHOTS / f"shot_{i:03d}.mp4"
     chroma = base.get("chroma") if base.get("kind") != "generated" else None
+    speed = float(shot.get("speed") or 1.0)
+    speed_vf = f"setpts=PTS/{speed:.4f}," if speed != 1.0 else ""
     common = ["-t", f"{dur:.3f}", "-r", "25", "-pix_fmt", "yuv420p",
               "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-an", str(out)]
     if chroma and fill:
         fc = (f"[0:v]{cover},fps=25,setsar=1,eq=saturation=0.62:contrast=1.08[bg];"
-              f"[1:v]{cover},fps=25,setsar=1,chromakey={chroma}:0.16:0.10[fg];"
+              f"[1:v]{speed_vf}{cover},fps=25,setsar=1,chromakey={chroma}:0.16:0.10[fg];"
               f"[bg][fg]overlay,format=yuv420p[v]")
         ok = ff(["-stream_loop", "-1", "-i", str(fill),
                  "-stream_loop", "-1", "-i", str(bfile),
                  "-filter_complex", fc, "-map", "[v]", *common])
     else:
         ok = ff(["-stream_loop", "-1", "-i", str(bfile),
-                 "-vf", f"{cover},fps=25,setsar=1", *common])
+                 "-vf", f"{speed_vf}{cover},fps=25,setsar=1", *common])
     return out if ok else None
 
 
