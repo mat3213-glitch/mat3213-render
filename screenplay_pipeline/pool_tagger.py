@@ -110,10 +110,22 @@ def append_catalog(entries: list[dict]):
 
 
 def media_list(pool: str, date: str) -> list[str]:
-    """--max-depth 1 ОБЯЗАТЕЛЕН — иначе rclone lsf рекурсивно затянет _rejected/ (брак гейта)."""
+    """--max-depth 1 ОБЯЗАТЕЛЕН — иначе rclone lsf рекурсивно затянет _rejected/ (брак гейта).
+    Живой баг найден в первом backfill-прогоне 2026-07-04: --include "*.png" ловил не только
+    img_01.png (реальный кадр), но и *.fail.png (скриншот НЕУДАЧНОЙ генерации VeoFree — не
+    футаж) + rclone lsf иногда отдавал "_rejected/" САМ каталог как запись (trailing slash),
+    который потом падал на copyto/mimo. Фильтруем оба класса явно."""
     r = sh(f'rclone lsf "{YD}/cloud_io/{pool}/{date}/" --max-depth 1 '
            f'--include "*.mp4" --include "*.png" --include "*.jpg"')
-    return [x.strip() for x in r.stdout.splitlines() if x.strip()]
+    out = []
+    for x in r.stdout.splitlines():
+        x = x.strip()
+        if not x or x.endswith("/"):
+            continue
+        if x.endswith(".fail.png") or ".FAILED." in x:
+            continue
+        out.append(x)
+    return out
 
 
 def main():
