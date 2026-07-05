@@ -1,0 +1,50 @@
+name: SP Vzrosly Real
+
+# Клип «взрослый» v3 на РЕАЛЬНОМ футаже (разворот после пластика AI-стиллов+параллакс):
+# real_cut (герой-сегменты/кроп/грейд + cc-атмосфера + чёрная вспышка) → сборка по EDL (hard-cut, полнотрек).
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID (storyboard_v3.json + hero_raw.mp4 + cc_footage/ на ЯД)'
+        required: true
+        type: string
+        default: 'vzrosly_2026-07-05'
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+          pip install -q librosa soundfile numpy
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Real cut (hero segments + cc atmosphere + black)
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: python3 real_cut.py
+
+      - name: Assemble EDL (storyboard_render_job)
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: python3 storyboard_render_job.py
