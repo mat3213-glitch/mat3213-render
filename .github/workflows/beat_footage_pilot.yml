@@ -1,0 +1,59 @@
+name: Beat Footage Pilot
+
+# Пилот реального видеопродакшена «взрослый»: пер-бит YouTube-поиск (релевантность) → короткие
+# сегменты кандидатов → контактные листы на превью-канал для отбора глазами. yt-dlp-стек как fetch_cc.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID (pilot_beats.json на ЯД в render_jobs/<job_id>/)'
+        required: true
+        default: 'vzrosly_2026-07-05'
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone ffmpeg
+          pip install -q requests pillow
+          pip install -q -U --pre "yt-dlp[default]"
+          pip install -q -U yt-dlp-ejs
+
+      - name: Restore YouTube cookies
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: printf '%s' "$YOUTUBE_COOKIES" > youtube_cookies.txt
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run beat footage pilot
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+          COOKIES: ${{ github.workspace }}/youtube_cookies.txt
+        run: python3 screenplay_pipeline/beat_footage_pilot.py
