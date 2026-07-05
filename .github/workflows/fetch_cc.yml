@@ -1,0 +1,84 @@
+name: Fetch CC Footage (search + download)
+
+# Скачивает Creative Commons видео с YouTube ЦЕЛИКОМ для использования футажа в рендере
+# (после уникализации). US-раннер — скачивание YouTube с RU-IP блокируется. Тот же yt-dlp-стек,
+# что sp_references. Вход: явные CC-запросы. Выход: render_jobs/<job_id>/cc_footage/*.mp4 + cc_manifest.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — куда класть cc_footage/ на ЯД'
+        required: true
+      queries:
+        description: 'CC-запросы через ; (напр. fist punching glass; rain on window)'
+        required: true
+      max:
+        description: 'Сколько клипов скачать (дефолт 3)'
+        default: '3'
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone ffmpeg
+          pip install -q requests pyyaml python-dotenv
+          pip install -q -U --pre "yt-dlp[default]"
+          pip install -q -U yt-dlp-ejs
+
+      - name: Restore YouTube cookies from ydrive
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: |
+          printf '%s' "$YOUTUBE_COOKIES" > youtube_cookies.txt
+          echo "cookies lines: $(wc -l < youtube_cookies.txt)"
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Stage 1 — CC search
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          YT_API_KEY: ${{ secrets.YT_API_KEY }}
+        run: |
+          python3 screenplay_pipeline/reference_search.py --queries "${{ inputs.queries }}" \
+            --cc-only --job-id "$JOB_ID" --top "${{ inputs.max || '3' }}"
+
+      - name: Stage 2 — download CC clips
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/references.json" references.json
+          python3 screenplay_pipeline/fetch_cc_clip.py --references references.json \
+            --job-id "$JOB_ID" --max "${{ inputs.max || '3' }}" --cookies "$PWD/youtube_cookies.txt"
+
+      - name: Report status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/cc_footage/status.txt" \
+            <<< "error: fetch_cc workflow failed" || true
