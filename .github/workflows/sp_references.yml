@@ -14,6 +14,10 @@ on:
       top:
         description: 'Сколько референсов искать (дефолт 5)'
         default: '5'
+      queries:
+        description: 'Явные запросы через ; (Reference Heist — если задано, бриф не нужен)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -72,15 +76,20 @@ jobs:
         env:
           JOB_ID: ${{ inputs.job_id }}
         run: |
-          rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/brief_full.yaml" brief_full.yaml
+          rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/brief_full.yaml" brief_full.yaml || echo 'no brief (queries mode)'
 
       - name: Stage 1 — reference_search
         env:
           JOB_ID: ${{ inputs.job_id }}
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
         run: |
-          python3 screenplay_pipeline/reference_search.py --brief brief_full.yaml \
-            --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}"
+          if [ -n "${{ inputs.queries }}" ]; then
+            python3 screenplay_pipeline/reference_search.py --queries "${{ inputs.queries }}" \
+              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}"
+          else
+            python3 screenplay_pipeline/reference_search.py --brief brief_full.yaml \
+              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}"
+          fi
 
       - name: Stage 2 — reference_deconstruct
         env:

@@ -153,7 +153,8 @@ def upload_yd(path: str, job_id: str):
 
 def main():
     ap = argparse.ArgumentParser(description="Поиск референс-клипов на YouTube по параметрам трека.")
-    ap.add_argument("--brief", required=True, help="путь к brief_full.yaml")
+    ap.add_argument("--brief", required=False, default=None, help="путь к brief_full.yaml (не нужен при --queries)")
+    ap.add_argument("--queries", type=str, default=None, help="явные запросы через ; (Reference Heist — минует build_query/бриф)")
     ap.add_argument("--job-id", required=True, help="ID задачи (для пути на Яндекс.Диск)")
     ap.add_argument("--top", type=int, default=5, help="сколько результатов вернуть (default: 5)")
     args = ap.parse_args()
@@ -162,11 +163,29 @@ def main():
         print("[error] YT_API_KEY не задан в переменных окружения", file=sys.stderr)
         sys.exit(1)
 
-    brief = yaml.safe_load(Path(args.brief).read_text(encoding="utf-8"))
-    query = build_query(brief)
-    print(f"[yt] query: {query}")
+    if args.queries:
+        # Reference Heist: явные прицельные запросы под мир трека, минуя build_query.
+        queries = [q.strip() for q in args.queries.split(";") if q.strip()]
+        if not queries:
+            print("[yt] --queries задан, но пуст после разбора", file=sys.stderr)
+            sys.exit(1)
+        candidates = []
+        seen = set()
+        for q in queries:
+            batch = yt_search(q, max_results=6)
+            new = [c for c in batch if c["video_id"] not in seen]
+            seen.update(c["video_id"] for c in new)
+            candidates.extend(new)
+            print(f"[yt] запрос «{q}»: {len(batch)} найдено, {len(new)} новых")
+    else:
+        if not args.brief:
+            print("[yt] нужен --queries или --brief", file=sys.stderr)
+            sys.exit(1)
+        brief = yaml.safe_load(Path(args.brief).read_text(encoding="utf-8"))
+        query = build_query(brief)
+        print(f"[yt] query: {query}")
+        candidates = yt_search(query)
 
-    candidates = yt_search(query)
     if not candidates:
         print("[yt] ничего не найдено", file=sys.stderr)
         sys.exit(1)
