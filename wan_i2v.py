@@ -85,8 +85,14 @@ if not yd_get(IMG_REMOTE, TMP / "in.png"):
 log(f"input image: {(TMP/'in.png').stat().st_size//1024}KB")
 
 status = "?"; out_local = None
+if HF_TOKEN:
+    os.environ.setdefault("HF_TOKEN", HF_TOKEN)          # hub-авторизация через env (публичный Space её не требует)
+    os.environ.setdefault("HUGGINGFACE_HUB_TOKEN", HF_TOKEN)
 try:
-    client = Client(SPACE, hf_token=HF_TOKEN)
+    try:
+        client = Client(SPACE, hf_token=HF_TOKEN) if HF_TOKEN else Client(SPACE)
+    except TypeError:                                     # версия gradio_client без kwarg hf_token
+        client = Client(SPACE)
     # интроспекция api в лог — увидим реальную сигнатуру для последующей фиксации API_NAME
     try:
         log("── view_api ──")
