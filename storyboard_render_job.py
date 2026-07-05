@@ -21,8 +21,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-from analyze import find_highlight_offset
-
 JOB_ID = os.environ.get("JOB_ID", "")
 if not JOB_ID:
     sys.exit("JOB_ID not set")
@@ -190,6 +188,7 @@ def main():
         print(f"  audio_start={hl:.1f}с (highlight пропущен — полнотрековый EDL)", flush=True)
     else:
         try:
+            from analyze import find_highlight_offset  # ленивый: aubio нужен только в highlight-режиме
             hl = find_highlight_offset(str(track), window=reel_dur)
         except Exception as e:
             print(f"  highlight err ({e}) → 0.0", flush=True)

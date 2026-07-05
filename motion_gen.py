@@ -101,6 +101,9 @@ def main():
         kind, name = parse_src(shot["src"])
         out = WORK / f"scene_{idx:03d}.mp4"
         print(f"── scene {idx:03d}: {shot['src']} motion={motion} t={t_dur}s", flush=True)
+        # идемпотентность: сцена уже на ЯД → пропуск (дешёвый редиспатч после падения сборки)
+        if sh(["rclone", "lsf", f"{REMOTE}:{JOB_YD}/generated/scene_{idx:03d}.mp4"]).stdout.strip():
+            print("  · уже на ЯД — пропуск", flush=True); done.append(idx); continue
 
         try:
             if kind == "still":
