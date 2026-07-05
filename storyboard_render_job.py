@@ -180,14 +180,21 @@ def main():
                "-pix_fmt", "yuv420p", str(concat)]):
         sys.exit("concat не вышел")
 
-    # 3. аудио-окно на дропе (интро пропускается через highlight) + mux
-    print("\n── Highlight + аудио + mux ──", flush=True)
-    try:
-        hl = find_highlight_offset(str(track), window=reel_dur)
-    except Exception as e:
-        print(f"  highlight err ({e}) → 0.0", flush=True)
-        hl = 0.0
-    print(f"  highlight_offset={hl:.1f}с (интро до него отрезано)", flush=True)
+    # 3. аудио-окно + mux. Полнотрековый EDL (раскадровка привязана к энергокарте ВСЕГО трека)
+    # задаёт audio_start явно → highlight ПРОПУСКАЕТСЯ (иначе десинхрон: пик кадра ≠ пик трека).
+    # Хайлайт-режим (короткий рил без audio_start) сохранён без изменений.
+    print("\n── Аудио + mux ──", flush=True)
+    audio_start = sb.get("audio_start")
+    if audio_start is not None:
+        hl = float(audio_start)
+        print(f"  audio_start={hl:.1f}с (highlight пропущен — полнотрековый EDL)", flush=True)
+    else:
+        try:
+            hl = find_highlight_offset(str(track), window=reel_dur)
+        except Exception as e:
+            print(f"  highlight err ({e}) → 0.0", flush=True)
+            hl = 0.0
+        print(f"  highlight_offset={hl:.1f}с (интро до него отрезано)", flush=True)
     result = WORKDIR / "result.mp4"
     if not ff(["-i", str(concat), "-ss", f"{hl:.3f}", "-t", f"{reel_dur:.3f}", "-i", str(track),
                "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "veryfast",
