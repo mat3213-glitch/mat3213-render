@@ -1,0 +1,77 @@
+name: Wan2 i2v
+
+# Wan2.1 image-to-video на US-раннере через HF Space (gradio_client). Замена мёртвого Hunyuan i2v.
+# Оживляет ОДИН стилл → клип на ЯД. Дефолт Space = Wan-AI/Wan2.1-I2V-14B-720P (переопределяемо).
+
+on:
+  workflow_dispatch:
+    inputs:
+      img_remote:
+        description: 'Путь стилла на ЯД (напр. Content factory/cloud_io/render_jobs/vzrosly_2026-07-05/src_stills/s01_hand_fog.png)'
+        required: true
+        type: string
+      prompt:
+        description: 'Промпт движения'
+        required: false
+        type: string
+        default: 'slow subtle cinematic motion, gentle drift, film grain, no text, no people'
+      dest_folder:
+        description: 'Папка назначения на ЯД'
+        required: false
+        type: string
+        default: 'Content factory/cloud_io/render_jobs/vzrosly_2026-07-05/wan2'
+      out_name:
+        description: 'Имя выходного mp4'
+        required: false
+        type: string
+        default: 'wan_clip.mp4'
+      space:
+        description: 'HF Space id'
+        required: false
+        type: string
+        default: 'Wan-AI/Wan2.1-I2V-14B-720P'
+      api_name:
+        description: 'api_name предикта (опц., после первого прогона по view_api)'
+        required: false
+        type: string
+
+jobs:
+  wan_i2v:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+          pip install gradio_client requests
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run Wan2 i2v
+        env:
+          IMG_REMOTE:        ${{ inputs.img_remote }}
+          PROMPT:            ${{ inputs.prompt }}
+          DEST_FOLDER:       ${{ inputs.dest_folder }}
+          OUT_NAME:          ${{ inputs.out_name }}
+          SPACE:             ${{ inputs.space }}
+          API_NAME:          ${{ inputs.api_name }}
+          HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+        run: python3 wan_i2v.py
