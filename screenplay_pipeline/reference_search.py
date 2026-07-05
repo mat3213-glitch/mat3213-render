@@ -76,12 +76,12 @@ def build_query(brief: dict) -> str:
     return query
 
 
-def yt_search(query: str, max_results: int = 15, cc_only: bool = False) -> list[dict]:
+def yt_search(query: str, max_results: int = 15, cc_only: bool = False, order: str = "relevance") -> list[dict]:
     url = "https://www.googleapis.com/youtube/v3/search"
     params = {
         "part": "snippet",
         "type": "video",
-        "order": "relevance",
+        "order": order,
         "maxResults": max_results,
         "q": query,
         "key": YT_API_KEY,
@@ -159,6 +159,7 @@ def main():
     ap.add_argument("--brief", required=False, default=None, help="путь к brief_full.yaml (не нужен при --queries)")
     ap.add_argument("--queries", type=str, default=None, help="явные запросы через ; (Reference Heist — минует build_query/бриф)")
     ap.add_argument("--cc-only", action="store_true", help="только Creative Commons видео (для скачивания футажа в рендер)")
+    ap.add_argument("--top-views", action="store_true", help="сортировать по просмотрам (топ вирусные клипы, не по релевантности)")
     ap.add_argument("--job-id", required=True, help="ID задачи (для пути на Яндекс.Диск)")
     ap.add_argument("--top", type=int, default=5, help="сколько результатов вернуть (default: 5)")
     args = ap.parse_args()
@@ -175,8 +176,9 @@ def main():
             sys.exit(1)
         candidates = []
         seen = set()
+        order = "viewCount" if args.top_views else "relevance"
         for q in queries:
-            batch = yt_search(q, max_results=6, cc_only=args.cc_only)
+            batch = yt_search(q, max_results=6, cc_only=args.cc_only, order=order)
             new = [c for c in batch if c["video_id"] not in seen]
             seen.update(c["video_id"] for c in new)
             candidates.extend(new)
@@ -188,7 +190,7 @@ def main():
         brief = yaml.safe_load(Path(args.brief).read_text(encoding="utf-8"))
         query = build_query(brief)
         print(f"[yt] query: {query}")
-        candidates = yt_search(query, cc_only=args.cc_only)
+        candidates = yt_search(query, cc_only=args.cc_only, order="viewCount" if args.top_views else "relevance")
 
     if not candidates:
         print("[yt] ничего не найдено", file=sys.stderr)

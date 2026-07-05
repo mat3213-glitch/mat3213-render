@@ -18,6 +18,10 @@ on:
         description: 'Явные запросы через ; (Reference Heist — если задано, бриф не нужен)'
         required: false
         default: ''
+      top_views:
+        description: 'true = сортировать по просмотрам (топ вирусные клипы)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -82,13 +86,14 @@ jobs:
         env:
           JOB_ID: ${{ inputs.job_id }}
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
+          TV: ${{ inputs.top_views == 'true' && '--top-views' || '' }}
         run: |
           if [ -n "${{ inputs.queries }}" ]; then
             python3 screenplay_pipeline/reference_search.py --queries "${{ inputs.queries }}" \
-              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}"
+              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}" $TV
           else
             python3 screenplay_pipeline/reference_search.py --brief brief_full.yaml \
-              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}"
+              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}" $TV
           fi
 
       - name: Stage 2 — reference_deconstruct
