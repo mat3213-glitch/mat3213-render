@@ -1,0 +1,100 @@
+name: Treatment compare (A overlayfx vs B our-layers)
+
+# Сравнение двух путей лоу-фай на одном и том же клипе, с ЗАМЕРОМ ВРЕМЕНИ (для монитора:
+# что проще/дешевле/быстрее + грабли):
+#   A = внешние Pinterest-оверлеи (film-grain + film-burn) — treatment_overlayfx.py
+#   B = наши слои (texture_pass.py: зерно+grit+scratch+LUT-грейд+виньетка, пресет cold_steel)
+# Оба выхода + timings.txt → одна папка сессии на ЯД (на гейт).
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "База (склейка-слоумо) на ЯД, относительно 'Content factory/'"
+        required: false
+        default: "cloud_io/preview/slowmo_joined_2026-07-07/slowmo_2.0x_minterp.mp4"
+        type: string
+      folder:
+        description: "Папка сессии на ЯД (вход оверлеев + выход)"
+        required: false
+        default: "cloud_io/preview/slowmo_joined_2026-07-07"
+        type: string
+      seam:
+        description: "Секунда стыка склейки (для film-burn вспышки)"
+        required: false
+        default: "16.0"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg + rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull base + overlays
+        env:
+          BASE: ${{ inputs.base }}
+          FOLDER: ${{ inputs.folder }}
+        run: |
+          rclone copyto "ydrive:Content factory/$BASE" base.mp4 -v
+          rclone copyto "ydrive:Content factory/$FOLDER/NOISE_film-grain_720x1280.mp4" grain.mp4 -v
+          rclone copyto "ydrive:Content factory/$FOLDER/TRANSITION_film-burn_720x1280.mp4" burn.mp4 -v
+          W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 base.mp4)
+          H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 base.mp4)
+          echo "W=$W H=$H" | tee dims.txt
+
+      - name: Track A — external overlays (film-grain + film-burn)
+        env:
+          SEAM: ${{ inputs.seam }}
+        run: |
+          W=$(cut -d' ' -f1 dims.txt | cut -d= -f2); H=$(cut -d' ' -f2 dims.txt | cut -d= -f2)
+          t0=$(date +%s.%N)
+          python3 treatment_overlayfx.py base.mp4 grain.mp4 burn.mp4 out_A_overlayfx.mp4 \
+            --seam "$SEAM" --w "$W" --h "$H" --fps 24 --grain-op 0.20 --burn-len 3.0
+          t1=$(date +%s.%N)
+          echo "A_seconds=$(echo "$t1 - $t0" | bc)" | tee -a timings.txt
+
+      - name: Track B — our layers (texture_pass cold_steel)
+        run: |
+          W=$(cut -d' ' -f1 dims.txt | cut -d= -f2); H=$(cut -d' ' -f2 dims.txt | cut -d= -f2)
+          t0=$(date +%s.%N)
+          python3 screenplay_pipeline/texture_pass.py base.mp4 out_B_ourlayers.mp4 \
+            --seed 42 --w "$W" --h "$H" --fps 24 \
+            --eq "contrast=1.14:saturation=0.9:brightness=-0.02:gamma=0.96" \
+            --vignette "angle=PI/4.5" --grain-min 10 --grain-max 15
+          t1=$(date +%s.%N)
+          echo "B_seconds=$(echo "$t1 - $t0" | bc)" | tee -a timings.txt
+
+      - name: Report + push
+        if: always()
+        env:
+          FOLDER: ${{ inputs.folder }}
+        run: |
+          echo "=== timings ===" ; cat timings.txt 2>/dev/null || echo "(нет)"
+          for f in out_A_overlayfx.mp4 out_B_ourlayers.mp4; do
+            if [ -f "$f" ]; then
+              echo "--- $f ---" | tee -a timings.txt
+              ffprobe -v error -select_streams v:0 -show_entries stream=width,height,nb_frames \
+                -show_entries format=duration,size -of default=noprint_wrappers=1 "$f" | tee -a timings.txt
+              rclone copyto "$f" "ydrive:Content factory/$FOLDER/$f" -v
+            else
+              echo "!!! $f НЕ СОБРАН" | tee -a timings.txt
+            fi
+          done
+          rclone copyto timings.txt "ydrive:Content factory/$FOLDER/treatment_timings.txt" -v
