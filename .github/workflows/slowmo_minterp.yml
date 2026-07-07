@@ -13,6 +13,11 @@ on:
         required: false
         default: "cloud_io/veofree_i2v/smoke_2026-07-07/i2v_smoke.mp4"
         type: string
+      src2:
+        description: "Второй клип для склейки ПЕРЕД слоумо (пусто = одиночный)"
+        required: false
+        default: ""
+        type: string
       factor:
         description: "Коэффициент замедления (2.0 = в 2 раза медленнее)"
         required: false
@@ -45,12 +50,23 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Pull source
+      - name: Pull source(s) + optional concat
         env:
-          SRC: ${{ inputs.src }}
+          SRC:  ${{ inputs.src }}
+          SRC2: ${{ inputs.src2 }}
         run: |
-          rclone copyto "ydrive:Content factory/$SRC" in.mp4 -v
-          echo "=== probe src ==="
+          rclone copyto "ydrive:Content factory/$SRC" a.mp4 -v
+          if [ -n "$SRC2" ]; then
+            rclone copyto "ydrive:Content factory/$SRC2" b.mp4 -v
+            # Склейка ПЕРЕД слоумо. Оба клипа VeoFree 720x1280/24fps — re-encode для
+            # единого потока. minterpolate сам детектит стык (scd) и не морфит через рез.
+            ffmpeg -y -i a.mp4 -i b.mp4 -filter_complex \
+              "[0:v]setsar=1[v0];[1:v]setsar=1[v1];[v0][v1]concat=n=2:v=1:a=0[v]" \
+              -map "[v]" -r 24 -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p in.mp4
+          else
+            cp a.mp4 in.mp4
+          fi
+          echo "=== probe joined/src ==="
           ffprobe -v error -select_streams v:0 \
             -show_entries stream=width,height,r_frame_rate,nb_frames \
             -show_entries format=duration -of default=noprint_wrappers=1 in.mp4
