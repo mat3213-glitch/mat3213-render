@@ -1,0 +1,83 @@
+name: Slowmo minterpolate (test)
+
+# Настоящий слоумо через motion-интерполяцию (minterpolate синтезирует промежуточные
+# кадры), в отличие от setpts-псевдослоумо (тупиковый на 24fps — микрофризы, вердикт
+# yaromat 2026-07-07). Тяжёлый CPU → только на GH, не на Atom-буке.
+# Вход — клип с ЯД, выход — на ЯД в preview/ на гейт.
+
+on:
+  workflow_dispatch:
+    inputs:
+      src:
+        description: "Путь к исходнику на ЯД (относительно 'Content factory/')"
+        required: false
+        default: "cloud_io/veofree_i2v/smoke_2026-07-07/i2v_smoke.mp4"
+        type: string
+      factor:
+        description: "Коэффициент замедления (2.0 = в 2 раза медленнее)"
+        required: false
+        default: "2.0"
+        type: string
+      outdir:
+        description: "Папка выхода на ЯД (относительно 'Content factory/')"
+        required: false
+        default: "cloud_io/preview/slowmo_minterp_2026-07-07"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  slowmo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ffmpeg + rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull source
+        env:
+          SRC: ${{ inputs.src }}
+        run: |
+          rclone copyto "ydrive:Content factory/$SRC" in.mp4 -v
+          echo "=== probe src ==="
+          ffprobe -v error -select_streams v:0 \
+            -show_entries stream=width,height,r_frame_rate,nb_frames \
+            -show_entries format=duration -of default=noprint_wrappers=1 in.mp4
+
+      - name: Minterpolate slowmo
+        env:
+          FACTOR: ${{ inputs.factor }}
+        run: |
+          # Источник 24fps. setpts=FACTOR*PTS растягивает тайминг, minterpolate=fps=24
+          # синтезирует новые кадры на замедленной шкале → гладко (без дубль-фризов).
+          # mci+aobmc+vsbmc = самое качественное перекрытие блоков, bidir оценка движения.
+          ffmpeg -y -i in.mp4 -filter:v \
+            "setpts=${FACTOR}*PTS,minterpolate=mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1:fps=24" \
+            -an -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p out_minterp.mp4
+          # Контроль: тот же слоумо старым setpts-способом (для сравнения гладкости на гейте).
+          ffmpeg -y -i in.mp4 -filter:v "setpts=${FACTOR}*PTS" -an \
+            -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p out_setpts.mp4
+          echo "=== out minterp ==="
+          ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate,nb_frames \
+            -show_entries format=duration -of default=noprint_wrappers=1 out_minterp.mp4
+          ls -la out_*.mp4
+
+      - name: Push results
+        env:
+          OUTDIR: ${{ inputs.outdir }}
+          FACTOR: ${{ inputs.factor }}
+        run: |
+          rclone copyto out_minterp.mp4 "ydrive:Content factory/$OUTDIR/slowmo_${FACTOR}x_minterp.mp4" -v
+          rclone copyto out_setpts.mp4  "ydrive:Content factory/$OUTDIR/slowmo_${FACTOR}x_setpts.mp4" -v
+          echo "OK → $OUTDIR"
