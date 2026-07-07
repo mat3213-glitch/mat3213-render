@@ -1,0 +1,101 @@
+name: Treatment combined (B our-layers + extended film-burn at seam)
+
+# Объединённый пресет (выбор yaromat 2026-07-07): база = наши слои (texture_pass, грейд
+# cold_steel + виньетка + зерно/скретч) → поверх РАСТЯНУТЫЙ film-burn на стыке склейки
+# (bleeds в оба клипа, переход не резкий). Зерно даёт слой B → burn БЕЗ доп. зерна (--no-grain).
+# Выход → 03_treatment_compare/ рядом с A и B (сравнение A/B/C).
+
+on:
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "База (склейка-слоумо) на ЯД, относительно 'Content factory/'"
+        required: false
+        default: "cloud_io/preview/slowmo_joined_2026-07-07/01_slowmo/slowmo_2.0x_minterp.mp4"
+        type: string
+      burn:
+        description: "film-burn клип на ЯД"
+        required: false
+        default: "cloud_io/preview/slowmo_joined_2026-07-07/02_overlay_sources/TRANSITION_film-burn_720x1280.mp4"
+        type: string
+      outdir:
+        description: "Папка выхода на ЯД"
+        required: false
+        default: "cloud_io/preview/slowmo_joined_2026-07-07/03_treatment_compare"
+        type: string
+      seam:
+        description: "Секунда стыка"
+        required: false
+        default: "16.0"
+        type: string
+      burn_len:
+        description: "Длина растянутого burn-окна на стыке, с (bleeds в оба клипа)"
+        required: false
+        default: "6.0"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  combined:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ffmpeg + rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull base + burn
+        env:
+          BASE: ${{ inputs.base }}
+          BURN: ${{ inputs.burn }}
+        run: |
+          rclone copyto "ydrive:Content factory/$BASE" base.mp4 -v
+          rclone copyto "ydrive:Content factory/$BURN" burn.mp4 -v
+          W=$(ffprobe -v error -select_streams v:0 -show_entries stream=width -of csv=p=0 base.mp4)
+          H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 base.mp4)
+          echo "W=$W H=$H" | tee dims.txt
+
+      - name: Step 1 — B grade (texture_pass cold_steel)
+        run: |
+          W=$(cut -d' ' -f1 dims.txt | cut -d= -f2); H=$(cut -d' ' -f2 dims.txt | cut -d= -f2)
+          python3 screenplay_pipeline/texture_pass.py base.mp4 graded.mp4 \
+            --seed 42 --w "$W" --h "$H" --fps 24 \
+            --eq "contrast=1.14:saturation=0.9:brightness=-0.02:gamma=0.96" \
+            --vignette "angle=PI/4.5" --grain-min 10 --grain-max 15
+
+      - name: Step 2 — extended film-burn at seam (burn-only)
+        env:
+          SEAM: ${{ inputs.seam }}
+          BURN_LEN: ${{ inputs.burn_len }}
+        run: |
+          W=$(cut -d' ' -f1 dims.txt | cut -d= -f2); H=$(cut -d' ' -f2 dims.txt | cut -d= -f2)
+          # grain-вход не нужен (--no-grain), но позиционный обязателен → передаём burn.mp4 как заглушку.
+          python3 treatment_overlayfx.py graded.mp4 burn.mp4 burn.mp4 out_C_combined_B+burn.mp4 \
+            --no-grain --seam "$SEAM" --burn-len "$BURN_LEN" \
+            --w "$W" --h "$H" --fps 24 --burn-op 0.85
+
+      - name: Push + probe
+        if: always()
+        env:
+          OUTDIR: ${{ inputs.outdir }}
+        run: |
+          if [ -f out_C_combined_B+burn.mp4 ]; then
+            ffprobe -v error -select_streams v:0 -show_entries stream=width,height,nb_frames \
+              -show_entries format=duration -of default=noprint_wrappers=1 out_C_combined_B+burn.mp4
+            rclone copyto out_C_combined_B+burn.mp4 "ydrive:Content factory/$OUTDIR/out_C_combined_B+burn.mp4" -v
+            echo "OK → $OUTDIR/out_C_combined_B+burn.mp4"
+          else
+            echo "!!! out_C НЕ СОБРАН"; exit 1
+          fi

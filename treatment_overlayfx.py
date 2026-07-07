@@ -34,28 +34,49 @@ def main():
     p.add_argument("--seam", type=float, required=True, help="секунда стыка склейки")
     p.add_argument("--grain-op", type=float, default=0.20, help="непрозрачность зерна (screen)")
     p.add_argument("--burn-len", type=float, default=3.0, help="длина вспышки film-burn, с")
+    p.add_argument("--no-grain", action="store_true",
+                   help="только film-burn на стыке, БЕЗ зерна (для объединённого пресета: "
+                        "зерно уже даёт слой B/texture_pass)")
+    p.add_argument("--burn-op", type=float, default=1.0, help="непрозрачность film-burn (screen)")
     p.add_argument("--timeout", type=int, default=600)
     a = p.parse_args()
 
     dur = probe_dur(a.base)
-    burn_start = max(0.0, a.seam - a.burn_len / 2.0)     # центр вспышки на стыке
+    # burn растягиваем симметрично вокруг стыка: bleeds в ОБА клипа (переход не резкий).
+    burn_start = max(0.0, a.seam - a.burn_len / 2.0)     # центр окна на стыке
     stop = max(0.0, dur - burn_start - a.burn_len)       # чёрный хвост до конца базы
 
-    # grain → gray (монохром) → gbrp; burn оставляем ЦВЕТНЫМ (оранжевый прожиг).
-    fc = (
-        f"[0:v]scale={a.w}:{a.h},fps={a.fps},format=gbrp,setpts=PTS-STARTPTS[v];"
-        f"[1:v]scale={a.w}:{a.h},fps={a.fps},format=gray,format=gbrp,setpts=PTS-STARTPTS[g];"
-        f"[2:v]scale={a.w}:{a.h},fps={a.fps},trim=duration={a.burn_len},setpts=PTS-STARTPTS,"
+    # burn: обрезаем/ускоряем клип до burn_len (setpts тянет вспышку на всё окно),
+    # паддим чёрным до/после (на чёрном screen=ничего). Оставляем ЦВЕТНЫМ (оранж прожиг).
+    burn_src_dur = probe_dur(a.burn)
+    burn_speed = a.burn_len / burn_src_dur               # setpts-фактор: тянет/жмёт вспышку РОВНО в окно
+    burn_chain = (
+        f"[2:v]scale={a.w}:{a.h},fps={a.fps},setpts={burn_speed}*PTS,"
+        f"trim=duration={a.burn_len},setpts=PTS-STARTPTS,"
         f"tpad=start_duration={burn_start}:stop_duration={stop}:color=black,"
         f"format=gbrp,setpts=PTS-STARTPTS[b];"
-        f"[v][g]blend=all_mode=screen:all_opacity={a.grain_op}:shortest=1[b1];"
-        f"[b1][b]blend=all_mode=screen:shortest=1[vout]"
     )
+    if a.no_grain:
+        fc = (
+            f"[0:v]scale={a.w}:{a.h},fps={a.fps},format=gbrp,setpts=PTS-STARTPTS[v];"
+            + burn_chain +
+            f"[v][b]blend=all_mode=screen:all_opacity={a.burn_op}:shortest=1[vout]"
+        )
+        inputs = ["-i", a.base, "-i", a.burn]
+        # переиндексируем [2:v]→[1:v] когда нет grain-входа
+        fc = fc.replace("[2:v]", "[1:v]")
+    else:
+        fc = (
+            f"[0:v]scale={a.w}:{a.h},fps={a.fps},format=gbrp,setpts=PTS-STARTPTS[v];"
+            f"[1:v]scale={a.w}:{a.h},fps={a.fps},format=gray,format=gbrp,setpts=PTS-STARTPTS[g];"
+            + burn_chain +
+            f"[v][g]blend=all_mode=screen:all_opacity={a.grain_op}:shortest=1[b1];"
+            f"[b1][b]blend=all_mode=screen:all_opacity={a.burn_op}:shortest=1[vout]"
+        )
+        inputs = ["-i", a.base, "-stream_loop", "-1", "-i", a.grain, "-i", a.burn]
     cmd = [
         "ffmpeg", "-y", "-loglevel", "error",
-        "-i", a.base,
-        "-stream_loop", "-1", "-i", a.grain,   # зерно короче базы → зациклить
-        "-i", a.burn,
+        *inputs,
         "-filter_complex", fc, "-map", "[vout]", "-an", "-shortest",
         "-c:v", "libx264", "-crf", "20", "-preset", "medium",
         "-r", str(a.fps), "-pix_fmt", "yuv420p", a.out,
