@@ -186,10 +186,21 @@ def main():
     yd_put_text("done", f"{JOB_YD}/status.txt")
     print(f"✅ done {out_name} ({mb:.1f}MB)")
 
-    try:
-        send_tg(result, f"TSX overlay · {overlay} · {fmt} · @{at}s — акцент-хук на ревью{approval_tag}")
-    except Exception as e:
-        print(f"  [tg] ping err: {e} (клип на ЯД — не критично)")
+    # доставка на гейт = ЯД-подпапка сессии (job.preview_dir), НЕ TG (правило yaromat 2026-07-08)
+    prev_dir = job.get("preview_dir")
+    if prev_dir:
+        if yd_put(result, f"{prev_dir.rstrip('/')}/{out_name}"):
+            print(f"  ✅ превью в сессионную папку: {prev_dir}")
+        else:
+            print(f"  ⚠ не удалось скопировать в preview_dir {prev_dir}")
+
+    # TG-пинг гейта ВЫКЛЮЧЕН по умолчанию (yaromat: «на гейт в тг не скидывай»).
+    # Включить точечно можно env GATE_TO_TG=1.
+    if os.environ.get("GATE_TO_TG"):
+        try:
+            send_tg(result, f"TSX overlay · {overlay} · {fmt} · @{at}s — на ревью{approval_tag}")
+        except Exception as e:
+            print(f"  [tg] ping err: {e} (клип на ЯД — не критично)")
 
 
 if __name__ == "__main__":

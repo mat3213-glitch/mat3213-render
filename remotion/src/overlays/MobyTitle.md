@@ -1,7 +1,7 @@
 ---
 component: MobyTitle
 type: overlay
-approved: no
+approved: yes
 ---
 
 # MobyTitle — liner-note титр (регистр ранних клипов Moby)
