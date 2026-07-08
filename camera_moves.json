@@ -1,0 +1,68 @@
+{
+  "_source": "aicameramovements.com — 46 camera-move prompts, 7 категорий (разбор 2026-07-09)",
+  "_why": "Заземлённый словарь движений камеры под i2v (Seedance/VeoFree/Kling). Приём: РАЗДЕЛЯЕТ инструкцию камеры от контента сцены — 'меняй первый кадр, движение оставь неизменным'. Ложится 1:1 на наш стык i2v (конечный кадр → seed следующего).",
+  "_how": "director.py: расширить MOTIONS ключами отсюда; в i2v-путь ({kind:generate}) инжектить поле prompt как камер-часть промпта. energy_map даёт выбор под тишину/пик (как ENERGY_MOTIONS).",
+  "_legacy_map": {
+    "static": "static", "slow_push": "dolly_in", "zoom_in": "slow_zoom_in",
+    "zoom_out": "slow_zoom_out", "drift": "slider_right", "handheld": "handheld", "tilt": "tilt_up"
+  },
+  "moves": {
+    "static":            {"cat": "pan_tilt", "energy": "low",  "prompt": "locked-off static shot. Movement: hold one fixed camera position for the full clip."},
+    "pan_right":         {"cat": "pan_tilt", "energy": "medium", "prompt": "pan right. Movement: rotate the camera horizontally from left to right from one fixed point."},
+    "pan_left":          {"cat": "pan_tilt", "energy": "medium", "prompt": "pan left. Movement: rotate the camera horizontally from right to left from one fixed point."},
+    "whip_pan_right":    {"cat": "pan_tilt", "energy": "high", "prompt": "whip pan right. Movement: rotate rapidly from the starting direction toward a new target on the right."},
+    "whip_pan_left":     {"cat": "pan_tilt", "energy": "high", "prompt": "whip pan left. Movement: rotate rapidly from the starting direction toward a new target on the left."},
+    "tilt_up":           {"cat": "pan_tilt", "energy": "low",  "prompt": "tilt up. Movement: rotate the camera upward from one fixed point."},
+    "tilt_down":         {"cat": "pan_tilt", "energy": "low",  "prompt": "tilt down. Movement: rotate the camera downward from one fixed point."},
+
+    "slow_zoom_in":      {"cat": "zoom_lens", "energy": "low",  "prompt": "slow zoom in. Movement: slowly increase lens focal length toward a tighter frame."},
+    "slow_zoom_out":     {"cat": "zoom_lens", "energy": "low",  "prompt": "slow zoom out. Movement: slowly decrease lens focal length toward a wider frame."},
+    "fast_zoom_in":      {"cat": "zoom_lens", "energy": "high", "prompt": "fast zoom in. Movement: quickly increase lens focal length toward the main visual target."},
+    "fast_zoom_out":     {"cat": "zoom_lens", "energy": "high", "prompt": "fast zoom out. Movement: quickly decrease lens focal length away from the main visual target."},
+    "crash_zoom_in":     {"cat": "zoom_lens", "energy": "high", "prompt": "crash zoom in. Movement: snap the lens rapidly toward the main visual target."},
+    "crash_zoom_out":    {"cat": "zoom_lens", "energy": "high", "prompt": "crash zoom out. Movement: snap the lens rapidly away from the main visual target."},
+
+    "dolly_in":          {"cat": "dolly_track", "energy": "medium", "prompt": "dolly in. Movement: move the camera physically forward in a straight line toward the main subject."},
+    "dolly_out":         {"cat": "dolly_track", "energy": "medium", "prompt": "dolly out. Movement: move the camera physically backward in a straight line away from the main subject."},
+    "tracking":          {"cat": "dolly_track", "energy": "medium", "prompt": "tracking shot. Movement: move through the scene with the main subject."},
+    "follow_behind":     {"cat": "dolly_track", "energy": "medium", "prompt": "follow shot from behind. Movement: move behind the subject along their route at shoulder height."},
+    "reverse_tracking":  {"cat": "dolly_track", "energy": "medium", "prompt": "reverse tracking shot. Movement: move backward in front of the walking subject."},
+    "side_tracking":     {"cat": "dolly_track", "energy": "medium", "prompt": "side tracking shot. Movement: move parallel beside the subject along their direction of travel."},
+    "low_tracking":      {"cat": "dolly_track", "energy": "medium", "prompt": "low tracking shot. Movement: move at ground or below-waist height alongside the subject's movement path."},
+    "vehicle_tracking":  {"cat": "dolly_track", "energy": "high", "prompt": "vehicle tracking shot. Movement: move with the vehicle along its route."},
+    "chase":             {"cat": "dolly_track", "energy": "high", "prompt": "chase shot. Movement: follow a moving subject quickly along the action route."},
+
+    "truck_right":       {"cat": "physical", "energy": "medium", "prompt": "truck right. Movement: move the camera physically to the right on a straight horizontal path."},
+    "truck_left":        {"cat": "physical", "energy": "medium", "prompt": "truck left. Movement: move the camera physically to the left on a straight horizontal path."},
+    "pedestal_up":       {"cat": "physical", "energy": "low",  "prompt": "pedestal up. Movement: move the entire camera vertically upward in a straight line."},
+    "pedestal_down":     {"cat": "physical", "energy": "low",  "prompt": "pedestal down. Movement: move the entire camera vertically downward in a straight line."},
+    "slider_right":      {"cat": "physical", "energy": "low",  "prompt": "slider right. Movement: slide the camera a small distance to the right."},
+    "slider_left":       {"cat": "physical", "energy": "low",  "prompt": "slider left. Movement: slide the camera a small distance to the left."},
+    "push_past":         {"cat": "physical", "energy": "medium", "prompt": "push past. Movement: move forward past a visible foreground object, edge or opening."},
+    "arc_right":         {"cat": "physical", "energy": "medium", "prompt": "arc right. Movement: move on a shallow curved path around the main subject toward the right side."},
+    "arc_left":          {"cat": "physical", "energy": "medium", "prompt": "arc left. Movement: move on a shallow curved path around the main subject toward the left side."},
+    "orbit_cw":          {"cat": "physical", "energy": "medium", "prompt": "clockwise orbit. Movement: circle clockwise around the main subject at a consistent radius."},
+    "orbit_ccw":         {"cat": "physical", "energy": "medium", "prompt": "counterclockwise orbit. Movement: circle counterclockwise around the main subject at a consistent radius."},
+
+    "handheld":          {"cat": "human", "energy": "high", "prompt": "handheld shot. Movement: hold the camera at human operator height with natural body movement."},
+    "snorricam":         {"cat": "human", "energy": "high", "prompt": "body-mounted Snorricam. Movement: keep the camera fixed relative to the subject's torso or face."},
+
+    "crane_up":          {"cat": "drone_crane", "energy": "medium", "prompt": "crane up. Movement: travel smoothly upward through open space."},
+    "crane_down":        {"cat": "drone_crane", "energy": "medium", "prompt": "crane down. Movement: travel smoothly downward through open space."},
+    "drone_push_in":     {"cat": "drone_crane", "energy": "medium", "prompt": "drone push in. Movement: fly smoothly forward through open space toward the subject or destination."},
+    "drone_pull_back":   {"cat": "drone_crane", "energy": "medium", "prompt": "drone pull back. Movement: fly smoothly backward away from the subject or destination."},
+    "helicopter":        {"cat": "drone_crane", "energy": "medium", "prompt": "helicopter-style aerial shot. Movement: move from high altitude along a broad gradual flight path."},
+
+    "fpv":               {"cat": "special", "energy": "high", "prompt": "first-person view. Movement: move forward at human eye height from the character's perspective."},
+    "tilt_shift":        {"cat": "special", "energy": "low",  "prompt": "tilt-shift miniature view. Movement: hold or glide from a high angled view over the scene."},
+    "infinite_zoom":     {"cat": "special", "energy": "high", "prompt": "infinite zoom. Movement: zoom continuously inward toward the exact center target."},
+    "earth_zoom_out":    {"cat": "special", "energy": "high", "prompt": "earth zoom out. Movement: pull upward from the starting point through street, city, landscape and planet."},
+    "timelapse":         {"cat": "special", "energy": "low",  "prompt": "locked-camera time-lapse. Movement: hold one fixed camera position while time moves rapidly forward."},
+    "pass_through":      {"cat": "special", "energy": "medium", "prompt": "pass-through movement. Movement: move forward toward a visible object, surface or barrier and continue."}
+  },
+  "energy_map": {
+    "low":    ["static", "tilt_up", "tilt_down", "slow_zoom_in", "slow_zoom_out", "slider_right", "slider_left", "pedestal_up", "pedestal_down", "tilt_shift", "timelapse"],
+    "medium": ["pan_right", "pan_left", "dolly_in", "dolly_out", "tracking", "follow_behind", "side_tracking", "arc_right", "arc_left", "orbit_cw", "orbit_ccw", "crane_up", "drone_push_in", "push_past", "pass_through"],
+    "high":   ["whip_pan_right", "whip_pan_left", "fast_zoom_in", "crash_zoom_in", "handheld", "snorricam", "chase", "vehicle_tracking", "fpv", "infinite_zoom", "earth_zoom_out"]
+  }
+}

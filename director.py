@@ -57,6 +57,21 @@ ENERGY_MOTIONS = {
     "high":   ["handheld", "zoom_in", "zoom_out", "drift"],
 }
 
+# Словарь движений камеры (aicameramovements.com, 46 приёмов, разбор 2026-07-09) — заземлённые
+# строки под i2v (Seedance/VeoFree/Kling). Маппим наши 7 motion → строку камеры и инжектим её
+# в i2v-промпт (base.kind=="generate"). Обратно совместимо: нет файла/ключа → no-op.
+_CAM_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "camera_moves.json")
+try:
+    _CAM = json.loads(open(_CAM_PATH, encoding="utf-8").read())
+    _CAM_MOVES, _CAM_LEGACY = _CAM.get("moves", {}), _CAM.get("_legacy_map", {})
+except Exception:
+    _CAM_MOVES, _CAM_LEGACY = {}, {}
+
+def camera_prompt(motion: str) -> str:
+    """Строка движения камеры под i2v для нашего motion-ключа (через legacy-map). '' если нет."""
+    mv = _CAM_MOVES.get(_CAM_LEGACY.get(motion, motion))
+    return mv.get("prompt", "") if isinstance(mv, dict) else ""
+
 SYSTEM = """Ты — режиссёр-раскадровщик музыкальных клипов yaromat (future garage/downtempo,
 инструментал, БЕЗ лиц). Тебе дан драматургический трактат (treatment) и РЕАЛЬНЫЙ музыкальный
 таймлайн — пронумерованные сегменты трека (с энергией). Разложи дугу трактата по кадрам:
@@ -327,6 +342,13 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
             rb = _resolve_cat(bcat, orientation, f"{seed}-base-{i}", used,
                               chroma=True if bcat == "vinil" else None)
             base = {"kind": "catalog", **rb} if rb else {"kind": "catalog", "category": bcat}
+
+        # i2v: обогащаем generate-промпт заземлённой строкой движения камеры (camera_moves.json).
+        # Разделяем контент сцены (уже в prompt) от инструкции камеры — приём aicameramovements.
+        if base.get("kind") == "generate" and base.get("prompt"):
+            cam = camera_prompt(motion)
+            if cam and cam.split(".")[0].lower() not in base["prompt"].lower():
+                base = {**base, "prompt": f"{base['prompt'].rstrip('. ')}. Camera: {cam}"}
 
         # ПРАВИЛО [[feedback_no_footage_on_footage]]: НЕ мешаем оверлей поверх футажа.
         # Целевое наложение = заливка зелёной зоны (chroma) фоном — это делает рендер.
