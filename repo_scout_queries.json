@@ -1,82 +1,21 @@
 [
-  {
-    "label": "free LLM openai-compatible api",
-    "category": "orchestration",
-    "query": "free LLM api openai compatible no key OR gateway"
-  },
-  {
-    "label": "llm router gateway proxy",
-    "category": "orchestration",
-    "query": "llm gateway router proxy multi provider openai compatible"
-  },
-  {
-    "label": "free inference endpoint aggregator",
-    "category": "orchestration",
-    "query": "free ai inference endpoint aggregator OR pool OR rotation"
-  },
-  {
-    "label": "llm orchestration agents free",
-    "category": "orchestration",
-    "query": "llm orchestration multi agent framework free local"
-  },
-  {
-    "label": "headless llm agent cli",
-    "category": "orchestration",
-    "query": "headless llm agent cli coding free vision"
-  },
-  {
-    "label": "openai compatible inference server",
-    "category": "orchestration",
-    "query": "openai compatible inference server self-hosted free proxy"
-  },
-  {
-    "label": "ffmpeg cli video editing",
-    "category": "video",
-    "query": "ffmpeg cli video editing filter automation"
-  },
-  {
-    "label": "scene detect shot boundary",
-    "category": "video",
-    "query": "scene detection shot boundary opencv python cpu"
-  },
-  {
-    "label": "video transitions glsl ffmpeg",
-    "category": "video",
-    "query": "video transition glsl shader ffmpeg cli"
-  },
-  {
-    "label": "datamosh glitch bitstream",
-    "category": "video",
-    "query": "datamosh glitch video bitstream motion vector"
-  },
-  {
-    "label": "auto video editing silence",
-    "category": "video",
-    "query": "automatic video editing silence removal cut python"
-  },
-  {
-    "label": "procedural motion graphics code",
-    "category": "video",
-    "query": "procedural motion graphics code generative animation render"
-  },
-  {
-    "label": "audio processing python",
-    "category": "audio",
-    "query": "audio processing python pydub librosa pedalboard cli"
-  },
-  {
-    "label": "transcription whisper cpu",
-    "category": "audio",
-    "query": "subtitle transcription whisper cpu fast align"
-  },
-  {
-    "label": "image aesthetic scoring",
-    "category": "vision",
-    "query": "image aesthetic quality scoring predictor cpu"
-  },
-  {
-    "label": "imagemagick procedural image",
-    "category": "vision",
-    "query": "imagemagick wand python procedural image typography"
-  }
+  {"label": "free LLM openai-compatible api", "category": "orchestration", "query": "free LLM api openai compatible no key OR gateway"},
+  {"label": "headless llm agent cli vision", "category": "orchestration", "query": "headless llm agent cli coding free vision"},
+
+  {"label": "camera movement prompt i2v", "category": "craft", "query": "camera movement prompt library image to video OR i2v cinematic"},
+  {"label": "film LUT color grade emulation", "category": "craft", "query": "film emulation LUT color grade cinematic analog look"},
+  {"label": "film grain overlay texture", "category": "craft", "query": "film grain OR light leak OR dust overlay texture pack video"},
+  {"label": "remotion motion graphics template", "category": "craft", "query": "remotion template motion graphics OR title OR lower third"},
+  {"label": "lottie animation pack", "category": "craft", "query": "lottie bodymovin animation open source pack loop"},
+  {"label": "music visualizer audio reactive", "category": "craft", "query": "music visualizer audio reactive generative video"},
+  {"label": "ai video editor open source", "category": "craft", "query": "ai video editor open source multi model timeline"},
+  {"label": "reel shorts formula deconstruction", "category": "craft", "query": "shorts reels formula analysis viral pattern deconstruct"},
+
+  {"label": "ffmpeg cli video editing", "category": "video", "query": "ffmpeg cli video editing filter automation"},
+  {"label": "procedural motion graphics code", "category": "video", "query": "procedural motion graphics code generative animation render"},
+  {"label": "video transitions glsl ffmpeg", "category": "video", "query": "video transition glsl shader ffmpeg cli"},
+  {"label": "scene detect shot boundary", "category": "video", "query": "scene detection shot boundary opencv python cpu"},
+
+  {"label": "audio processing python", "category": "audio", "query": "audio processing python pydub librosa pedalboard cli"},
+  {"label": "image aesthetic scoring", "category": "vision", "query": "image aesthetic quality scoring predictor cpu"}
 ]
