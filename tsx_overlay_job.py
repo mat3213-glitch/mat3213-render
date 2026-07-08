@@ -149,9 +149,23 @@ def main():
     else:
         print(f"  ✓ alpha channel present ({pix_fmt})")
 
+    # размеры базы: оверлей рендерится в FORMAT_DIMS (напр. 1080x1920), а база может
+    # быть меньше (VeoFree i2v = 720x1280). Тот же 9:16, но overlay=0:0 без скейла обрезал
+    # бы оверлей и увёл графику за кадр — поэтому скейлим оверлей ПОД размер базы.
+    bp = run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+              "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", str(base)],
+             capture_output=True, text=True)
+    try:
+        bw, bh = (int(x) for x in (bp.stdout or "").strip().split("x")[:2])
+        scale_ov = f",scale={bw}:{bh}"
+        print(f"  base dims {bw}x{bh} → scale overlay to match")
+    except Exception:
+        scale_ov = ""  # не смогли определить — не скейлим (совпадающие размеры)
+        print("  ⚠ base dims неизвестны — оверлей без скейла")
+
     # композит: сдвинуть оверлей на [at], показать [at..at+dur], сохранить аудио базы
     end = round(at + ov_dur, 3)
-    fc = (f"[1:v]setpts=PTS-STARTPTS+{at}/TB[ov];"
+    fc = (f"[1:v]setpts=PTS-STARTPTS+{at}/TB{scale_ov}[ov];"
           f"[0:v][ov]overlay=0:0:enable='between(t,{at},{end})':eof_action=pass,format=yuv420p[v]")
     result = WORK / out_name
     r = run(["ffmpeg", "-y", "-loglevel", "error",
