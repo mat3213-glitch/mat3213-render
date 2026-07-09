@@ -3,45 +3,44 @@
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 7,
-      "reason": "Кинематографично, глубина в тенях, приглушённый тон, дорого"
+      "score": 8,
+      "reason": "Мутное тепло, дорого, кинематографичная глубина без каста"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 6,
-      "reason": "Холодный баланс, атмосферно, но чуть менее выразительно"
+      "score": 7,
+      "reason": "Холодный воздух, атмосферно, но менее тёплый вайб"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": true,
-      "score": 6,
-      "reason": "Мягче первого, цельно, годится в ротацию как вариант"
+      "keep": false,
+      "score": 5,
+      "reason": "Почти дубль первого, нет нового смысла"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
       "score": 4,
-      "reason": "Зелёный каст на свете — ощущение дешёвого фильтра"
+      "reason": "Зелёный каст дешёвый, не цельно"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
       "score": 5,
-      "reason": "Слишком нейтрально, нет кинематографичной глубины"
+      "reason": "Нейтрально, но плоско, нет характера"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": false,
       "score": 5,
-      "reason": "Тёплый+зелёный каст, выглядит нецеленаправленно"
+      "reason": "Слишком светлый, не ночной вайб"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
-    "scout_cool_mid_muted",
-    "scout_warm_night_muted_2"
+    "scout_cool_mid_muted"
   ],
-  "_generated": "2026-07-08",
+  "_generated": "2026-07-09",
   "_judge": "mimo-auto"
 }
