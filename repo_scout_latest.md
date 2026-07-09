@@ -1,48 +1,24 @@
-# Repo Scout — 2026-07-08T11:46:50.988076
+# Repo Scout — 2026-07-09T12:37:49.314806
 
-Всего в шортлисте: 11
+Всего в шортлисте: 5
 
 - **piyush-tyagi-13/llm-keypool** ⭐48 [misc]
   - https://github.com/piyush-tyagi-13/llm-keypool
-  - 💡 Автоматизирует работу с API-ключами для языковых моделей, может быть полезен для проекта yaromat в части оптимизации использования API-ключей для генерации музыкального контента.
+  - 💡 Автоматизирует управление API-ключами для доступа к языковым моделям. Может быть полезен проекту для оптимизации доступа к языковым моделям без оплаты.
   - 📄 Free-tier LLM API key pool with rotation, cooldown handling, and an OpenAI-compatible proxy. Use with Hermes Agent or any OpenAI-compatible tool - no paid API k
-- **andreimerfu/pllm** ⭐20 [misc]
-  - https://github.com/andreimerfu/pllm
-  - 💡 Предоставляет высокопроизводительный шлюз для языковых моделей, может быть полезен для проекта yaromat в части улучшения производительности генерации музыкального контента.
-  - 📄 High-performance LLM Gateway built in Go - OpenAI compatible proxy with multi-provider support, adaptive routing, and enterprise features
-- **jmanhype/req_llm_gateway** ⭐3 [misc]
-  - https://github.com/jmanhype/req_llm_gateway
-  - 💡 Реализует прокси для языковых моделей с поддержкой нескольких провайдеров, может быть полезен для проекта yaromat в части обеспечения отказоустойчивости и гибкости при работе с языковыми моделями.
-  - 📄 OpenAI-compatible LLM proxy with telemetry and multi-provider routing
-- **rickcrawford/tokenomics** ⭐3 [misc]
-  - https://github.com/rickcrawford/tokenomics
-  - 💡 Предоставляет обратный прокси для языковых моделей, который можно запускать самостоятельно, может быть полезен для проекта yaromat в части контроля над расходами и безопасностью при использовании языковых моделей.
-  - 📄 An OpenAI-compatible reverse proxy you run yourself. It gives you the features of an AI gateway (guardrails, budgets, rate limits, multi-provider routing) but u
-- **anatissera/claude-on-nim** ⭐2 [misc]
-  - https://github.com/anatissera/claude-on-nim
-  - 💡 Реализует автономного агента ИИ, работающего с языковыми моделями, может быть полезен для проекта yaromat в части создания более сложных и автономных музыкальных генераторов.
-  - 📄 An autonomous AI agent powered by the Claude Agent SDK, running inference on NVIDIA's free NIM endpoints with automated code verification (linting, type-checkin
-- **tridpt/llm-gateway** ⭐1 [misc]
-  - https://github.com/tridpt/llm-gateway
-  - 💡 Предоставляет готовый шлюз для языковых моделей с поддержкой нескольких провайдеров и кэширования, может быть полезен для проекта yaromat в части упрощения интеграции с языковыми моделями.
-  - 📄 Production-style LM gateway/proxy with an OpenAI-compatible API: multi-provider fallback, smart routing, caching, cost tracking, rate limits, budgets, and obser
-- **SAYOUNCDR/GhostContext** ⭐1 [misc]
-  - https://github.com/SAYOUNCDR/GhostContext
-  - 💡 Реализует контекстно-зависимый движок автозаполнения для редактора кода, вряд ли будет полезен для проекта yaromat, поскольку не связан напрямую с генерацией музыки.
-  - 📄 A low-latency, context-aware AI tab-completion engine for VS Code. Features a high-performance inference proxy supporting BYOK (FIM-compatible endpoints), telem
+- **shinggao/diffusion-bending-live** ⭐0 [video]
+  - https://github.com/shinggao/diffusion-bending-live
+  - 💡 Автоматизирует генерацию музыкальных видеороликов на основе аудио. Может быть полезен проекту для создания визуальных эффектов для музыкального контента.
+  - 📄 Code for the paper "Generating Music Reactive Videos by Applying Network Bending to Stable Diffusion" which appears in the June 2025 edition of the Journal of t
 - **leeguooooo/cloudflare-llm-gateway** ⭐0 [misc]
   - https://github.com/leeguooooo/cloudflare-llm-gateway
-  - 💡 Предоставляет серверный шлюз для языковых моделей на основе Cloudflare Workers, может быть полезен для проекта yaromat в части создания масштабируемых и экономически эффективных решений для генерации музыки.
+  - 💡 Автоматизирует создание серверless-шлюза для доступа к языковым моделям. Для проекта вряд ли пригодится, поскольку требует специфической инфраструктуры Cloudflare.
   - 📄 A serverless, OpenAI-compatible LLM API gateway for Cloudflare Workers — a new-api / one-api alternative that runs on the free tier (Workers + D1, no server).
-- **kpihx-labs/k-ai** ⭐0 [misc]
-  - https://github.com/kpihx-labs/k-ai
-  - 💡 Реализует суверенный шлюз для языковых моделей, может быть полезен для проекта yaromat в части обеспечения независимости и контроля над используемыми языковыми моделями.
-  - 📄 Sovereign LLM gateway — 100% Go, OpenAI-compatible proxy with multi-provider routing
 - **dorucioclea/LocalAIPlatform** ⭐0 [workflow]
   - https://github.com/dorucioclea/LocalAIPlatform
-  - 💡 Предоставляет самодостаточную платформу для языковых моделей, работающую на обычном оборудовании, может быть полезен для проекта yaromat в части создания локальных решений для генерации музыки без использования внешних API.
+  - 💡 Автоматизирует запуск языковых моделей на локальном оборудовании. Может быть полезен проекту для создания собственной инфраструктуры языковых моделей без зависимости от внешних сервисов.
   - 📄 🤖 Self-hosted, community-driven, local OpenAI compatible API. Drop-in replacement for OpenAI running LLMs on consumer-grade hardware. Free Open Source OpenAI al
 - **chrolloolucilferr/GroqChatbot** ⭐0 [automation]
   - https://github.com/chrolloolucilferr/GroqChatbot
-  - 💡 Реализует терминального чат-бота на основе API Groq и моделей Llama3/Mixtral, вряд ли будет полезен для проекта yaromat, поскольку не связан напрямую с генерацией музыки.
+  - 💡 Автоматизирует создание чат-ботов на основе языковых моделей. Для проекта вряд ли пригодится, поскольку проект ориентирован на музыкальный контент, а не на чат-боты.
   - 📄 This project is a terminal-based chatbot built using Groq API and Llama3/Mixtral models.  Features: Simple and clean Python code  Real-time chatbot responses us
