@@ -54,10 +54,12 @@ jobs:
       - name: Generate scene (Qwen video)
         working-directory: qwen
         env:
+          INPUT_PROMPT: ${{ inputs.prompt }}
+          INPUT_RATIO: ${{ inputs.ratio }}
           JOB_ID: ${{ inputs.job_id }}
           SCENE_IDX: ${{ inputs.scene_idx }}
         run: |
-          python3 GEN.py video "${{ inputs.prompt }}" --ratio "${{ inputs.ratio }}" \
+          python3 GEN.py video "$INPUT_PROMPT" --ratio "$INPUT_RATIO" \
             --out "scene_${SCENE_IDX}.mp4" --timeout 1200
           rclone copyto "scene_${SCENE_IDX}.mp4" \
             "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.mp4"

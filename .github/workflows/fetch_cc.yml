@@ -61,10 +61,11 @@ jobs:
 
       - name: Stage 1 — CC search
         env:
+          INPUT_QUERIES: ${{ inputs.queries }}
           JOB_ID: ${{ inputs.job_id }}
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
         run: |
-          python3 screenplay_pipeline/reference_search.py --queries "${{ inputs.queries }}" \
+          python3 screenplay_pipeline/reference_search.py --queries "$INPUT_QUERIES" \
             --cc-only --job-id "$JOB_ID" --top "${{ inputs.max || '3' }}"
 
       - name: Stage 2 — download CC clips

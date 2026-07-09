@@ -53,29 +53,40 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Prepare test art (public/testart.jpg)
+        env:
+          INPUT_ART_REMOTE: ${{ github.event.inputs.art_remote }}
         run: |
           mkdir -p remotion/public
-          if [ -n "${{ github.event.inputs.art_remote }}" ]; then
-            rclone copyto "ydrive:${{ github.event.inputs.art_remote }}" remotion/public/testart.jpg
+          if [ -n "$INPUT_ART_REMOTE" ]; then
+            rclone copyto "ydrive:$INPUT_ART_REMOTE" remotion/public/testart.jpg
           else
             cp style_scout_testframe.jpg remotion/public/testart.jpg
           fi
 
       - name: Render composition
         working-directory: remotion
+        env:
+          INPUT_TITLE: ${{ github.event.inputs.title }}
+          INPUT_FORMAT: ${{ github.event.inputs.format }}
+          INPUT_COMPOSITION: ${{ github.event.inputs.composition }}
         run: |
           cat > props.json <<EOF
-          {"artUrl":"testart.jpg","trackTitle":"${{ github.event.inputs.title }}","format":"${{ github.event.inputs.format }}","brand":"yaromat","seed":42}
+          {"artUrl":"testart.jpg","trackTitle":"$INPUT_TITLE","format":"$INPUT_FORMAT","brand":"yaromat","seed":42}
           EOF
-          npx remotion render src/index.ts "${{ github.event.inputs.composition }}" ../preview.mp4 --props=./props.json --log=verbose
+          npx remotion render src/index.ts "$INPUT_COMPOSITION" ../preview.mp4 --props=./props.json --log=verbose
 
       - name: Upload preview to YaDisk
+        env:
+          INPUT_COMPOSITION: ${{ github.event.inputs.composition }}
         run: |
           STAMP=$(date +%Y%m%d_%H%M%S)
-          rclone copyto preview.mp4 "ydrive:Content factory/cloud_io/tsx_sandbox/${{ github.event.inputs.composition }}_${STAMP}.mp4"
+          rclone copyto preview.mp4 "ydrive:Content factory/cloud_io/tsx_sandbox/$INPUT_COMPOSITION_${STAMP}.mp4"
 
       - name: Ping preview to Telegram
         env:
+          INPUT_COMPOSITION: ${{ github.event.inputs.composition }}
+          INPUT_FORMAT: ${{ github.event.inputs.format }}
+          INPUT_TITLE: ${{ github.event.inputs.title }}
           CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID:            ${{ secrets.SCOUT_CHAT_ID }}
@@ -83,6 +94,6 @@ jobs:
         run: |
           curl -sf -F chat_id="${CHAT_ID}" \
                -F message_thread_id="${THREAD_ID}" \
-               -F caption="TSX sandbox · ${{ github.event.inputs.composition }} · ${{ github.event.inputs.format }} · «${{ github.event.inputs.title }}» — на ревью" \
+               -F caption="TSX sandbox · $INPUT_COMPOSITION · $INPUT_FORMAT · «$INPUT_TITLE» — на ревью" \
                -F video=@preview.mp4 \
                "${CLOUDFLARE_WORKER}/bot${TELEGRAM_BOT_TOKEN}/sendVideo" || echo "TG ping failed (превью всё равно на ЯД)"

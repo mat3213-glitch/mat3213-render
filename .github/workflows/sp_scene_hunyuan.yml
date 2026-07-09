@@ -60,20 +60,23 @@ jobs:
 
       - name: Fetch stock still (Openverse)
         env:
+          INPUT_STILL_QUERY: ${{ inputs.still_query }}
           OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
           OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
         run: |
-          python3 screenplay_pipeline/fetch_still.py "${{ inputs.still_query }}" --out still.jpg
+          python3 screenplay_pipeline/fetch_still.py "$INPUT_STILL_QUERY" --out still.jpg
 
       - name: Generate scene (Hunyuan i2v)
         env:
+          INPUT_PROMPT: ${{ inputs.prompt }}
+          INPUT_RATIO: ${{ inputs.ratio }}
           JOB_ID: ${{ inputs.job_id }}
           SCENE_IDX: ${{ inputs.scene_idx }}
         run: |
           RAW="scene_${SCENE_IDX}_raw.mp4"
           OUT="scene_${SCENE_IDX}.mp4"
-          python3 hunyuan/hunyuan_video.py "${{ inputs.prompt }}" --image still.jpg \
-            --ratio "${{ inputs.ratio }}" --out "$RAW"
+          python3 hunyuan/hunyuan_video.py "$INPUT_PROMPT" --image still.jpg \
+            --ratio "$INPUT_RATIO" --out "$RAW"
           # кроп free-вотермарка «AI生成» — эталон из animate_planes.py::crop_watermark
           ffmpeg -y -i "$RAW" -vf "crop=860:860:(in_w-860)/2:0,scale=960:960" \
             -c:v libx264 -crf 20 -preset veryfast -an "$OUT"

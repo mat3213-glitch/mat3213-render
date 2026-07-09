@@ -111,15 +111,18 @@ jobs:
             { echo "❌ forwarder/proxy down"; cat /tmp/gost.log; exit 1; }
 
       - name: Resolve image (ЯД art > runner path > placeholder)
+        env:
+          INPUT_IMAGE_YD: ${{ inputs.image_yd }}
+          INPUT_IMAGE: ${{ inputs.image }}
         run: |
           set -euo pipefail
-          if [ -n "${{ inputs.image_yd }}" ]; then
-            rclone copyto "ydrive:Content factory/${{ inputs.image_yd }}" pinterest/outputs/art.png
+          if [ -n "$INPUT_IMAGE_YD" ]; then
+            rclone copyto "ydrive:Content factory/$INPUT_IMAGE_YD" pinterest/outputs/art.png
             test -s pinterest/outputs/art.png || { echo "❌ арт с ЯД не скачался"; exit 1; }
-            echo "✓ арт с ЯД: ${{ inputs.image_yd }} ($(stat -c%s pinterest/outputs/art.png) bytes)"
+            echo "✓ арт с ЯД: $INPUT_IMAGE_YD ($(stat -c%s pinterest/outputs/art.png) bytes)"
             echo "IMG=pinterest/outputs/art.png" >> "$GITHUB_ENV"
-          elif [ -n "${{ inputs.image }}" ]; then
-            echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
+          elif [ -n "$INPUT_IMAGE" ]; then
+            echo "IMG=$INPUT_IMAGE" >> "$GITHUB_ENV"
           else
             echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" \
               | base64 -d > pinterest/outputs/placeholder.png
@@ -128,15 +131,18 @@ jobs:
 
       - name: Run poster
         env:
+          INPUT_CONFIRM: ${{ inputs.confirm }}
+          INPUT_BOARD: ${{ inputs.board }}
+          INPUT_DESC: ${{ inputs.desc }}
           PINTEREST_PROXY: "socks5://127.0.0.1:1081"
         run: |
           DRY="--dry-run"
-          [ "${{ inputs.confirm }}" = "true" ] && DRY=""
+          [ "$INPUT_CONFIRM" = "true" ] && DRY=""
           echo "mode: ${DRY:-PUBLISH}"
           python pinterest/publish_pinterest.py \
             --image "$IMG" \
-            --board "${{ inputs.board }}" \
-            --desc "${{ inputs.desc }}" \
+            --board "$INPUT_BOARD" \
+            --desc "$INPUT_DESC" \
             $DRY
 
       - name: Upload screenshots

@@ -55,12 +55,13 @@ jobs:
 
       - name: Fetch stock still (Openverse) + upload to ЯД
         env:
+          INPUT_STILL_QUERY: ${{ inputs.still_query }}
           OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
           OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
           JOB_ID: ${{ inputs.job_id }}
           SCENE_IDX: ${{ inputs.scene_idx }}
         run: |
-          python3 screenplay_pipeline/fetch_still.py "${{ inputs.still_query }}" --out still.jpg
+          python3 screenplay_pipeline/fetch_still.py "$INPUT_STILL_QUERY" --out still.jpg
           rclone copyto still.jpg "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/still_${SCENE_IDX}.jpg"
 
       - name: Generate scene (VeoFree i2v)

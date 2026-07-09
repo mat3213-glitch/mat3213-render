@@ -24,10 +24,14 @@ jobs:
           python-version: "3.11"
 
       - name: Merge into styles.json
-        run: python3 style_scout_merge.py --names ${{ github.event.inputs.names }}
+        env:
+          INPUT_NAMES: ${{ github.event.inputs.names }}
+        run: python3 style_scout_merge.py --names "$INPUT_NAMES"
 
       - name: Commit + push
         id: commit
+        env:
+          INPUT_NAMES: ${{ github.event.inputs.names }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
@@ -36,7 +40,7 @@ jobs:
             echo "changed=0" >> "$GITHUB_OUTPUT"
             echo "нечего коммитить (уже влиты)"
           else
-            git commit -m "style: merge approved looks via cloud bot (${{ github.event.inputs.names }}) [skip ci]"
+            git commit -m "style: merge approved looks via cloud bot ($INPUT_NAMES) [skip ci]"
             git push
             echo "changed=1" >> "$GITHUB_OUTPUT"
           fi
@@ -44,14 +48,15 @@ jobs:
       - name: Notify thread 634
         if: always()
         env:
+          INPUT_NAMES: ${{ github.event.inputs.names }}
           WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT:     ${{ secrets.SCOUT_CHAT_ID }}
         run: |
           if [ "${{ steps.commit.outputs.changed }}" = "1" ]; then
-            MSG="✅ Влито в styles.json: ${{ github.event.inputs.names }}"
+            MSG="✅ Влито в styles.json: $INPUT_NAMES"
           else
-            MSG="ℹ️ Мердж ${{ github.event.inputs.names }} — изменений нет (возможно уже влиты)"
+            MSG="ℹ️ Мердж $INPUT_NAMES — изменений нет (возможно уже влиты)"
           fi
           curl -sf -m 30 -H "Content-Type: application/json" \
             -d "{\"chat_id\":\"$CHAT\",\"message_thread_id\":634,\"text\":\"$MSG\"}" \

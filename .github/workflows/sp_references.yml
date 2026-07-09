@@ -84,12 +84,13 @@ jobs:
 
       - name: Stage 1 — reference_search
         env:
+          INPUT_QUERIES: ${{ inputs.queries }}
           JOB_ID: ${{ inputs.job_id }}
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
           TV: ${{ inputs.top_views == 'true' && '--top-views' || '' }}
         run: |
-          if [ -n "${{ inputs.queries }}" ]; then
-            python3 screenplay_pipeline/reference_search.py --queries "${{ inputs.queries }}" \
+          if [ -n "$INPUT_QUERIES" ]; then
+            python3 screenplay_pipeline/reference_search.py --queries "$INPUT_QUERIES" \
               --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}" $TV
           else
             python3 screenplay_pipeline/reference_search.py --brief brief_full.yaml \

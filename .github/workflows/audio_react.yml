@@ -58,6 +58,8 @@ jobs:
 
       - name: Write error status on failure
         if: failure()
+        env:
+          INPUT_JOB_ID: ${{ inputs.job_id }}
         run: |
-          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/${{ inputs.job_id }}/status.txt" \
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$INPUT_JOB_ID/status.txt" \
             <<< "error: workflow failed" || true

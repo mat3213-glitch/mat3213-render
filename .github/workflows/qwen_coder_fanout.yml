@@ -50,4 +50,6 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Run batch
-        run: python3 qwen_coder_runner.py "${{ inputs.batch_id }}"
+        env:
+          INPUT_BATCH_ID: ${{ inputs.batch_id }}
+        run: python3 qwen_coder_runner.py "$INPUT_BATCH_ID"

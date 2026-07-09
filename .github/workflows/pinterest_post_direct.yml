@@ -75,8 +75,10 @@ jobs:
 
       - name: Determine mode (queue vs manual inputs)
         id: mode
+        env:
+          INPUT_USE_QUEUE: ${{ inputs.use_queue }}
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.use_queue }}" = "true" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "$INPUT_USE_QUEUE" = "true" ]; then
             echo "queue=true" >> "$GITHUB_OUTPUT"
             echo "режим: ОЧЕРЕДЬ"
           else
@@ -135,16 +137,19 @@ jobs:
 
       - name: Resolve image (queue ЯД > input ЯД > runner path > placeholder)
         if: env.QUEUE_EMPTY != '1'
+        env:
+          INPUT_IMAGE_YD: ${{ inputs.image_yd }}
+          INPUT_IMAGE: ${{ inputs.image }}
         run: |
           set -euo pipefail
-          IMG_YD="${Q_IMAGE_YD:-${{ inputs.image_yd }}}"
+          IMG_YD="${Q_IMAGE_YD:-$INPUT_IMAGE_YD}"
           if [ -n "$IMG_YD" ]; then
             rclone copyto "ydrive:Content factory/$IMG_YD" pinterest/outputs/art.png
             test -s pinterest/outputs/art.png || { echo "❌ арт с ЯД не скачался: $IMG_YD"; exit 1; }
             echo "✓ арт с ЯД: $IMG_YD ($(stat -c%s pinterest/outputs/art.png) bytes)"
             echo "IMG=pinterest/outputs/art.png" >> "$GITHUB_ENV"
-          elif [ -n "${{ inputs.image }}" ]; then
-            echo "IMG=${{ inputs.image }}" >> "$GITHUB_ENV"
+          elif [ -n "$INPUT_IMAGE" ]; then
+            echo "IMG=$INPUT_IMAGE" >> "$GITHUB_ENV"
           else
             echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" \
               | base64 -d > pinterest/outputs/placeholder.png
@@ -153,14 +158,18 @@ jobs:
 
       - name: Run poster (DIRECT, no proxy)
         if: env.QUEUE_EMPTY != '1'
+        env:
+          INPUT_CONFIRM: ${{ inputs.confirm }}
+          INPUT_BOARD: ${{ inputs.board }}
+          INPUT_DESC: ${{ inputs.desc }}
         run: |
           set -o pipefail
           # Реальный пост: cron ИЛИ confirm=true. Иначе dry-run.
           DRY="--dry-run"
           [ "${{ github.event_name }}" = "schedule" ] && DRY=""
-          [ "${{ inputs.confirm }}" = "true" ] && DRY=""
-          BOARD="${BOARD:-${{ inputs.board }}}"
-          DESC="${Q_DESC:-${{ inputs.desc }}}"
+          [ "$INPUT_CONFIRM" = "true" ] && DRY=""
+          BOARD="${BOARD:-$INPUT_BOARD}"
+          DESC="${Q_DESC:-$INPUT_DESC}"
           echo "mode: ${DRY:-PUBLISH}  (egress = US-GH datacenter, БЕЗ прокси телефона)"
           echo "доска: $BOARD"
           python pinterest/publish_pinterest.py \
