@@ -25,6 +25,64 @@ from analyze import analyze_track
 AUDIO_EXTS = {".mp3", ".wav", ".flac"}
 YAML_EXTS = {".yaml", ".yml"}
 
+# ДУБЛИКАТ лексикона из Instrument/ContentAgent/brief_autofill.py (yaromat 2026-07-04, найдено
+# на реальном треке "conversation inside" — intake.py был написан 2026-07-03 под ВЫДУМАННЫЙ
+# плоский мини-бриф-формат, ни разу не сверенный с реальным music_post_template_v2.yaml,
+# который используют ВСЕ треки проекта). github_actions_clips — отдельный git-репо (свой
+# чекаут на GH Actions), Instrument/ оттуда не виден — тот же принцип, что уже есть у
+# analyze.py ("копия для runner, синхронизировать вручную после каждого изменения").
+_EMOTION_LEXICON: dict[str, dict] = {
+    "выгорание":     {"palette": "пыльно-серый + блёклый охряной", "texture": "выцветшая плёнка, офисный люминесцент", "words": ["усталость", "оцепенение", "серость", "перегруз", "пустота"]},
+    "тоска":         {"palette": "холодный синий + тусклый тил",    "texture": "зерно, дождь по стеклу, дальний свет",      "words": ["потеря", "даль", "сумерки", "тишина", "память"]},
+    "надежда":       {"palette": "тёплый янтарный + мягкий кремовый","texture": "засвет, рассеянный свет, мягкое зерно",     "words": ["рассвет", "тепло", "дыхание", "путь", "свет"]},
+    "отстранённость":{"palette": "монохром + один холодный акцент",  "texture": "длинная выдержка, motion-смаз, стекло",     "words": ["дистанция", "наблюдатель", "сквозь", "молчание", "глубина"]},
+    "эйфория":       {"palette": "контрастный дуотон, выбитые света", "texture": "строб, световые росчерки, высокий контраст","words": ["разгон", "пульс", "вспышка", "поток", "высота"]},
+    "тревога":       {"palette": "красный + чёрный, жёсткий контраст","texture": "глитч, рваные края, нервная нарезка",       "words": ["напряжение", "край", "пульс", "разлом", "клаустрофобия"]},
+    "нежность":      {"palette": "приглушённый розово-серый + крем",  "texture": "мягкий фокус, плёнка, ручной коллаж",       "words": ["близость", "тепло", "хрупкость", "касание", "тишина"]},
+    "одиночество":   {"palette": "глубокий синий + один тёплый блик", "texture": "негативное пространство, дальний якорь",    "words": ["один", "простор", "эхо", "ночь", "окно"]},
+    "погружение":    {"palette": "тёплый кремовый + мягкий янтарный", "texture": "мягкий фокус, домашний свет, лёгкое зерно",  "words": ["тепло", "покой", "внутреннее", "дыхание", "свет"]},
+}
+_DEFAULT_LEX = {"palette": "ограниченная палитра 2–3 цвета", "texture": "плёночное зерно, видна рука (коллаж/scratch)", "words": ["глубина", "внутреннее", "фактура", "ручная работа", "контраст"]}
+
+
+def _adapt_minimal_brief(mini: dict, title_fallback: str) -> dict:
+    """Реальный on-disk формат (music_post_template_v2.yaml): track.title/soul.about/
+    soul.core_emotion/optional.avoid — НЕ плоский формат, под который был писан этот файл.
+    Возвращает плоский словарь, совместимый с остальной логикой main() ниже."""
+    t = mini.get("track", {}) or {}
+    soul = mini.get("soul", {}) or {}
+    opt = mini.get("optional", {}) or {}
+
+    core = str(soul.get("core_emotion") or "").strip()
+    about = str(soul.get("about") or "").strip()
+    avoid_raw = str(opt.get("avoid") or "").strip()
+
+    lex = _DEFAULT_LEX
+    for k, v in _EMOTION_LEXICON.items():
+        if k in core.lower():
+            lex = v
+            break
+
+    # ВАЖНО: optional.avoid в реальных брифах порой несёт ПОЗИТИВНОЕ пожелание ("хочется
+    # показать...") несмотря на название поля (yaromat, "conversation inside" — прямой пример).
+    # Дословный дамп в constraints.what_to_avoid перевернул бы смысл на противоположный —
+    # screenwriter.py подаёт этот блок в промпт как строгий запрет ("не выдавать такие cue").
+    # Безопаснее добавить как доп. контекст к narrative_angle, не как запрет.
+    narrative_angle = about
+    if avoid_raw:
+        narrative_angle = f"{about}\n(доп. пожелание к визуалу: {avoid_raw})".strip()
+
+    return {
+        "title": str(t.get("title") or "").strip() or title_fallback,
+        "core_emotion": core,
+        "visual_mood": f"DRAFT: {lex['palette']}; фактура — {lex['texture']}",
+        "narrative_angle": narrative_angle,
+        "mood_words": lex["words"],
+        "genre": "future garage / downtempo",
+        "key": "",
+        "what_to_avoid": [],
+    }
+
 
 def _rclone_copy(src: str, dst: str):
     r = subprocess.run(
@@ -76,6 +134,10 @@ def main():
     if not isinstance(mini_brief, dict):
         print("[intake] mini-brief is not a dict", file=sys.stderr)
         sys.exit(1)
+
+    if "track" in mini_brief and "soul" in mini_brief:
+        print("[intake] реальный минимальный бриф (music_post_template_v2) — адаптирую через лексикон")
+        mini_brief = _adapt_minimal_brief(mini_brief, title_fallback=audio_path.stem)
 
     for key in ("title", "core_emotion", "visual_mood", "narrative_angle", "mood_words", "genre"):
         if key not in mini_brief:

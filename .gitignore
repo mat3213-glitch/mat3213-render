@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# session/test artifacts
+screenplay_pipeline/analysis.json
+.agents/
+remotion/.agents/
