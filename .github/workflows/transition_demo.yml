@@ -1,0 +1,57 @@
+name: transition-demo
+
+# Гейт-демо transition-router (Ф3): 4 приёма стыка (gl-dissolve/glitch/film-burn/
+# hard-cut) на реальных клипах, подписанные. Ручной запуск. → ЯД (оттуда в TG).
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "трек на ЯД (rel от 'Content factory/')"
+        default: "music post/моя музыка/старая/yaromat - hurts in my heart/yaromat - hurts in my heart.flac"
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone (ЯД / ydrive)
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [ydrive]
+          type = yandex
+          client_id = ${YDRIVE_CLIENT_ID}
+          client_secret = ${YDRIVE_CLIENT_SECRET}
+          token = ${YDRIVE_TOKEN}
+          EOF
+
+      - name: Build transition demo
+        working-directory: screenplay_pipeline
+        env:
+          TRACK: ${{ inputs.track }}
+          FALLBACK: "music post/моя музыка/старая/yaromat - hurts in my heart/yaromat - hurts in my heart.flac"
+        run: |
+          rclone copyto "ydrive:Content factory/${TRACK}" ./track_audio 2>/dev/null || \
+            rclone copyto "ydrive:Content factory/${FALLBACK}" ./track_audio
+          python transition_demo.py ./track_audio
+
+      - name: Upload to ЯД (гейт-папка)
+        working-directory: screenplay_pipeline
+        run: |
+          DST="ydrive:Content factory/cloud_io/preview/2026-07-10_supervision_creative/05_transition_GATE"
+          rclone copyto transition_demo.mp4 "$DST/transition_demo.mp4"
