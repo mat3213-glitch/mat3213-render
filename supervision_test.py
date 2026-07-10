@@ -2,7 +2,7 @@
 """
 supervision_test.py — смоук-тест roboflow/supervision на НАШИХ vision-задачах (B-adopt).
 
-Цель: проверить, даёт ли ОБУЧЕННЫЙ детектор (YOLOv8 персоны/объекты + Haar лица),
+Цель: проверить, даёт ли ОБУЧЕННЫЙ детектор (YOLOv8 персоны/объекты + mediapipe лица),
 обёрнутый в supervision, более надёжный класс, чем наш VLM-судья (plastic_gate/
 final_qc). supervision — детерминированная CV-библиотека (боксы/маски/аннотация),
 LLM внутри НЕТ.
@@ -25,6 +25,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import mediapipe as mp
 import supervision as sv
 from ultralytics import YOLO
 
@@ -90,19 +91,28 @@ def first_frame(media: Path) -> Path:
     return out if out.exists() else media
 
 
-def detect_faces_haar(bgr) -> sv.Detections:
-    """Haar-каскад (в комплекте cv2, без докачки) → sv.Detections."""
-    cascade = cv2.CascadeClassifier(
-        cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-    faces = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5,
-                                     minSize=(24, 24))
-    if len(faces) == 0:
+def detect_faces_mp(bgr) -> sv.Detections:
+    """mediapipe FaceDetection (model_selection=1 = full-range) → sv.Detections.
+    Обученный детектор, не зависит от cv2-каскадов (ultralytics ставит headless-opencv)."""
+    H, W = bgr.shape[:2]
+    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
+    with mp.solutions.face_detection.FaceDetection(
+            model_selection=1, min_detection_confidence=0.5) as fd:
+        res = fd.process(rgb)
+    boxes = []
+    if res.detections:
+        for d in res.detections:
+            bb = d.location_data.relative_bounding_box
+            x1 = max(0.0, bb.xmin * W); y1 = max(0.0, bb.ymin * H)
+            x2 = min(float(W), (bb.xmin + bb.width) * W)
+            y2 = min(float(H), (bb.ymin + bb.height) * H)
+            if x2 > x1 and y2 > y1:
+                boxes.append([x1, y1, x2, y2])
+    if not boxes:
         return sv.Detections.empty()
-    xyxy = np.array([[x, y, x + w, y + h] for (x, y, w, h) in faces], dtype=float)
-    return sv.Detections(xyxy=xyxy,
-                         confidence=np.ones(len(faces)),
-                         class_id=np.zeros(len(faces), dtype=int))
+    return sv.Detections(xyxy=np.array(boxes, dtype=float),
+                         confidence=np.ones(len(boxes)),
+                         class_id=np.zeros(len(boxes), dtype=int))
 
 
 def annotate(bgr, dets: sv.Detections, labels, color):
@@ -147,8 +157,8 @@ def main() -> int:
         persons = int(sum(1 for c in det.class_id if names[int(c)] == "person"))
         objects = sorted({names[int(c)] for c in det.class_id})
 
-        # 2) Haar — лица + доля площади крупнейшего
-        faces = detect_faces_haar(bgr)
+        # 2) mediapipe — лица + доля площади крупнейшего
+        faces = detect_faces_mp(bgr)
         max_face_frac = 0.0
         if len(faces) > 0:
             fa = (faces.xyxy[:, 2] - faces.xyxy[:, 0]) * (faces.xyxy[:, 3] - faces.xyxy[:, 1])
@@ -183,7 +193,7 @@ def main() -> int:
 
     md = ["# supervision smoke-test — вердикты\n",
           f"Сэмпл {len(report)} кадров пула. Детектор: YOLOv8n (COCO, персоны/объекты) "
-          f"+ Haar (лица). supervision = аннотация/боксы, детерминированно, без LLM.\n",
+          f"+ mediapipe (лица). supervision = аннотация/боксы, детерминированно, без LLM.\n",
           "| # | id | scale | persons | objects | faces | face% | closeup? |",
           "|---|---|---|---|---|---|---|---|"]
     for i, v in enumerate(report):

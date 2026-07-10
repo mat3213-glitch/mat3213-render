@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg libgl1 libglib2.0-0
-          pip install --quiet supervision ultralytics numpy
+          pip install --quiet supervision ultralytics mediapipe numpy
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Configure rclone (ЯД / ydrive)
