@@ -1,0 +1,62 @@
+name: whisper-karaoke
+
+# Чистая проверка тайминга whisperx (гейт Ф1b): осциллограмма аудио + слово,
+# вспыхивающее на онсете. Без монтажа/футажа → без фризов. Ручной запуск.
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "трек на ЯД (rel от 'Content factory/')"
+        default: "music post/моя музыка/старая/yaromat - hurts in my heart/yaromat - hurts in my heart.flac"
+      model:
+        description: "whisper модель (base/small/medium)"
+        default: "small"
+
+jobs:
+  karaoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libsndfile1 fonts-dejavu-core
+          pip install --quiet whisperx
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone (ЯД / ydrive)
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [ydrive]
+          type = yandex
+          client_id = ${YDRIVE_CLIENT_ID}
+          client_secret = ${YDRIVE_CLIENT_SECRET}
+          token = ${YDRIVE_TOKEN}
+          EOF
+
+      - name: Build karaoke timing video
+        working-directory: screenplay_pipeline
+        env:
+          TRACK: ${{ inputs.track }}
+          WHISPER_MODEL: ${{ inputs.model }}
+          FALLBACK: "music post/моя музыка/старая/yaromat - hurts in my heart/yaromat - hurts in my heart.flac"
+        run: |
+          rclone copyto "ydrive:Content factory/${TRACK}" ./track_audio 2>/dev/null || \
+            rclone copyto "ydrive:Content factory/${FALLBACK}" ./track_audio
+          python whisper_karaoke.py ./track_audio
+
+      - name: Upload karaoke to ЯД (гейт-папка, НОВОЕ имя — снять кэш)
+        working-directory: screenplay_pipeline
+        run: |
+          DST="ydrive:Content factory/cloud_io/preview/2026-07-10_supervision_creative/04_whisper_stage_GATE"
+          rclone copyto whisper_karaoke.mp4 "$DST/whisper_karaoke.mp4"
