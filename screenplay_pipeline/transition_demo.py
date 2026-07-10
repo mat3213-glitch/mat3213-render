@@ -23,7 +23,7 @@ FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 # (тип, подпись-условие) — по одному репрезентативному контексту на приём
 DEMOS = [
     ("gl-dissolve", "GL-DISSOLVE  intro/atmo"),
-    ("glitch",      "GLITCH  body/high"),
+    ("dip",         "DIP  body/high"),
     ("film-burn",   "FILM-BURN  смена типа"),
     ("hard-cut",    "HARD-CUT  climax/high"),
 ]

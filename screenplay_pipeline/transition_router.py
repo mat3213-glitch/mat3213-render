@@ -17,11 +17,13 @@ router даёт ТОЛЬКО тип стыка; slowmo-сосед → длите
 
 XFADE_MAP = {
     "gl-dissolve": "fade",
-    "glitch": "pixelize",
+    "dip": "fadeblack",      # быстрый дип-в-чёрное на энергии (не цифровой глитч — yaromat 07-10)
     "film-burn": "fadegrays",
     "hard-cut": None,        # concat без перехода
 }
-DEFAULT_TDUR = 0.7           # длительность перехода, с
+# длительность перехода по приёму: dip рубленый (короткий), растворение/плёнка мягче
+TDUR = {"gl-dissolve": 0.7, "dip": 0.28, "film-burn": 0.6, "hard-cut": 0.0}
+DEFAULT_TDUR = 0.7
 SLOWMO_FACTOR = 1.5
 
 
@@ -38,11 +40,11 @@ def lookup_transition(section: str, energy: str,
     if s == "climax" and e == "high":
         return "hard-cut"                 # пик энергии — рубленый монтаж
     if s == "climax":
-        return "glitch"                   # вход в кульминацию — нервный
+        return "dip"                      # вход в кульминацию — рубленый дип по биту
     if s in ("intro", "outro"):
         return "gl-dissolve"              # края трека — мягко
     if s == "body" and e == "high":
-        return "glitch"
+        return "dip"
     if p == "atmosphere" and n == "atmosphere":
         return "gl-dissolve"              # атмосфера↔атмосфера — растворение
     if p != n:
@@ -50,10 +52,11 @@ def lookup_transition(section: str, energy: str,
     return "gl-dissolve"                  # дефолт — мягкое растворение
 
 
-def transition_duration(base: float = DEFAULT_TDUR,
+def transition_duration(ttype: str = None, base: float = None,
                         prev_slowmo: bool = False, next_slowmo: bool = False) -> float:
-    """slowmo-сосед → удлиняем переход (сглаживаем скачок скорости в стыке)."""
-    return round(base * (SLOWMO_FACTOR if (prev_slowmo or next_slowmo) else 1.0), 3)
+    """Длительность перехода по приёму; slowmo-сосед → ×1.5 (сглаживает скачок скорости)."""
+    d = base if base is not None else TDUR.get(ttype, DEFAULT_TDUR)
+    return round(d * (SLOWMO_FACTOR if (prev_slowmo or next_slowmo) else 1.0), 3)
 
 
 def xfade_name(ttype: str) -> str | None:

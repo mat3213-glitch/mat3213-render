@@ -21,6 +21,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "screenplay_pipeline"))
+import transition_router as _tr        # L6: выбор приёма стыка
+import transition_render as _trn       # L6: xfade-цепочка с сохранением тайминга
+
 JOB_ID = os.environ.get("JOB_ID", "")
 if not JOB_ID:
     sys.exit("JOB_ID not set")
@@ -127,6 +131,29 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
     return out if ok else None
 
 
+def _shot_type(shot: dict) -> str:
+    """Тип кадра для роутера: subject (герой/крупно/climax) vs atmosphere."""
+    if (shot.get("scale") in ("macro", "close")) or shot.get("section") == "climax":
+        return "subject"
+    return "atmosphere"
+
+
+def plan_transitions(shots: list[dict]) -> list[tuple]:
+    """Приём стыка, ВХОДЯЩЕГО в каждый кадр (индекс j = стык j-1→j). [0]=None.
+    → [(name, d)]; d учитывает slowmo-соседа (speed<1.0)."""
+    plan = [None]
+    for j in range(1, len(shots)):
+        prev, cur = shots[j - 1], shots[j]
+        name = _tr.lookup_transition(cur.get("section"), cur.get("energy"),
+                                     _shot_type(prev), _shot_type(cur))
+        d = _tr.transition_duration(
+            name,
+            prev_slowmo=float(prev.get("speed") or 1.0) < 1.0,
+            next_slowmo=float(cur.get("speed") or 1.0) < 1.0)
+        plan.append((name, d))
+    return plan
+
+
 def main():
     print(f"Job: {JOB_ID}", flush=True)
     sb_file = WORKDIR / "storyboard.json"
@@ -154,13 +181,17 @@ def main():
         else:
             print(f"  ⚠ fill {sb['fill']} не стянут — зелёные зоны останутся", flush=True)
 
-    # 1. рендер кадров
+    # 1. рендер кадров. Каждый кадр — с ЗАПАСОМ-хвостом на исходящий переход (его съест
+    #    xfade → нетто t_dur сохраняется, EDL не дрейфует относительно музыки). [[transition_router]]
     print("\n── Рендер кадров ──", flush=True)
-    rendered = []
+    plan = plan_transitions(shots)     # приём стыка, входящего в каждый кадр
+    rendered = []                      # [(path, shot, rendered_dur)]
     for i, sh in enumerate(shots):
-        out = render_shot(i, sh, cover, fill)
+        d_out = plan[i + 1][1] if i + 1 < len(shots) else 0.0
+        rdur = _trn.render_tail(float(sh["t_dur"]), d_out)
+        out = render_shot(i, {**sh, "t_dur": rdur}, cover, fill)
         if out:
-            rendered.append(out)
+            rendered.append((out, sh, rdur))
             b = sh.get("base") or {}
             tag = f"{b.get('category')}{'+заливка' if (b.get('chroma') and fill) else ''}"
             print(f"  ✓ shot {i}: {sh['t_dur']:.1f}с {tag}", flush=True)
@@ -168,15 +199,44 @@ def main():
         yd_put_status("FAIL: ни один кадр не отрендерился")
         sys.exit("0 кадров")
 
-    # 2. concat (hard cut — v1; xfade/dip = v2)
-    print("\n── Concat ──", flush=True)
-    lst = WORKDIR / "list.txt"
-    lst.write_text("".join(f"file '{p}'\n" for p in rendered), encoding="utf-8")
+    # 2. склейка с переходами (L6 transition-router): xfade-цепочка, фолбэк на concat.
+    print("\n── Склейка (переходы) ──", flush=True)
+    paths = [r[0] for r in rendered]
     concat = WORKDIR / "concat.mp4"
-    if not ff(["-f", "concat", "-safe", "0", "-i", str(lst),
-               "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
-               "-pix_fmt", "yuv420p", str(concat)]):
-        sys.exit("concat не вышел")
+    xfade_ok = False
+    if len(rendered) >= 2:
+        durs = [r[2] for r in rendered]
+        trans = [None]
+        names_log = []
+        for k in range(1, len(rendered)):
+            prev_sh, cur_sh = rendered[k - 1][1], rendered[k][1]
+            name = _tr.lookup_transition(cur_sh.get("section"), cur_sh.get("energy"),
+                                         _shot_type(prev_sh), _shot_type(cur_sh))
+            d = _tr.transition_duration(
+                name, prev_slowmo=float(prev_sh.get("speed") or 1.0) < 1.0,
+                next_slowmo=float(cur_sh.get("speed") or 1.0) < 1.0)
+            d = max(0.04, min(d, durs[k - 1] - 0.1, durs[k] - 0.1))  # не длиннее клипов
+            trans.append((_tr.xfade_name(name) or "fade", d))
+            names_log.append(name)
+        fc, label, total = _trn.build_xfade_chain(durs, trans)
+        inputs = []
+        for p in paths:
+            inputs += ["-i", str(p)]
+        xfade_ok = ff(inputs + ["-filter_complex", fc, "-map", label,
+                                "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+                                "-pix_fmt", "yuv420p", str(concat)])
+        exp = round(sum(float(r[1]["t_dur"]) for r in rendered), 1)
+        print(f"  переходы: {names_log}", flush=True)
+        print(f"  xfade-цепочка: {'OK' if xfade_ok else 'FAIL'}, "
+              f"timeline={total}с (ожид.~{exp}с)", flush=True)
+    if not xfade_ok:
+        print("  → фолбэк на concat (hard-cut)", flush=True)
+        lst = WORKDIR / "list.txt"
+        lst.write_text("".join(f"file '{p}'\n" for p in paths), encoding="utf-8")
+        if not ff(["-f", "concat", "-safe", "0", "-i", str(lst),
+                   "-c:v", "libx264", "-preset", "veryfast", "-crf", "22",
+                   "-pix_fmt", "yuv420p", str(concat)]):
+            sys.exit("concat не вышел")
 
     # 3. аудио-окно + mux. Полнотрековый EDL (раскадровка привязана к энергокарте ВСЕГО трека)
     # задаёт audio_start явно → highlight ПРОПУСКАЕТСЯ (иначе десинхрон: пик кадра ≠ пик трека).
