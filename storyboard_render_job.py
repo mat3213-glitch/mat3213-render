@@ -219,6 +219,16 @@ def main():
             trans.append((_tr.xfade_name(name) or "fade", d))
             names_log.append(name)
         fc, label, total = _trn.build_xfade_chain(durs, trans)
+        # DIAG: реальные длины отрендеренных клипов (rdur ожидается)
+        def _probe(p):
+            try:
+                r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                                    "-of", "default=nw=1:nk=1", str(p)], capture_output=True, text=True)
+                return float(r.stdout.strip() or 0)
+            except Exception:
+                return -1.0
+        print(f"  DIAG durs(ожид rdur)={[round(d,2) for d in durs]}", flush=True)
+        print(f"  DIAG клипы(факт)={[round(_probe(p),2) for p in paths]}", flush=True)
         inputs = []
         for p in paths:
             inputs += ["-i", str(p)]
@@ -227,6 +237,7 @@ def main():
                                 "-pix_fmt", "yuv420p", str(concat)])
         exp = round(sum(float(r[1]["t_dur"]) for r in rendered), 1)
         print(f"  переходы: {names_log}", flush=True)
+        print(f"  DIAG concat(факт)={round(_probe(concat),2)}с", flush=True)
         print(f"  xfade-цепочка: {'OK' if xfade_ok else 'FAIL'}, "
               f"timeline={total}с (ожид.~{exp}с)", flush=True)
     if not xfade_ok:
