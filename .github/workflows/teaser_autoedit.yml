@@ -1,0 +1,50 @@
+name: teaser-autoedit
+
+# Ф2: auto-editor standalone тизер-тул. Из готового клипа → энергичный тизер (держит
+# громкие участки). НЕ трогает нарративный рендер. Ручной запуск.
+on:
+  workflow_dispatch:
+    inputs:
+      input:
+        description: "видео на ЯД (rel от 'Content factory/')"
+        default: "cloud_io/preview/2026-07-10_supervision_creative/04_whisper_stage_GATE/control_montage.mp4"
+      threshold:
+        description: "порог громкости (напр. 4%)"
+        default: "4%"
+
+jobs:
+  teaser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          pip install -q auto-editor
+
+      - name: Configure rclone (ЯД / ydrive)
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [ydrive]
+          type = yandex
+          client_id = ${YDRIVE_CLIENT_ID}
+          client_secret = ${YDRIVE_CLIENT_SECRET}
+          token = ${YDRIVE_TOKEN}
+          EOF
+
+      - name: Auto-edit teaser
+        env:
+          IN: ${{ inputs.input }}
+          TH: ${{ inputs.threshold }}
+        run: python teaser_autoedit.py --input "$IN" --threshold "$TH"
