@@ -34,9 +34,11 @@ def compute_beats(audio_path: str):
 
 def transcribe_words(audio_path: str) -> tuple[str, list[dict]]:
     """whisperx transcribe + align → [{word,start,end}]. Без диаризации (pyannote не нужен)."""
+    import os
     import whisperx
     device, compute = "cpu", "int8"
-    model = whisperx.load_model("base", device, compute_type=compute)
+    arch = os.environ.get("WHISPER_MODEL", "small")  # small = лучше recall на ревербном вокале
+    model = whisperx.load_model(arch, device, compute_type=compute)
     audio = whisperx.load_audio(audio_path)
     result = model.transcribe(audio, batch_size=8)
     lang = result.get("language", "en")
