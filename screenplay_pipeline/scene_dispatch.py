@@ -41,6 +41,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import plastic_gate_core as pgc
 import pool_matcher
+import source_qc
 from submit_render_job import submit
 
 YD_ROOT = "ydrive:Content factory"
@@ -148,6 +149,11 @@ def pool_fill_shot(job_id: str, idx: int, shot: dict, hero_object: str,
 
     for entry in cand[:3]:  # пробуем до 3 кандидатов, если первый не пройдёт гейт
         local = pool_matcher.fetch(entry, tmpdir)
+        sq = source_qc.judge_source(str(local))  # L4: детерминир. пре-гейт ДО VLM
+        if not sq["ok"]:
+            print(f"  scene {idx} [pool:{entry['engine']}] {entry['id']}: "
+                  f"source_qc REJECT — {sq['reject_reason']}")
+            continue
         verdict = pgc.judge_media(str(local), threshold=GATE_THRESHOLD)
         print(f"  scene {idx} [pool:{entry['engine']}] {entry['id']}: "
               f"gate={verdict['verdict']} score={verdict['score']}")
@@ -218,6 +224,14 @@ def dispatch_and_gate(job_id: str, idx: int, shot: dict, ratio: str, timeout: in
 
         local = wait_for_scene(job_id, idx, timeout, poll, tmpdir)
         if not local:
+            continue
+
+        sq = source_qc.judge_source(str(local))  # L4: детерминир. пре-гейт ДО VLM
+        if not sq["ok"]:
+            print(f"  scene {idx}: source_qc REJECT — {sq['reject_reason']}")
+            subprocess.run(["rclone", "deletefile",
+                           f"{YD_ROOT}/cloud_io/render_jobs/{job_id}/generated/scene_{idx}.mp4"],
+                          capture_output=True)
             continue
 
         verdict = pgc.judge_media(str(local), threshold=GATE_THRESHOLD)
