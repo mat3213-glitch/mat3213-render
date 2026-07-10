@@ -59,17 +59,18 @@ def safe_word(w: str) -> str:
     return w or "•"
 
 
-def build_segment(clip: Path, dur: float, word: str, out: Path):
-    """Клип → 720x1280, обрезан до dur, БЕЛАЯ ВСПЫШКА первые 0.08с + слово первые 0.6с."""
-    word_e = word.replace("'", "").replace(":", "")
+FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+
+
+def normalize_segment(clip: Path, dur: float, out: Path):
+    """Клип → 720x1280, CFR, ровно dur. БЕЗ текста/вспышки (текст накладываем на
+    финальный таймлайн). closed GOP → чистый вход для concat-фильтра (нет фризов)."""
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
-          f"fps={FPS},setsar=1,"
-          f"drawbox=x=0:y=0:w=iw:h=ih:color=white@0.9:t=fill:enable='lt(t,0.08)',"
-          f"drawtext=text='{word_e}':fontcolor=white:fontsize=54:x=(w-tw)/2:y=h-220:"
-          f"box=1:boxcolor=black@0.5:boxborderw=12:enable='lt(t,0.6)'")
+          f"fps={FPS},setsar=1,format=yuv420p")
     sh(["ffmpeg", "-y", "-stream_loop", "-1", "-i", str(clip), "-t", f"{dur:.3f}",
-        "-vf", vf, "-an", "-r", str(FPS), "-pix_fmt", "yuv420p",
-        "-c:v", "libx264", "-preset", "veryfast", str(out)])
+        "-vf", vf, "-an", "-r", str(FPS), "-vsync", "cfr",
+        "-g", str(FPS * 2), "-keyint_min", str(FPS * 2),
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", str(out)])
 
 
 def main() -> int:
@@ -100,34 +101,51 @@ def main() -> int:
     if len(clips) < 2:
         print("[demo] мало клипов пула", file=sys.stderr); return 1
 
-    # границы сегментов = онсеты (+ конец окна)
+    # границы сегментов = онсеты (+ конец окна). Нормализуем сегменты (без текста).
     bounds = [c["start"] for c in cuts] + [win_end]
-    seglist = work / "segs.txt"
-    lines = []
+    segs, durs, cut_words = [], [], []
     for i in range(len(cuts)):
         d = bounds[i + 1] - bounds[i]
         if d < 0.15:
             continue
         seg = work / f"seg_{i}.mp4"
-        build_segment(clips[i % len(clips)], d, safe_word(cuts[i]["word"]), seg)
+        normalize_segment(clips[i % len(clips)], d, seg)
         if seg.exists():
-            lines.append(f"file '{seg}'")
-    seglist.write_text("\n".join(lines), encoding="utf-8")
+            segs.append(seg); durs.append(d); cut_words.append(cuts[i]["word"])
+    if len(segs) < 2:
+        print("[demo] мало валидных сегментов", file=sys.stderr); return 1
 
-    silent = work / "video_silent.mp4"
-    sh(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(seglist),
-        "-c", "copy", str(silent)])
+    # абсолютные видео-времена резов (начало каждого сегмента на финальном таймлайне)
+    starts = [0.0]
+    for d in durs[:-1]:
+        starts.append(round(starts[-1] + d, 3))
 
-    # аудио трека за окно + мукс
+    # ОДИН проход: concat-фильтр (непрерывный PTS → нет микрофризов) + текст по
+    # абсолютным временам резов (жёсткий синк со звуком, аудио -ss с первого онсета).
     out = Path("whisper_demo.mp4")
-    audio_ss = bounds[0]   # видео начинается с первого онсета → аудио оттуда же (синк)
-    r = sh(["ffmpeg", "-y", "-i", str(silent),
-            "-ss", f"{audio_ss:.3f}", "-i", audio,
-            "-map", "0:v", "-map", "1:a", "-shortest",
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", str(out)])
+    inputs = []
+    for s in segs:
+        inputs += ["-i", str(s)]
+    aidx = len(segs)
+    concat_in = "".join(f"[{i}:v]" for i in range(len(segs)))
+    fc = f"{concat_in}concat=n={len(segs)}:v=1:a=0[vc]"
+    label = "vc"
+    for i, (st, w) in enumerate(zip(starts, cut_words)):
+        nl = f"v{i}"
+        fc += (f";[{label}]drawtext=fontfile={FONT}:text='{safe_word(w)}':fontcolor=white:"
+               f"fontsize=54:x=(w-tw)/2:y=h-220:box=1:boxcolor=black@0.55:boxborderw=12:"
+               f"enable='between(t,{st:.3f},{st + 0.7:.3f})'[{nl}]")
+        label = nl
+    cmd = (["ffmpeg", "-y"] + inputs + ["-ss", f"{bounds[0]:.3f}", "-i", audio,
+           "-filter_complex", fc, "-map", f"[{label}]", "-map", f"{aidx}:a",
+           "-shortest", "-r", str(FPS), "-vsync", "cfr",
+           "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p",
+           "-c:a", "aac", "-b:a", "160k", str(out)])
+    r = sh(cmd)
     if not out.exists():
-        print(f"[demo] мукс упал: {r.stderr[-400:]}", file=sys.stderr); return 1
-    print(f"[demo] ✅ {out} ({out.stat().st_size//1024}КБ), резов={len(lines)}")
+        print(f"[demo] сборка упала: {r.stderr[-500:]}", file=sys.stderr); return 1
+    print(f"[demo] ✅ {out} ({out.stat().st_size // 1024}КБ), резов={len(segs)}, "
+          f"тексты по абс.времени, без вспышки/copy-concat")
     return 0
 
 
