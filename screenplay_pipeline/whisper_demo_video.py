@@ -76,18 +76,19 @@ def main() -> int:
     audio = sys.argv[1] if len(sys.argv) > 1 else "track_audio"
     work = Path(tempfile.mkdtemp(prefix="wdemo_"))
 
-    _, beats = vocal_sync.compute_beats(audio)
     lang, words = vocal_sync.transcribe_words(audio)
-    words, _ = vocal_sync.snap_to_beats(words, beats, vocal_sync.TOL_MS)
-    locked = [w for w in words if w.get("beat_locked")]
-    if len(locked) < 2:
-        print(f"[demo] слишком мало beat_locked слов ({len(locked)}) — нечего показывать",
+    # ДЛЯ ВИДЕО-ДЕМО режем на КАЖДОМ спетом слове (не только beat_locked — тот строгий
+    # фильтр нужен director-снапу; здесь цель — глазами/ушами проверить тайминг виспера).
+    onset_words = sorted((w for w in words if w.get("start") is not None),
+                         key=lambda w: w["start"])
+    if len(onset_words) < 2:
+        print(f"[demo] слишком мало распознанных слов ({len(onset_words)}) — нечего показывать",
               file=sys.stderr)
         return 1
 
     # слить близкие онсеты
-    cuts = [locked[0]]
-    for w in locked[1:]:
+    cuts = [onset_words[0]]
+    for w in onset_words[1:]:
         if w["start"] - cuts[-1]["start"] >= MERGE_GAP:
             cuts.append(w)
     cuts = cuts[:MAX_CUTS]
