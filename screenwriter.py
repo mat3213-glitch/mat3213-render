@@ -301,7 +301,17 @@ def main():
     brief = yaml.safe_load(brief_path.read_text(encoding="utf-8"))
     references = None
     if args.references:
-        references = json.loads(Path(args.references).read_text(encoding="utf-8"))
+        rp = Path(args.references)
+        if rp.exists():
+            try:
+                references = json.loads(rp.read_text(encoding="utf-8"))
+                n = len(references) if isinstance(references, list) else "?"
+                print(f"[refs] загружено {n} референсов из {rp.name}", file=sys.stderr)
+            except Exception as e:
+                print(f"[refs] WARN: не смог прочитать {rp} ({e}) — работаю без референсов", file=sys.stderr)
+                references = None
+        else:
+            print(f"[refs] WARN: {rp} нет — работаю без референсов", file=sys.stderr)
     treatment = generate_treatment(brief, references)
 
     out_json = json.dumps(treatment, ensure_ascii=False, indent=2)

@@ -97,10 +97,13 @@ def rclone_put(local: Path, yd_path: str) -> bool:
     return True
 
 
-def run_screenwriter(brief: Path, out: Path) -> dict:
+def run_screenwriter(brief: Path, out: Path, references: Path | None = None) -> dict:
     t0 = time.time()
+    cmd = [sys.executable, str(GHC / "screenwriter.py"), str(brief), "-o", str(out)]
+    if references and references.exists():
+        cmd += ["--references", str(references)]
     r = subprocess.run(
-        [sys.executable, str(GHC / "screenwriter.py"), str(brief), "-o", str(out)],
+        cmd,
         capture_output=True, text=True, timeout=300,
     )
     return {
@@ -188,9 +191,15 @@ def process_brief(brief_path: Path) -> dict:
         return log
     log["audio_size_mb"] = round(audio.stat().st_size / 1024 / 1024, 1)
 
+    # опц. reference-пища (стадия 2 screenplay-pipeline): reference_recipes.json с ЯД → сценаристу.
+    # fail-open: нет на ЯД → сценарист работает как раньше. [[feedback_screenwriter_needs_reference_food]]
+    refs = work / "reference_recipes.json"
+    if not rclone_get(f"Content factory/cloud_io/render_jobs/{name}/reference_recipes.json", refs):
+        refs = None
+
     treatment = work / "treatment.json"
-    print(f"[2/5] screenwriter → {treatment.name}", flush=True)
-    log["screenwriter"] = run_screenwriter(brief_copy, treatment)
+    print(f"[2/5] screenwriter → {treatment.name}" + (" (+refs)" if refs else ""), flush=True)
+    log["screenwriter"] = run_screenwriter(brief_copy, treatment, refs)
     if not log["screenwriter"]["ok"]:
         log["error"] = "screenwriter failed"
         return log

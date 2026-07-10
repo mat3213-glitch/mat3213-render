@@ -4,7 +4,7 @@
   "_how": "director.py: расширить MOTIONS ключами отсюда; в i2v-путь ({kind:generate}) инжектить поле prompt как камер-часть промпта. energy_map даёт выбор под тишину/пик (как ENERGY_MOTIONS).",
   "_legacy_map": {
     "static": "static", "slow_push": "dolly_in", "zoom_in": "slow_zoom_in",
-    "zoom_out": "slow_zoom_out", "drift": "slider_right", "handheld": "handheld", "tilt": "tilt_up"
+    "zoom_out": "slow_zoom_out", "drift": "slider_right", "handheld": "handheld", "tilt": "tilt_up", "pan": "pan_right"
   },
   "moves": {
     "static":            {"cat": "pan_tilt", "energy": "low",  "prompt": "locked-off static shot. Movement: hold one fixed camera position for the full clip."},
