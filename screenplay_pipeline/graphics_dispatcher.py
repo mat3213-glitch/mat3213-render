@@ -12,24 +12,46 @@ AccentBurst (акцент на пике), BeatPulse (ритм-пульс на э
 (рамка-фокус на герое/крупном). Оверлей самоценен графикой — текст максимум бренд-акцент.
 """
 
+from pathlib import Path
+
 OVERLAYS = ("MobyTitle", "AccentBurst", "BeatPulse", "FocusBracket")
+_OVL_DIR = Path(__file__).resolve().parent.parent / "remotion" / "src" / "overlays"
 
 
-def pick_overlay(section: str, energy: str, scale: str = "") -> str | None:
+def approved_overlays() -> set:
+    """Множество ОДОБРЕННЫХ оверлеев (approved: yes в <Name>.md). Гейт yaromat."""
+    ok = set()
+    if _OVL_DIR.exists():
+        for md in _OVL_DIR.glob("*.md"):
+            for line in md.read_text(encoding="utf-8").splitlines():
+                if line.strip().lower().startswith("approved:"):
+                    if line.split(":", 1)[1].strip().lower() in ("yes", "true", "да"):
+                        ok.add(md.stem)
+                    break
+    return ok
+
+
+def pick_overlay(section: str, energy: str, scale: str = "",
+                 approved_only: bool = False) -> str | None:
     """ОДИН оверлей под кадр, или None (без графики — большинство кадров чистые).
-    Графику ставим ТОЧЕЧНО (не на каждый кадр), иначе перегруз."""
+    Графику ставим ТОЧЕЧНО (не на каждый кадр), иначе перегруз. approved_only=True →
+    неодобренный оверлей → None (прод не падает на гейте, ждёт одобрения yaromat)."""
     s = (section or "body").lower()
     e = (energy or "medium").lower()
     sc = (scale or "").lower()
     if s in ("intro", "outro"):
-        return "MobyTitle"            # лайнер-титр в начале/конце
-    if s == "climax":
-        return "AccentBurst"          # акцент-хит на кульминации
-    if s == "body" and e == "high":
-        return "BeatPulse"            # ритм-пульс на энергичном body
-    if sc in ("macro", "close"):
-        return "FocusBracket"         # рамка-фокус на крупном/герое
-    return None                       # атмосферный проходной кадр — без графики
+        pick = "MobyTitle"            # лайнер-титр в начале/конце
+    elif s == "climax":
+        pick = "AccentBurst"          # акцент-хит на кульминации
+    elif s == "body" and e == "high":
+        pick = "BeatPulse"            # ритм-пульс на энергичном body
+    elif sc in ("macro", "close"):
+        pick = "FocusBracket"         # рамка-фокус на крупном/герое
+    else:
+        pick = None                   # атмосферный проходной кадр — без графики
+    if approved_only and pick is not None and pick not in approved_overlays():
+        return None
+    return pick
 
 
 def overlay_job(overlay: str, base_clip: str, fmt: str = "vertical",
