@@ -2,7 +2,7 @@
 """
 supervision_test.py — смоук-тест roboflow/supervision на НАШИХ vision-задачах (B-adopt).
 
-Цель: проверить, даёт ли ОБУЧЕННЫЙ детектор (YOLOv8 персоны/объекты + mediapipe лица),
+Цель: проверить, даёт ли ОБУЧЕННЫЙ детектор (YOLOv8 персоны/объекты + YOLOv8-face лица),
 обёрнутый в supervision, более надёжный класс, чем наш VLM-судья (plastic_gate/
 final_qc). supervision — детерминированная CV-библиотека (боксы/маски/аннотация),
 LLM внутри НЕТ.
@@ -25,7 +25,6 @@ from pathlib import Path
 
 import cv2
 import numpy as np
-import mediapipe as mp
 import supervision as sv
 from ultralytics import YOLO
 
@@ -91,28 +90,26 @@ def first_frame(media: Path) -> Path:
     return out if out.exists() else media
 
 
-def detect_faces_mp(bgr) -> sv.Detections:
-    """mediapipe FaceDetection (model_selection=1 = full-range) → sv.Detections.
-    Обученный детектор, не зависит от cv2-каскадов (ultralytics ставит headless-opencv)."""
-    H, W = bgr.shape[:2]
-    rgb = cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
-    with mp.solutions.face_detection.FaceDetection(
-            model_selection=1, min_detection_confidence=0.5) as fd:
-        res = fd.process(rgb)
-    boxes = []
-    if res.detections:
-        for d in res.detections:
-            bb = d.location_data.relative_bounding_box
-            x1 = max(0.0, bb.xmin * W); y1 = max(0.0, bb.ymin * H)
-            x2 = min(float(W), (bb.xmin + bb.width) * W)
-            y2 = min(float(H), (bb.ymin + bb.height) * H)
-            if x2 > x1 and y2 > y1:
-                boxes.append([x1, y1, x2, y2])
-    if not boxes:
+def load_face_model():
+    """YOLOv8-face с HF (тот же ultralytics-стек, что уже работает). Graceful:
+    если не подтянулась — вернём None, тест продолжит с person/object-детекцией."""
+    try:
+        from huggingface_hub import hf_hub_download
+        p = hf_hub_download(repo_id="arnabdhar/YOLOv8-Face-Detection",
+                            filename="model.pt")
+        m = YOLO(p)
+        log(f"face-модель: {p}")
+        return m
+    except Exception as e:
+        log(f"⚠ face-модель не загрузилась ({e}) — тест без детекции лиц")
+        return None
+
+
+def detect_faces_yolo(face_model, bgr) -> sv.Detections:
+    if face_model is None:
         return sv.Detections.empty()
-    return sv.Detections(xyxy=np.array(boxes, dtype=float),
-                         confidence=np.ones(len(boxes)),
-                         class_id=np.zeros(len(boxes), dtype=int))
+    res = face_model(bgr, verbose=False)[0]
+    return sv.Detections.from_ultralytics(res)
 
 
 def annotate(bgr, dets: sv.Detections, labels, color):
@@ -133,6 +130,7 @@ def main() -> int:
     log("== supervision smoke-test ==")
     log(f"supervision {sv.__version__}, opencv {cv2.__version__}")
     model = YOLO("yolov8n.pt")          # COCO 80 классов, авто-докачка ~6MB
+    face_model = load_face_model()      # YOLOv8-face (HF), graceful если нет
     sample = sample_catalog()
     log(f"сэмпл: {len(sample)} медиа")
 
@@ -157,8 +155,8 @@ def main() -> int:
         persons = int(sum(1 for c in det.class_id if names[int(c)] == "person"))
         objects = sorted({names[int(c)] for c in det.class_id})
 
-        # 2) mediapipe — лица + доля площади крупнейшего
-        faces = detect_faces_mp(bgr)
+        # 2) YOLOv8-face — лица + доля площади крупнейшего
+        faces = detect_faces_yolo(face_model, bgr)
         max_face_frac = 0.0
         if len(faces) > 0:
             fa = (faces.xyxy[:, 2] - faces.xyxy[:, 0]) * (faces.xyxy[:, 3] - faces.xyxy[:, 1])
@@ -193,7 +191,7 @@ def main() -> int:
 
     md = ["# supervision smoke-test — вердикты\n",
           f"Сэмпл {len(report)} кадров пула. Детектор: YOLOv8n (COCO, персоны/объекты) "
-          f"+ mediapipe (лица). supervision = аннотация/боксы, детерминированно, без LLM.\n",
+          f"+ YOLOv8-face (лица). supervision = аннотация/боксы, детерминированно, без LLM.\n",
           "| # | id | scale | persons | objects | faces | face% | closeup? |",
           "|---|---|---|---|---|---|---|---|"]
     for i, v in enumerate(report):
