@@ -58,8 +58,12 @@ ENGINE_ORDER = ["hunyuan", "veofree", "qwen"]  # round-robin по кругу; hu
 
 
 def engine_for(shot: dict) -> str:
-    """Round-robin по idx — распределяет нагрузку между движками (устойчивость через
-    разнообразие: если один упёрся в дневной лимит/500, другие сцены не встанут)."""
+    """base.provider от режиссёра (director.assemble: veofree=макро/пик-герой, qwen=общий/тишина-
+    атмосфера) имеет ПРИОРИТЕТ, если движок подключён. Иначе round-robin по idx — распределяет
+    нагрузку между движками (устойчивость: если один упёрся в дневной лимит/500, другие не встанут)."""
+    prov = (shot.get("base") or {}).get("provider")
+    if prov in ENGINE_WORKFLOWS:
+        return prov
     idx = shot.get("idx", 0)
     return ENGINE_ORDER[idx % len(ENGINE_ORDER)]
 
