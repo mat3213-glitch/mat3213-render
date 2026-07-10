@@ -1,4 +1,4 @@
-import {loadFont as loadLora} from '@remotion/google-fonts/Lora';
+import {loadFont as loadGaramond} from '@remotion/google-fonts/EBGaramond';
 import {loadFont as loadCaveat} from '@remotion/google-fonts/Caveat';
 
 /**
@@ -8,8 +8,8 @@ import {loadFont as loadCaveat} from '@remotion/google-fonts/Caveat';
  *
  * Кастомные (НЕ гугл) шрифты — класть .ttf в public/fonts/ и грузить через @remotion/fonts.
  */
-const {fontFamily: LORA} = loadLora();     // чистый serif для титров/названий
-const {fontFamily: CAVEAT} = loadCaveat(); // рукописный бренд-акцент
+const {fontFamily: GARAMOND} = loadGaramond();  // тёплый литературный serif (liner-note à la Moby)
+const {fontFamily: CAVEAT} = loadCaveat();       // рукописный бренд-акцент
 
-export const TITLE_FONT = `${LORA}, Georgia, serif`;
+export const TITLE_FONT = `${GARAMOND}, Georgia, serif`;
 export const HAND_FONT = `${CAVEAT}, cursive`;

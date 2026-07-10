@@ -74,9 +74,9 @@ export const MobyTitle: React.FC<OverlayProps> = ({
           style={{
             fontSize: brandSize,
             lineHeight: 1.0,
-            fontWeight: 500,
+            fontWeight: 600,
             color: ink,
-            letterSpacing: '0.01em',
+            letterSpacing: '-0.005em',
           }}
         >
           yaromat
