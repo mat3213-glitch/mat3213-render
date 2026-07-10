@@ -21,11 +21,15 @@ from pathlib import Path
 TOL_MS = 50
 
 
-def compute_bpm(audio_path: str) -> float:
+def compute_beats(audio_path: str):
+    """→ (bpm, beat_times[]). Берём РЕАЛЬНЫЕ тайминги битов librosa (с фазой интро),
+    не идеальную сетку от t=0 — иначе снап систематически мажет на фазовый сдвиг."""
     import librosa
     y, sr = librosa.load(audio_path, sr=22050, mono=True)
-    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
-    return float(tempo if not hasattr(tempo, "__len__") else tempo[0])
+    tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+    beat_times = librosa.frames_to_time(beat_frames, sr=sr)
+    bpm = float(tempo if not hasattr(tempo, "__len__") else tempo[0])
+    return bpm, [float(t) for t in beat_times]
 
 
 def transcribe_words(audio_path: str) -> tuple[str, list[dict]]:
@@ -58,15 +62,21 @@ def transcribe_words(audio_path: str) -> tuple[str, list[dict]]:
     return lang, words
 
 
-def snap_to_beats(words: list[dict], bpm: float, tol_ms: int) -> tuple[list[dict], int]:
-    period = 60.0 / bpm
+def snap_to_beats(words: list[dict], beat_times: list[float], tol_ms: int) -> tuple[list[dict], int]:
+    """Снап на БЛИЖАЙШИЙ реальный бит-тайминг (bisect), а не на сетку от нуля."""
+    import bisect
     tol = tol_ms / 1000.0
     locked = 0
+    if not beat_times:
+        for w in words:
+            w["beat_idx"], w["beat_offset"], w["beat_locked"] = -1, None, False
+        return words, 0
     for w in words:
-        beat_idx = round(w["start"] / period)
-        beat_t = beat_idx * period
-        off = w["start"] - beat_t
-        w["beat_idx"] = int(beat_idx)
+        i = bisect.bisect_left(beat_times, w["start"])
+        cands = [j for j in (i - 1, i) if 0 <= j < len(beat_times)]
+        nearest = min(cands, key=lambda j: abs(beat_times[j] - w["start"]))
+        off = w["start"] - beat_times[nearest]
+        w["beat_idx"] = int(nearest)
         w["beat_offset"] = round(off, 3)
         w["beat_locked"] = abs(off) <= tol
         if w["beat_locked"]:
@@ -85,7 +95,9 @@ def main() -> int:
     out = {"lang": None, "bpm": None, "tol_ms": args.tol_ms, "n_words": 0,
            "n_beat_locked": 0, "words": [], "reason": None}
     try:
-        bpm = args.bpm or compute_bpm(args.audio)
+        bpm, beat_times = compute_beats(args.audio)
+        if args.bpm:
+            bpm = args.bpm
         out["bpm"] = round(bpm, 1)
         lang, words = transcribe_words(args.audio)
         out["lang"] = lang
@@ -93,10 +105,10 @@ def main() -> int:
             out["reason"] = "нет вокала/слов (инструментал?) — fall back на energy"
             print(f"[vocal_sync] {out['reason']}")
         else:
-            words, locked = snap_to_beats(words, bpm, args.tol_ms)
+            words, locked = snap_to_beats(words, beat_times, args.tol_ms)
             out.update(n_words=len(words), n_beat_locked=locked, words=words)
             print(f"[vocal_sync] lang={lang} bpm={bpm:.1f} слов={len(words)} "
-                  f"на-бите={locked} (±{args.tol_ms}мс)")
+                  f"на-бите={locked}/{len(words)} (±{args.tol_ms}мс)")
     except Exception as e:
         out["reason"] = f"whisperx упал: {e} — fall back на energy (не блокируем пайплайн)"
         print(f"[vocal_sync] {out['reason']}", file=sys.stderr)
