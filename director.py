@@ -394,6 +394,46 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
     }
 
 
+def load_vocal_onsets(path: str) -> list[float]:
+    """beat_locked вокал-онсеты (абс. время трека) из vocal_markers.json (whisperx, L1)."""
+    d = json.loads(Path(path).read_text(encoding="utf-8"))
+    return sorted(w["start"] for w in d.get("words", [])
+                  if w.get("beat_locked") and w.get("start") is not None)
+
+
+def snap_cuts_to_vocals(shots: list[dict], onsets: list[float], total_dur: float,
+                        window: float = 0.2) -> int:
+    """L1-коррекция: смещает t_start шотов (кроме первого) к ближайшему beat_locked
+    вокал-онсету в пределах window → рез ложится на СПЕТОЕ слово (вокал+бит совпали).
+    Сохраняет монотонность стыков, пересчитывает t_dur под новые старты. energy остаётся
+    каркасом — двигаем только там, где рядом реальное слово (иначе кадр не трогаем)."""
+    import bisect
+    if not onsets or len(shots) < 2:
+        return 0
+    starts = [float(sh["t_start"]) for sh in shots]
+    snapped = 0
+    for i in range(1, len(shots)):
+        cur = starts[i]
+        j = bisect.bisect_left(onsets, cur)
+        cands = [k for k in (j - 1, j) if 0 <= k < len(onsets)]
+        if not cands:
+            continue
+        cand = min((onsets[k] for k in cands), key=lambda t: abs(t - cur))
+        if abs(cand - cur) > window or abs(cand - cur) < 0.001:
+            continue
+        # строгая монотонность: рез должен остаться между соседними стыками
+        if cand <= starts[i - 1] + 0.05 or (i + 1 < len(shots) and cand >= starts[i + 1] - 0.05):
+            continue
+        starts[i] = round(cand, 2)
+        shots[i]["vocal_snap"] = {"from": round(cur, 2), "to": starts[i]}
+        snapped += 1
+    for i in range(len(shots)):
+        end = starts[i + 1] if i + 1 < len(shots) else total_dur
+        shots[i]["t_start"] = round(starts[i], 2)
+        shots[i]["t_dur"] = round(max(0.1, end - starts[i]), 2)
+    return snapped
+
+
 def catalog_summary() -> str:
     items = asset_catalog.load()
     by: dict = {}
@@ -424,6 +464,8 @@ def main():
     ap.add_argument("--visualizer", action="store_true",
                     help="base из каталога (vinil/soundwave), не внешний футаж — рил-визуалайзер")
     ap.add_argument("--references", help="путь к reference_recipes.json (стадия 2, опционально)")
+    ap.add_argument("--vocal-markers", dest="vocal_markers",
+                    help="vocal_markers.json от whisperx (L1): резы к beat_locked словам, опц.")
     ap.add_argument("-o", "--out", help="куда писать storyboard.json (default: рядом с treatment)")
     ap.add_argument("--print", action="store_true", dest="to_stdout")
     a = ap.parse_args()
@@ -457,6 +499,14 @@ def main():
         references = json.loads(Path(a.references).read_text(encoding="utf-8"))
     shots = generate_shots(treatment, bpm, segs, cat, a.visualizer, references)
     storyboard = assemble(treatment, bpm, segs, shots, a.seed, a.orientation, a.visualizer)
+    if a.vocal_markers:  # L1: подвинуть резы к спетым словам (не-блокир.: нет файла → no-op)
+        try:
+            onsets = load_vocal_onsets(a.vocal_markers)
+            n = snap_cuts_to_vocals(storyboard["shots"], onsets, storyboard["duration"])
+            print(f"[director] вокал-снап: {n}/{len(storyboard['shots'])} резов → beat_locked слова "
+                  f"({len(onsets)} онсетов)", file=sys.stderr)
+        except Exception as e:
+            print(f"[director] вокал-снап пропущен ({e}) — energy-каркас как есть", file=sys.stderr)
     storyboard["format"] = "vertical" if a.orientation == "vertical" else (a.orientation or "landscape")
     storyboard["visualizer"] = a.visualizer
     if a.visualizer:
