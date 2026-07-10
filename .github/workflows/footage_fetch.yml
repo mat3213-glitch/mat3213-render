@@ -1,0 +1,56 @@
+name: footage-fetch
+
+# Ф4 (L0): дренаж внешних ре-пинов (pending_external.json) в каталог футажа yt-dlp
+# на US-раннере (бук с RU-IP не может). → assets/footage_catalog + catalog.jsonl. Ручной запуск.
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "макс. записей за прогон"
+        default: "10"
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+          # рецепт reference_yt_dlp_ci: nightly yt-dlp + ejs (n-challenge) + deno выше
+          pip install -q -U --pre "yt-dlp[default]"
+          pip install -q -U yt-dlp-ejs
+
+      - name: Configure rclone (ЯД / ydrive)
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [ydrive]
+          type = yandex
+          client_id = ${YDRIVE_CLIENT_ID}
+          client_secret = ${YDRIVE_CLIENT_SECRET}
+          token = ${YDRIVE_TOKEN}
+          EOF
+
+      - name: Restore YouTube cookies
+        env:
+          YOUTUBE_COOKIES: ${{ secrets.YOUTUBE_COOKIES }}
+        run: printf '%s' "$YOUTUBE_COOKIES" > youtube_cookies.txt
+
+      - name: Drain external footage
+        env:
+          LIMIT: ${{ inputs.limit }}
+        run: python footage_fetch.py --cookies "$PWD/youtube_cookies.txt" --limit "${LIMIT}"
