@@ -1,0 +1,43 @@
+name: supervision-test
+
+# Смоук-тест roboflow/supervision на наших vision-задачах (детект лиц крупным
+# планом + person/object-теги пула). Ручной запуск, ноль расписания. Кладёт
+# аннотированные кадры + вердикты в ЯД cloud_io/preview/2026-07-10_supervision_creative/.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libgl1 libglib2.0-0
+          pip install --quiet supervision ultralytics numpy
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone (ЯД / ydrive)
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [ydrive]
+          type = yandex
+          client_id = ${YDRIVE_CLIENT_ID}
+          client_secret = ${YDRIVE_CLIENT_SECRET}
+          token = ${YDRIVE_TOKEN}
+          EOF
+
+      - name: Run supervision smoke-test
+        run: python supervision_test.py
