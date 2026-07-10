@@ -1,0 +1,60 @@
+name: whisperx-vocal-sync
+
+# Ф1b: тест вокал-слоя тайминга (whisperx) на реальном треке. Пословные таймкоды →
+# снап на бит-сетку. Результат vocal_markers.json → ЯД сессионная папка. Ручной запуск.
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "путь к треку на ЯД (rel от 'Content factory/')"
+        default: "music post/моя музыка/старая/yaromat - hurts in my heart/yaromat - hurts in my heart.flac"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg libsndfile1
+          pip install --quiet whisperx librosa
+          curl -fsSL https://rclone.org/install.sh | sudo bash
+
+      - name: Configure rclone (ЯД / ydrive)
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf <<EOF
+          [ydrive]
+          type = yandex
+          client_id = ${YDRIVE_CLIENT_ID}
+          client_secret = ${YDRIVE_CLIENT_SECRET}
+          token = ${YDRIVE_TOKEN}
+          EOF
+
+      - name: Pull track + run vocal_sync
+        working-directory: screenplay_pipeline
+        env:
+          TRACK: ${{ inputs.track }}   # через env, не inline в run: (анти shell-injection, урок B-5)
+          FALLBACK: "music post/моя музыка/старая/yaromat - hurts in my heart/yaromat - hurts in my heart.flac"
+        run: |
+          rclone copyto "ydrive:Content factory/${TRACK}" ./track_audio 2>/dev/null || \
+            rclone copyto "ydrive:Content factory/${FALLBACK}" ./track_audio
+          python vocal_sync.py --audio ./track_audio --out vocal_markers.json
+          echo "=== markers head ==="; head -c 1200 vocal_markers.json
+
+      - name: Upload markers to ЯД
+        working-directory: screenplay_pipeline
+        run: |
+          rclone copyto vocal_markers.json \
+            "ydrive:Content factory/cloud_io/preview/2026-07-10_supervision_creative/03_notes/vocal_markers_sample.json"
