@@ -138,13 +138,17 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
     elif _is_still(bfile):
         # base из AI-пула бывает СТИЛЛОМ (PNG под именем scene_N.mp4). -stream_loop дал бы
         # мёртвый кадр → Ken Burns медленный наезд ([[feedback_motion_must_be_photographic]]).
-        # Пре-скейл ×2 от таргета = разрешение-запас zoompan → без джиттера. Слоу к стиллу неприм.
+        # Каноничный рецепт одиночного стилла: ОДИН вход + zoompan d=<кадры> (d=1 НЕ аккумулирует
+        # зум без потокового входа → заморозка; проверено кадр-diff 0.06→21.9). Пре-скейл ×2 =
+        # разрешение-запас zoompan → без джиттера. Слоу (speed) к стиллу неприменим.
         m = re.search(r"crop=(\d+):(\d+)", cover)
         W, H = (int(m.group(1)), int(m.group(2))) if m else (1080, 1920)
+        frames = max(2, int(round(dur * 25)))
+        inc = 0.12 / frames  # ~12% наезда за длительность шота
         zoom = (f"scale={W*2}:{H*2}:force_original_aspect_ratio=increase,crop={W*2}:{H*2},"
-                f"zoompan=z='min(zoom+0.0009,1.10)':d=1:"
+                f"zoompan=z='min(zoom+{inc:.6f},1.12)':d={frames}:"
                 f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps=25,setsar=1")
-        ok = ff(["-loop", "1", "-i", str(bfile), "-vf", zoom, *common])
+        ok = ff(["-i", str(bfile), "-vf", zoom, *common])
     else:
         ok = ff(["-stream_loop", "-1", "-i", str(bfile),
                  "-vf", f"{speed_vf}{cover},fps=25,setsar=1", *common])
