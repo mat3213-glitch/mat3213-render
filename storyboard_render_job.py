@@ -17,6 +17,7 @@ Environment: JOB_ID
 """
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -65,6 +66,15 @@ def ff(args: list[str]) -> bool:
     if r.returncode != 0:
         print(f"  ffmpeg err: {r.stderr[-300:]}", flush=True)
     return r.returncode == 0
+
+
+def _is_still(path: Path) -> bool:
+    """AI-пул иногда отдаёт стилл (PNG) под именем scene_N.mp4 — ffprobe по кодеку потока,
+    не по расширению. Стилл рендерится через Ken Burns (см. render_shot), не -stream_loop."""
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                        "-show_entries", "stream=codec_name", "-of", "default=nw=1:nk=1",
+                        str(path)], capture_output=True, text=True)
+    return (r.stdout or "").strip() in {"png", "mjpeg", "bmp", "tiff", "webp", "gif"}
 
 
 def pull_clip(path: str) -> Path | None:
@@ -125,6 +135,16 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
         ok = ff(["-stream_loop", "-1", "-i", str(fill),
                  "-stream_loop", "-1", "-i", str(bfile),
                  "-filter_complex", fc, "-map", "[v]", *common])
+    elif _is_still(bfile):
+        # base из AI-пула бывает СТИЛЛОМ (PNG под именем scene_N.mp4). -stream_loop дал бы
+        # мёртвый кадр → Ken Burns медленный наезд ([[feedback_motion_must_be_photographic]]).
+        # Пре-скейл ×2 от таргета = разрешение-запас zoompan → без джиттера. Слоу к стиллу неприм.
+        m = re.search(r"crop=(\d+):(\d+)", cover)
+        W, H = (int(m.group(1)), int(m.group(2))) if m else (1080, 1920)
+        zoom = (f"scale={W*2}:{H*2}:force_original_aspect_ratio=increase,crop={W*2}:{H*2},"
+                f"zoompan=z='min(zoom+0.0009,1.10)':d=1:"
+                f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps=25,setsar=1")
+        ok = ff(["-loop", "1", "-i", str(bfile), "-vf", zoom, *common])
     else:
         ok = ff(["-stream_loop", "-1", "-i", str(bfile),
                  "-vf", f"{speed_vf}{cover},fps=25,setsar=1", *common])
