@@ -22,6 +22,10 @@ on:
         description: 'true = сортировать по просмотрам (топ вирусные клипы)'
         required: false
         default: ''
+      skip_search:
+        description: 'true = пропустить поиск, деконструировать УЖЕ лежащий references.json (курированные владельцем рефы)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -83,6 +87,7 @@ jobs:
           rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/brief_full.yaml" brief_full.yaml || echo 'no brief (queries mode)'
 
       - name: Stage 1 — reference_search
+        if: ${{ inputs.skip_search != 'true' }}
         env:
           INPUT_QUERIES: ${{ inputs.queries }}
           JOB_ID: ${{ inputs.job_id }}
