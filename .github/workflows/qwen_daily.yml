@@ -19,7 +19,7 @@ on:
         description: 'Кастомные видео-промпты (|||-разделитель), для прицельной генерации'
         default: ''
   schedule:
-    - cron: '0 2 * * *'   # ежедневно 02:00 UTC (05:00 МСК); GH может задерживать (проба IP пройдена 16.06)
+    - cron: '43 */5 * * *'   # каждые 5ч (~4-5/день под аккаунт-квоту Qwen); целевой заказ-пул 2026-07-11
 
 jobs:
   gen:
@@ -56,16 +56,9 @@ jobs:
           pip install -q requests playwright
           python -m playwright install --with-deps chromium
 
-      - name: Generate (Qwen)
-        working-directory: qwen
+      - name: Generate (pool_daily — Qwen, перенацелен 2026-07-11)
         env:
-          # при schedule контекст inputs пуст → fallback на боевой объём (1 фото + 1 видео)
-          N_IMG:               ${{ inputs.n_img || '1' }}
-          N_VID:               ${{ inputs.n_vid || '1' }}
-          RATIO:               ${{ inputs.ratio || '16:9' }}
-          VID_PROMPTS_CUSTOM:  ${{ inputs.vid_prompts_custom || '' }}
-          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
-          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
-          TG_THREAD_ID:        '2182'
-        run: python -u qwen_daily.py
+          ENGINE: qwen
+          GATE: "ydrive:Content factory/cloud_io/pool_gate/adult_dnb_2026-07-11"
+          LIMIT: '1'
+        run: python -u pool_daily.py

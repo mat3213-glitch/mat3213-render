@@ -39,11 +39,9 @@ jobs:
         run: |
           pip install -q requests playwright
           python -m playwright install --with-deps chromium
-      - name: Generate (VeoFree daily)
+      - name: Generate (pool_daily — целевой заказ-пул, перенацелен 2026-07-11)
         env:
-          N_VID:               ${{ inputs.n_vid || '1' }}
-          CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
-          TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT_ID:          ${{ secrets.SCOUT_CHAT_ID }}
-          TG_THREAD_ID:        '2182'
-        run: python -u veofree_daily.py
+          ENGINE: veofree
+          GATE: "ydrive:Content factory/cloud_io/pool_gate/adult_dnb_2026-07-11"
+          LIMIT: '1'
+        run: python -u pool_daily.py

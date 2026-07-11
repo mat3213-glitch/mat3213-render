@@ -86,16 +86,16 @@ with sync_playwright() as pw:
         dismiss(pg); kill_overlays(pg)                # снести попапы + рекламный сплэш перед кликом
         try: btn.scroll_into_view_if_needed(timeout=4000)
         except: pass
-        kill_overlays(pg)
-        # КЛИК ЧЕРЕЗ JS — element.click() игнорирует перехват pointer-events переинжекчёным сплэшем
-        # (Playwright-клик и force-клик не пробивали, лог 2026-07-11). Это надёжный обход.
-        clicked=False
-        try:
-            clicked=pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b){b.click();return true;} return false; }")
-        except Exception: pass
-        if not clicked:
-            try: btn.click(timeout=8000, force=True)   # фолбэк
-            except: pass
+        # КЛИК ЧЕРЕЗ JS в ЦИКЛЕ — element.click() игнорирует перехват pointer-events переинжекчёным
+        # сплэшем; цикл лечит флак по времени рекламы (сплэш выпадает не сразу). Выходим, как только
+        # генерация стартовала (появилось video/сеть-mp4). Лог фейлов 2026-07-11.
+        for _ in range(5):
+            kill_overlays(pg)
+            try: pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b) b.click(); }")
+            except Exception: pass
+            pg.wait_for_timeout(2500)
+            v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
+            if seen or (src and src.startswith("http")): break
         for _ in range(40):                            # до 200с (генерация бывает медленной)
             pg.wait_for_timeout(5000)
             if paywall(pg): status="paywall"; break
