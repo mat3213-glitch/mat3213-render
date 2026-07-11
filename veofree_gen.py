@@ -46,16 +46,22 @@ def dismiss(pg):
         except: pass
 
 def kill_overlays(pg):
-    # clickio-сплэш (__lxG__splash) + google-ads iframe перехватывают pointer events → клик
-    # "Generate" не проходит (лог фейла 2026-07-11). Сносим оверлеи из DOM напрямую.
+    # clickio-сплэш (__lxG__splash) + google-ads iframe ПЕРЕИНЖЕКТЯТСЯ и перехватывают pointer
+    # events → клик "Generate" не проходит (лог фейла 2026-07-11, и после однократного сноса тоже).
+    # Снос + ПОСТОЯННЫЙ стиль (глушит будущий переинжект). Настоящий клик — через JS (см. ниже).
     try:
         pg.evaluate("""() => {
             const sels = ['.__lxG__splash','div[id^="lx_"]','[id^="google_ads_iframe"]',
                           'iframe[title*="Advertisement"]','iframe[aria-label*="Advertisement"]',
                           '.adsbygoogle','[class*="__lxG__"]','[id^="clickio"]'];
             sels.forEach(s => document.querySelectorAll(s).forEach(e => e.remove()));
+            if (!document.getElementById('__killads')) {
+                const st = document.createElement('style'); st.id = '__killads';
+                st.textContent = '[class*="__lxG__"],div[id^="lx_"],[id^="google_ads_iframe"],iframe[title*="Advertisement"],iframe[aria-label*="Advertisement"],.adsbygoogle{display:none!important;pointer-events:none!important;visibility:hidden!important}';
+                document.head.appendChild(st);
+            }
         }""")
-        pg.wait_for_timeout(300)
+        pg.wait_for_timeout(200)
     except Exception:
         pass
 
@@ -80,10 +86,15 @@ with sync_playwright() as pw:
         dismiss(pg); kill_overlays(pg)                # снести попапы + рекламный сплэш перед кликом
         try: btn.scroll_into_view_if_needed(timeout=4000)
         except: pass
-        kill_overlays(pg)                             # ещё раз — сплэш мог всплыть при скролле
-        try: btn.click(timeout=8000)
-        except Exception:
-            try: btn.click(timeout=8000, force=True)   # сквозь возможный оверлей
+        kill_overlays(pg)
+        # КЛИК ЧЕРЕЗ JS — element.click() игнорирует перехват pointer-events переинжекчёным сплэшем
+        # (Playwright-клик и force-клик не пробивали, лог 2026-07-11). Это надёжный обход.
+        clicked=False
+        try:
+            clicked=pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b){b.click();return true;} return false; }")
+        except Exception: pass
+        if not clicked:
+            try: btn.click(timeout=8000, force=True)   # фолбэк
             except: pass
         for _ in range(40):                            # до 200с (генерация бывает медленной)
             pg.wait_for_timeout(5000)
