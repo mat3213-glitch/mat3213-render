@@ -4,44 +4,46 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Тёплый приглушённый тон, глубина и атмосфера, выглядит дорого."
+      "reason": "Muted warmth, cinematic depth, expensive feel"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 7,
-      "reason": "Прохладный, задумчивый, сдержанный кинематографичный каст."
+      "score": 8,
+      "reason": "Cool but restrained, good tonal contrast"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
-      "score": 6,
-      "reason": "Хороший, но мало отличается от первого кандидата."
+      "score": 7,
+      "reason": "Solid warm variant, slight shift from #1"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст ощущается дешёвым фильтром."
+      "score": 3,
+      "reason": "Green cast too visible, cheap filter feel"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Слишком нейтрально, нет глубины и характера."
+      "keep": true,
+      "score": 7,
+      "reason": "Balanced, clean, safe for rotation"
     },
     {
       "name": "scout_warm_mid_soft",
-      "keep": false,
-      "score": 3,
-      "reason": "Зелёно-жёлтый каст — дешёвый фильтр, не бренд."
+      "keep": true,
+      "score": 7,
+      "reason": "Warmer, slightly brighter, nice alternative"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
     "scout_cool_mid_muted",
-    "scout_warm_night_muted_2"
+    "scout_warm_night_muted_2",
+    "scout_neutral_night_soft",
+    "scout_warm_mid_soft"
   ],
-  "_generated": "2026-07-10",
+  "_generated": "2026-07-11",
   "_judge": "mimo-auto"
 }
