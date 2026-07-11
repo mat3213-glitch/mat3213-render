@@ -45,6 +45,20 @@ def dismiss(pg):
             if el and el.is_visible(): el.click(timeout=2000); pg.wait_for_timeout(400)
         except: pass
 
+def kill_overlays(pg):
+    # clickio-сплэш (__lxG__splash) + google-ads iframe перехватывают pointer events → клик
+    # "Generate" не проходит (лог фейла 2026-07-11). Сносим оверлеи из DOM напрямую.
+    try:
+        pg.evaluate("""() => {
+            const sels = ['.__lxG__splash','div[id^="lx_"]','[id^="google_ads_iframe"]',
+                          'iframe[title*="Advertisement"]','iframe[aria-label*="Advertisement"]',
+                          '.adsbygoogle','[class*="__lxG__"]','[id^="clickio"]'];
+            sels.forEach(s => document.querySelectorAll(s).forEach(e => e.remove()));
+        }""")
+        pg.wait_for_timeout(300)
+    except Exception:
+        pass
+
 log(f"=== VEOFREE GEN === OUT={OUT}\nPROMPT: {PROMPT}")
 try: log(f"runner IP: {requests.get('https://api.ipify.org',timeout=15).text}")
 except: pass
@@ -63,9 +77,10 @@ with sync_playwright() as pw:
     btn=pg.query_selector("#generate_it")
     if ta and btn:
         ta.click(); ta.fill(PROMPT)
-        dismiss(pg)                                   # убрать рекламу/попапы перед кликом
+        dismiss(pg); kill_overlays(pg)                # снести попапы + рекламный сплэш перед кликом
         try: btn.scroll_into_view_if_needed(timeout=4000)
         except: pass
+        kill_overlays(pg)                             # ещё раз — сплэш мог всплыть при скролле
         try: btn.click(timeout=8000)
         except Exception:
             try: btn.click(timeout=8000, force=True)   # сквозь возможный оверлей
