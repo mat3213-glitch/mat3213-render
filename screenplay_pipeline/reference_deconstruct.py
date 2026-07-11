@@ -81,16 +81,20 @@ def download_video(video: dict, tmpdir: str, cookies: str | None = None) -> str 
     # Убран. -w/--no-overwrites — реальный аналог (не перезаписывать), не нужен на tmpdir.
     # Формат/cookies — рецепт [[reference_yt_dlp_ci]]: единый прогрессивный файл (без ffmpeg-мержа
     # видео+аудио отдельно, для анализа кадров хватает), cookies обходят бот-детект US-датацентра.
+    # Качество СРЕЗАНО до ≤480p — для контакт-листа 16 кадров лучшее качество избыточно, а на
+    # длинных клипах (8 мин) полный битрейт + VEVO-троттлинг рвал таймаут. --write-comments УБРАН:
+    # на клипах с млн+ просмотров краул комментов тянется минутами и был реальной причиной таймаута
+    # 300с (get_comments всё равно брал top-10 — низкий сигнал для MV, спам-фаны). [[reference_yt_dlp_ci]]
     cmd = [
         "yt-dlp", "--no-warnings",
-        "-f", "b[ext=mp4]/bv*[ext=mp4]+ba[ext=m4a]/b",
-        "--write-comments", "--write-info-json",
+        "-f", "b[ext=mp4][height<=480]/bv*[height<=480][ext=mp4]+ba[ext=m4a]/b[height<=480]/b",
+        "--write-info-json",
         "-o", os.path.join(tmpdir, f"{vid}.%(ext)s"),
     ]
     if cookies:
         cmd += ["--cookies", cookies]
     cmd.append(url)
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     for f in os.listdir(tmpdir):
         if f.startswith(vid) and f.endswith((".mp4", ".webm", ".mkv", ".mov")):
             return os.path.join(tmpdir, f)
