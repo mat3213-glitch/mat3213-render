@@ -3,45 +3,44 @@
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 7,
-      "reason": "Тёплый приглушённый тон, кинематографичная глубина"
+      "score": 8,
+      "reason": "Мягкое тепло, глубокие тени, дорого и цельно"
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": false,
-      "score": 5,
-      "reason": "Слишком холодно, нет атмосферного тепла"
+      "keep": true,
+      "score": 7,
+      "reason": "Холодновато, но атмосферно, подойдёт для треков"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 7,
-      "reason": "Хороший баланс тёплых тонов, цельно"
+      "reason": "Тёплый, спокойный, хорошая глубина без избытка"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 3,
-      "reason": "Сильный зелёный каст, дешёвый фильтр"
+      "score": 5,
+      "reason": "Зелёный каст дешевлеет, напоминает фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Нейтрально-плоско, нет эмоциональной глубины"
+      "keep": true,
+      "score": 6,
+      "reason": "Нейтрально, чисто, но маловыразительно"
     },
     {
       "name": "scout_warm_mid_soft",
       "keep": true,
       "score": 8,
-      "reason": "Лучший баланс, тёплый но сдержанно, дорого"
+      "reason": "Тёплый, выдержанный, кинематографичный вайб"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
-    "scout_warm_night_muted_2",
     "scout_warm_mid_soft"
   ],
-  "_generated": "2026-07-12",
+  "_generated": "2026-07-13",
   "_judge": "mimo-auto"
 }
