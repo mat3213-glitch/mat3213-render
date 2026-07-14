@@ -4,43 +4,45 @@
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Мягкое тепло, глубокие тени, дорого и цельно"
+      "reason": "Тёплый приглушённый, дорогой кинематографичный тон, глубина без каста"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 7,
-      "reason": "Холодновато, но атмосферно, подойдёт для треков"
+      "reason": "Холодный сдержанный, чистый, хорош для контрастных сцен"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 7,
-      "reason": "Тёплый, спокойный, хорошая глубина без избытка"
+      "reason": "Вариация первого, чуть другой баланс — дополняет палитру"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 5,
-      "reason": "Зелёный каст дешевлеет, напоминает фильтр"
+      "score": 4,
+      "reason": "Зелёный каст слишком резкий, ощущается как дешёвый фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 6,
-      "reason": "Нейтрально, чисто, но маловыразительно"
+      "score": 7,
+      "reason": "Нейтральный прохладный, гибкий базовый грейд для альбома"
     },
     {
       "name": "scout_warm_mid_soft",
-      "keep": true,
-      "score": 8,
-      "reason": "Тёплый, выдержанный, кинематографичный вайб"
+      "keep": false,
+      "score": 5,
+      "reason": "Зеленоватый тон портит глубину, выглядит неубедительно"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
-    "scout_warm_mid_soft"
+    "scout_cool_mid_muted",
+    "scout_warm_night_muted_2",
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-07-13",
+  "_generated": "2026-07-14",
   "_judge": "mimo-auto"
 }
