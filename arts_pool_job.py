@@ -36,7 +36,8 @@ from looks import apply_look, negative_for   # noqa: E402
 
 YD = "ydrive:Content factory"
 LOOK = os.environ.get("LOOK") or "cold_noir_portishead"
-CF_URL = os.environ.get("IMG_WORKER_URL", "https://yaromat-img.mat3213.workers.dev").rstrip("/")
+# ГРАБЛЯ: .get(k, default) при ПУСТОЙ переменной вернёт "", не дефолт. Только `or`.
+CF_URL = (os.environ.get("IMG_WORKER_URL") or "https://yaromat-img.mat3213.workers.dev").rstrip("/")
 CF_SECRET = os.environ.get("IMG_WORKER_SECRET", "")
 CF_MODEL = "@cf/black-forest-labs/flux-1-schnell"
 STEPS = int(os.environ.get("STEPS") or 4)
@@ -92,6 +93,8 @@ def main():
     if not job:
         sys.exit("JOB_ID not set")
     provs = [p.strip() for p in (os.environ.get("PROVIDERS") or "cf,poll").split(",") if p.strip()]
+    if "cf" in provs and not CF_SECRET:
+        sys.exit("IMG_WORKER_SECRET пуст — CF не сгенерит ни одного арта. Стоп (а не 77 тихих провалов).")
     only = (os.environ.get("ONLY_SET") or "").strip()
     base = f"cloud_io/render_jobs/{job}"
     WORK.mkdir(parents=True, exist_ok=True)

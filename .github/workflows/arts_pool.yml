@@ -67,7 +67,7 @@ jobs:
           NEURON_BUDGET:     ${{ inputs.neuron_budget }}
           PROVIDERS:         ${{ inputs.providers }}
           ONLY_SET:          ${{ inputs.only_set }}
-          IMG_WORKER_URL:    ${{ secrets.IMG_WORKER_URL }}
+          IMG_WORKER_URL:    https://yaromat-img.mat3213.workers.dev
           IMG_WORKER_SECRET: ${{ secrets.IMG_WORKER_SECRET }}
         run: python -u arts_pool_job.py
 
