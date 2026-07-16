@@ -51,6 +51,16 @@ on:
         required: false
         default: 'cut'
         type: string
+      self_blend:
+        description: 'Кадр на себя с зеркалом: off|screen|average|lighten'
+        required: false
+        default: 'screen'
+        type: string
+      self_op:
+        description: 'Сила зеркальной копии (0.5)'
+        required: false
+        default: '0.5'
+        type: string
 
 jobs:
   assemble:
@@ -89,4 +99,6 @@ jobs:
           FLASH_WIN:  ${{ inputs.flash_win }}
           NOISE_GRAY: ${{ inputs.noise_gray }}
           SEAM:       ${{ inputs.seam }}
+          SELF_BLEND: ${{ inputs.self_blend }}
+          SELF_OP:    ${{ inputs.self_op }}
         run: python -u arts_assemble_job.py
