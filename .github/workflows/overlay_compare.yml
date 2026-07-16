@@ -1,0 +1,62 @@
+name: Overlay Compare
+
+# Сравнение оверлеев доски на живом кадре лупа: 3 оверлея по сегментам (стыки 9.47/18.94)
+# + вспышка-переход на первом стыке, каждый с подписью. Судить оверлей по контакт-листу нельзя.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — папка render_jobs/<job_id>/ с track.mp3 на ЯД'
+        required: true
+        default: 'qwen6_ovl_compare'
+        type: string
+      noise_sigma:
+        description: 'Синтетический шум поверх (0 = выкл, чтобы судить оверлей начисто)'
+        required: false
+        default: '0'
+        type: string
+
+jobs:
+  overlay-compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone fonts-dejavu-core
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run overlay compare
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          NOISE_SIGMA: ${{ inputs.noise_sigma }}
+        run: python -u overlay_compare_job.py
+
+      - name: Write error status on failure
+        if: failure()
+        env:
+          INPUT_JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$INPUT_JOB_ID/status.txt" \
+            <<< "error: workflow failed" || true
