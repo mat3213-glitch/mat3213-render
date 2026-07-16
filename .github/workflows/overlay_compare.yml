@@ -16,6 +16,16 @@ on:
         required: false
         default: '0'
         type: string
+      zoom_amp:
+        description: 'Зум-дыхание под бит от басовой огибающей (дефолт 0.02)'
+        required: false
+        default: '0.02'
+        type: string
+      ar_amp:
+        description: 'Пульс яркости под бит (дефолт 0.10)'
+        required: false
+        default: '0.10'
+        type: string
 
 jobs:
   overlay-compare:
@@ -36,6 +46,9 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing ffmpeg rclone fonts-dejavu-core
 
+      - name: Install Python deps
+        run: pip install librosa opencv-python-headless numpy scipy soundfile
+
       - name: Configure rclone ydrive
         env:
           YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
@@ -51,6 +64,8 @@ jobs:
         env:
           JOB_ID: ${{ inputs.job_id }}
           NOISE_SIGMA: ${{ inputs.noise_sigma }}
+          ZOOM_AMP: ${{ inputs.zoom_amp }}
+          AR_AMP: ${{ inputs.ar_amp }}
         run: python -u overlay_compare_job.py
 
       - name: Write error status on failure

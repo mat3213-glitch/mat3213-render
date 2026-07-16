@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """
-overlay_compare_job.py — сравнительный прогон оверлеев на живом кадре лупа qwen_6.
+overlay_compare_job.py — сравнительный прогон оверлеев на живом кадре лупа qwen_6 + движение под бит.
 
 Зачем: контакт-листы врут. Оверлей судится только поверх РЕАЛЬНОГО кадра, в движении,
 с нашим грейдом. Клип делится на 3 части по стыкам лупа (9.47с / 18.94с) — на каждой свой
 оверлей с подписью, плюс вспышка-переход на ПЕРВОМ стыке.
 
+ДВИЖЕНИЕ ПОД БИТ (оба слоя, выбор yaromat): зум-дыхание камеры + пульс яркости, драйвер —
+сглаженная басовая огибающая трека (BPM 87.9, доля 0.683с). Жёсткой бит-сетки НЕТ намеренно:
+огибающая даёт органичное дыхание, сетка — механический строб.
+
 База = ground truth v9 (грейд принят yaromat), НО синтетический шум ВЫКЛЮЧЕН (NOISE_SIGMA=0
 по умолчанию): судим оверлей начисто, без второго слоя зерна.
 
-⚠️ ГРАБЛЯ: screen-бленд ТОЛЬКО в gbrp. На yuv420p блендятся плоскости цветности →
+⚠️ ГРАБЛЯ 1: screen-бленд ТОЛЬКО в gbrp. На yuv420p блендятся плоскости цветности →
    screen(0.5,0.5)=0.75 → U,V вверх → пурпур (замерено +68). См. память.
+⚠️ ГРАБЛЯ 2: бит-пасс ТОЛЬКО ПОСЛЕ сборки 29с. На 10с-юните огибающая всего трека сожмётся
+   в юнит и повторится трижды → реакция разъедется с музыкой.
 
+Ручки: ZOOM_AMP=0.02, AR_AMP=0.10, NOISE_SIGMA=0.
 Запуск: JOB_ID=qwen6_ovl_compare python3 overlay_compare_job.py
 """
 import os
@@ -19,6 +26,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+
+import cv2
+import librosa
+import numpy as np
+from scipy.signal import butter, filtfilt
 
 UNIT_LEN = 10.0697
 XFADE_DUR = 0.6
@@ -77,8 +89,77 @@ def main():
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def beat_envelopes(track, n_frames, tmp):
+    """Две огибающие трека, растянутые на n_frames СОБРАННОГО клипа (не юнита!)."""
+    wav = os.path.join(tmp, "seg.wav")
+    sh(["ffmpeg", "-y", "-ss", str(AUDIO_SS), "-t", str(OUT_DUR), "-i", track,
+        "-ac", "1", "-ar", "22050", wav], check=True)
+    y, sr = librosa.load(wav, sr=22050, mono=True)
+    hop = 512
+    b_coef, a_coef = butter(4, 150.0 / (sr / 2.0), btype="low")   # бас < 150 Гц
+    bass_rms = librosa.feature.rms(y=filtfilt(b_coef, a_coef, y), hop_length=hop)[0]
+    full_rms = librosa.feature.rms(y=y, hop_length=hop)[0]
+
+    def norm01(sig):
+        p5, p95 = np.percentile(sig, 5), np.percentile(sig, 95)
+        if p95 - p5 < 1e-9:
+            return np.full_like(sig, 0.5, dtype=np.float64)
+        return np.clip((sig - p5) / (p95 - p5), 0.0, 1.0)
+
+    win = max(1, int(0.175 * sr / hop))          # сглаживание = дыхание, не строб
+    kern = np.ones(win, dtype=np.float64) / win
+    envs = []
+    for rms in (bass_rms, full_rms):
+        e = np.convolve(norm01(rms), kern, mode="same")
+        envs.append(np.interp(np.linspace(0, 1, n_frames),
+                              np.linspace(0, 1, len(e)), e))
+    return envs
+
+
+def beat_pass(loop29, track, tmp, zoom_amp, ar_amp):
+    """Зум-дыхание + пульс яркости по СОБРАННЫМ 29с."""
+    cap = cv2.VideoCapture(loop29)
+    fps = cap.get(cv2.CAP_PROP_FPS) or FPS
+    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    if n <= 0:
+        cap.release()
+        raise RuntimeError("loop29 has no frames")
+    print(f"  beat: {w}x{h} @{fps}fps {n} frames | ZOOM_AMP={zoom_amp} AR_AMP={ar_amp}")
+    bass_env, full_env = beat_envelopes(track, n, tmp)
+
+    raw = os.path.join(tmp, "beat_raw.mp4")
+    writer = cv2.VideoWriter(raw, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
+    if not writer.isOpened():
+        cap.release()
+        raise RuntimeError("VideoWriter failed to open")
+    for i in range(n):
+        ok, frame = cap.read()
+        if not ok:
+            break
+        z = 1.0 + zoom_amp * float(bass_env[i])          # дыхание камеры на басу
+        if z > 1.0 + 1e-9:
+            nw, nh = int(round(w * z)), int(round(h * z))
+            big = cv2.resize(frame, (nw, nh), interpolation=cv2.INTER_LINEAR)
+            x0, y0 = (nw - w) // 2, (nh - h) // 2
+            frame = big[y0:y0 + h, x0:x0 + w]
+            if frame.shape[0] != h or frame.shape[1] != w:
+                frame = cv2.resize(frame, (w, h), interpolation=cv2.INTER_LINEAR)
+        f = frame.astype(np.float32)
+        c = 1.0 + ar_amp * 1.2 * (float(full_env[i]) - 0.5)   # пульс яркости
+        writer.write(np.clip((f - 128.0) * c + 128.0 * c, 0, 255).astype(np.uint8))
+        if i % 100 == 0:
+            print(f"    frame {i}/{n}")
+    cap.release()
+    writer.release()
+    return raw
+
+
 def _run(tmp, job_id):
     noise_sigma = int(float(os.environ.get("NOISE_SIGMA") or 0))
+    zoom_amp = float(os.environ.get("ZOOM_AMP") or 0.02)
+    ar_amp = float(os.environ.get("AR_AMP") or 0.10)
     base_remote = f"{YD}/cloud_io/render_jobs/{job_id}"
 
     print("Stage 0: fetch")
@@ -101,7 +182,24 @@ def _run(tmp, job_id):
         "-an", "-c:v", "libx264", "-crf", "16", "-preset", "veryfast",
         "-pix_fmt", "yuv420p", unit], check=True)
 
-    print("Stage 2: assemble 29s + grade + overlays + labels")
+    print("Stage 2: assemble 29s (xfade)")
+    loop29 = os.path.join(tmp, "loop29.mp4")
+    fc_asm = (
+        f"[0:v]split=3[s0][s1][s2];"
+        f"[s0]trim=0:{UNIT_LEN},setpts=PTS-STARTPTS[a];"
+        f"[s1]trim=0:{UNIT_LEN},setpts=PTS-STARTPTS[b];"
+        f"[s2]trim=0:{UNIT_LEN},setpts=PTS-STARTPTS[c];"
+        f"[a][b]xfade=transition=fade:duration={XFADE_DUR}:offset={SEAM1}[ab];"
+        f"[ab][c]xfade=transition=fade:duration={XFADE_DUR}:offset={SEAM2}[v]"
+    )
+    sh(["ffmpeg", "-y", "-i", unit, "-filter_complex", fc_asm, "-map", "[v]",
+        "-t", str(OUT_DUR), "-an", "-c:v", "libx264", "-crf", "16",
+        "-preset", "veryfast", "-pix_fmt", "yuv420p", loop29], check=True)
+
+    print("Stage 3: beat pass (зум-дыхание + пульс яркости от баса)")
+    beat_raw = beat_pass(loop29, track, tmp, zoom_amp, ar_amp)
+
+    print("Stage 4: grade + overlays + labels")
     out_local = os.path.join(tmp, "qwen_6_overlay_compare.mp4")
 
     grade = (
@@ -113,18 +211,10 @@ def _run(tmp, job_id):
     if noise_sigma > 0:
         grade += f",format=yuv420p,noise=c0s={noise_sigma}:c0f=t"
 
-    parts = [
-        f"[0:v]split=3[s0][s1][s2];",
-        f"[s0]trim=0:{UNIT_LEN},setpts=PTS-STARTPTS[a];",
-        f"[s1]trim=0:{UNIT_LEN},setpts=PTS-STARTPTS[b];",
-        f"[s2]trim=0:{UNIT_LEN},setpts=PTS-STARTPTS[c];",
-        f"[a][b]xfade=transition=fade:duration={XFADE_DUR}:offset={SEAM1}[ab];",
-        f"[ab][c]xfade=transition=fade:duration={XFADE_DUR}:offset={SEAM2}[loop];",
-        # ГРАБЛЯ: в gbrp ДО блендов
-        f"[loop]{grade},format=gbrp[base];",
-    ]
+    # ГРАБЛЯ: в gbrp ДО блендов
+    parts = [f"[0:v]{grade},format=gbrp[base];"]
 
-    cmd = ["ffmpeg", "-y", "-i", unit, "-ss", str(AUDIO_SS), "-i", track]
+    cmd = ["ffmpeg", "-y", "-i", beat_raw, "-ss", str(AUDIO_SS), "-i", track]
     cur = "base"
     for idx, (path, label, op, t0, t1) in enumerate(ovls):
         n = idx + 2                       # 0=unit, 1=track
@@ -148,6 +238,11 @@ def _run(tmp, job_id):
             f"drawtext=fontfile={FONT}:text='{esc(label)}':fontsize=44:"
             f"fontcolor={col}:borderw=3:bordercolor=black@0.8:x=60:y={y}:"
             f"enable='between(t,{t0:g},{t1:g})'")
+    # движение под бит — тоже эффект, идёт весь клип → подпись сверху
+    beat_label = esc(f"движение под бит: зум {zoom_amp:g} + яркость {ar_amp:g} (от баса)")
+    draws.append(
+        f"drawtext=fontfile={FONT}:text='{beat_label}':fontsize=36:"
+        f"fontcolor=cyan:borderw=3:bordercolor=black@0.8:x=60:y=60")
     parts.append(f"[{cur}]" + ",".join(draws) + ",format=yuv420p[v]")
 
     fc = "".join(parts)
