@@ -363,12 +363,16 @@ def step4_6_final(concat_path, art_path, audio_path, total_duration, out_path):
         "-r",str(FPS),"-loop","1","-i",art_path,
         "-i",audio_path,
         "-filter_complex",
+        # ⚠️ screen-бленд ТОЛЬКО в gbrp: на yuv420p блендятся плоскости цветности
+        # (screen(0.5,0.5)=0.75 → U,V вверх → синий+красный = пурпур, замерено +54).
+        # Без явного format ffmpeg авто-сводит входы к yuv420p исходника и баг молчит.
         f"[1:v]scale='if(gte(iw,ih),-1,{W})':'if(gte(iw,ih),{H},-1)'[s];"
-        f"[s]crop={W}:{H}:'(iw-{W})*t/{total_duration:.1f}':'(ih-{H})/2'[moving];"
-        f"[0:v][moving]blend=all_mode=screen:all_opacity=0.28[blended];"
+        f"[s]crop={W}:{H}:'(iw-{W})*t/{total_duration:.1f}':'(ih-{H})/2',format=gbrp[moving];"
+        f"[0:v]format=gbrp[base];"
+        f"[base][moving]blend=all_mode=screen:all_opacity=0.28[blended];"
         f"[blended]rgbashift=rh=-3:bh=3,"
         f"drawgrid=x=0:y=0:w=0:h=2:t=1:color=black@0.18,"
-        f"fade=t=out:st={fade_start:.2f}:d={FADE_SEC}[out]",
+        f"fade=t=out:st={fade_start:.2f}:d={FADE_SEC},format=yuv420p[out]",
         "-map","[out]","-map","2:a",
         "-t",str(total_duration),
         "-c:v","libx264","-crf","22","-preset","fast",
