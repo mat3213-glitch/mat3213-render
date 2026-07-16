@@ -67,7 +67,10 @@ def _run(tmp):
     src = os.path.join(tmp, "src.mp4")
     sh(["rclone", "copyto", f"{base}/{art}.mp4", src], check=True)
     W, H = probe(src)
-    print(f"арт {art}: {W}x{H} | режимы: {modes} | self_op={self_op}")
+    d = sh(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "csv=p=0", src], check=True)
+    SRC_DUR = float(d.stdout.strip())
+    print(f"арт {art}: {W}x{H} {SRC_DUR:.2f}с | режимы: {modes} | self_op={self_op}")
 
     noise_p = None
     if noise_id:
@@ -85,7 +88,7 @@ def _run(tmp):
               f"[a][b]blend=all_mode={mode}:all_opacity={self_op}[sb];")
         chain = "sb"
         if noise_p:
-            inputs += ["-stream_loop", "-1", "-i", noise_p]
+            inputs += ["-stream_loop", "-1", "-t", f"{SRC_DUR:.3f}", "-i", noise_p]
             fc += f"[2:v]{cover(nw,nh,W,H)},fps={FPS},format=gbrp[nz];"
             fc += f"[{chain}][nz]blend=all_mode=screen:all_opacity={noise_op}[wn];"
             chain = "wn"
@@ -93,6 +96,7 @@ def _run(tmp):
         fc += (f"[{chain}]drawtext=fontfile={FONT}:text='{label}':fontsize=40:fontcolor=white:"
                f"borderw=3:bordercolor=black@0.8:x=25:y=h-60,format=yuv420p[v]")
         cmd = ["ffmpeg", "-y"] + inputs + ["-filter_complex", fc, "-map", "[v]",
+               "-t", f"{SRC_DUR:.3f}",
                "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
                "-pix_fmt", "yuv420p", out]
         sh(cmd, check=True)
@@ -105,13 +109,14 @@ def _run(tmp):
     inputs = ["-i", src]
     chain = "a"
     if noise_p:
-        inputs += ["-stream_loop", "-1", "-i", noise_p]
+        inputs += ["-stream_loop", "-1", "-t", f"{SRC_DUR:.3f}", "-i", noise_p]
         fc += f"[1:v]{cover(nw,nh,W,H)},fps={FPS},format=gbrp[nz];"
         fc += f"[{chain}][nz]blend=all_mode=screen:all_opacity={noise_op}[wn];"
         chain = "wn"
     fc += (f"[{chain}]drawtext=fontfile={FONT}:text='БЕЗ self-blend':fontsize=40:fontcolor=yellow:"
            f"borderw=3:bordercolor=black@0.8:x=25:y=h-60,format=yuv420p[v]")
     sh(["ffmpeg", "-y"] + inputs + ["-filter_complex", fc, "-map", "[v]",
+        "-t", f"{SRC_DUR:.3f}",
         "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
         "-pix_fmt", "yuv420p", ref], check=True)
     panels.insert(0, ref)
