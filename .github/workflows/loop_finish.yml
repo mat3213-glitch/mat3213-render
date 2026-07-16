@@ -1,0 +1,73 @@
+name: Loop Finish
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — render_jobs/<job_id>/ with track.mp3'
+        required: true
+        type: string
+      zoom_amp:
+        description: 'Beat-zoom amplitude (default 0.02)'
+        required: false
+        type: string
+        default: '0.02'
+      ar_amp:
+        description: 'Brightness pulse amplitude (default 0.10)'
+        required: false
+        type: string
+        default: '0.10'
+      grain_opacity:
+        description: 'Screen-blend opacity for grain overlay (default 0.35)'
+        required: false
+        type: string
+        default: '0.35'
+
+jobs:
+  loop-finish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Install Python deps
+        run: pip install librosa opencv-python-headless numpy scipy soundfile
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run loop finish
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          ZOOM_AMP: ${{ inputs.zoom_amp }}
+          AR_AMP: ${{ inputs.ar_amp }}
+          GRAIN_OPACITY: ${{ inputs.grain_opacity }}
+        run: python -u loop_finish_job.py
+
+      - name: Write error status on failure
+        if: failure()
+        env:
+          INPUT_JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$INPUT_JOB_ID/status.txt" \
+            <<< "error: workflow failed" || true

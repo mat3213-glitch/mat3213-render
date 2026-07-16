@@ -52,9 +52,9 @@ on:
         default: 'cut'
         type: string
       self_blend:
-        description: 'Кадр на себя с зеркалом: off|screen|average|lighten'
+        description: 'Кадр на себя: off|screen|average|lighten (зеркало=калейдоскоп, yaromat забраковал 16.07)'
         required: false
-        default: 'screen'
+        default: 'off'
         type: string
       self_op:
         description: 'Сила зеркальной копии (0.5)'
