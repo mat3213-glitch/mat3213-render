@@ -1,0 +1,71 @@
+name: Self Blend Compare
+
+# «Кадр на себя со встречным дрейфом»: параллакс + его реверс времени, разные режимы бленда.
+# Выход: панели рядом с подписями (эталон + режимы).
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — папка render_jobs/<job_id>/ с art_N.mp4'
+        required: true
+        default: 'arts_cold_noir_2026-07-16'
+        type: string
+      art:
+        description: 'Какой арт (art_5)'
+        required: false
+        default: 'art_5'
+        type: string
+      modes:
+        description: 'Режимы бленда через запятую'
+        required: false
+        default: 'average,screen,lighten'
+        type: string
+      self_op:
+        description: 'Сила наложения копии (0.5)'
+        required: false
+        default: '0.5'
+        type: string
+      noise_id:
+        description: 'Шум-оверлей на все панели (константа)'
+        required: false
+        default: '621848661095635747'
+        type: string
+      noise_op:
+        description: 'Сила шума (0.35)'
+        required: false
+        default: '0.35'
+        type: string
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone fonts-dejavu-core
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Compare
+        env:
+          JOB_ID:   ${{ inputs.job_id }}
+          ART:      ${{ inputs.art }}
+          MODES:    ${{ inputs.modes }}
+          SELF_OP:  ${{ inputs.self_op }}
+          NOISE_ID: ${{ inputs.noise_id }}
+          NOISE_OP: ${{ inputs.noise_op }}
+        run: python -u self_blend_compare_job.py
