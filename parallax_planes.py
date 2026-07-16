@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import shutil
 from pathlib import Path
@@ -160,10 +161,9 @@ def main():
     video_keys, done, fail = [], [], []
     for idx, item in enumerate(items, 1):
         name = item["name"]
-        keys = STILL_TO_KEYS.get(name)
-        if not keys:
-            print(f"  [{idx}/{len(items)}] {name}: нет в маппинге — пропуск")
-            continue
+        # нет в маппинге Партитуры → имя само себе ключ. Иначе движок молча пустышка
+        # для любых чужих имён (арты art_1..art_8 промахивались мимо 'art1' на подчёркивание).
+        keys = STILL_TO_KEYS.get(name) or [name]
         still_png = os.path.join(workdir, f"{name}.png")
         if sh(["rclone", "copyto", f"{base}/{name}.png", still_png]).returncode != 0:
             print(f"  [{idx}/{len(items)}] {name}: нет стилла на ЯД — пропуск")
@@ -188,8 +188,11 @@ def main():
         done.append(name)
 
     if not video_keys:
-        print("[parallax] ни один план не сгенерирован — стоп")
-        return
+        # НЕ return: молчаливый выход 0 давал ЗЕЛЁНЫЙ воркфлоу при нулевом результате
+        # (13с «успеха» и ни одного mp4). Зелёное должно значить работающее.
+        print(f"[parallax] ни один план не сгенерирован — стоп (планов было {len(items)}, "
+              f"провал: {fail or '—'})", file=sys.stderr)
+        sys.exit(1)
 
     local_job = os.path.join(workdir, "job.json")
     if sh(["rclone", "copyto", f"{base}/job.json", local_job]).returncode == 0:
