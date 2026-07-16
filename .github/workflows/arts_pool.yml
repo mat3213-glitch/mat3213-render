@@ -1,0 +1,80 @@
+name: Arts Pool (CF + Pollinations)
+
+# Пул артов на ПОЛНЫЙ трек: 7 наборов × 11 слотов vzrosly = 77 артов.
+# Два движка на одних промптах (CF Workers AI + Pollinations) = сравнение + запас на брак.
+# Замок палитры дописывается кодом (looks.json). Всё складывается на ЯД для гейта.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — папка render_jobs/<job_id>/ с pool_prompts.json'
+        required: true
+        default: 'vzrosly_pool_2026-07-16'
+        type: string
+      steps:
+        description: 'Шагов flux (4 = родной режим schnell, 57.6 нейрона/арт; 8 = максимум, 96)'
+        required: false
+        default: '4'
+        type: string
+      neuron_budget:
+        description: 'Потолок расхода CF за прогон (free = 10000/сутки, сброс 00:00 UTC)'
+        required: false
+        default: '9500'
+        type: string
+      providers:
+        description: 'Кто генерит: cf,poll | cf | poll'
+        required: false
+        default: 'cf,poll'
+        type: string
+      only_set:
+        description: 'Только один набор (1-7). Пусто = все семь.'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  pool:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350          # 77 артов × 2 движка с паузами
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone curl
+          pip install -q requests
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Generate pool
+        env:
+          JOB_ID:            ${{ inputs.job_id }}
+          STEPS:             ${{ inputs.steps }}
+          NEURON_BUDGET:     ${{ inputs.neuron_budget }}
+          PROVIDERS:         ${{ inputs.providers }}
+          ONLY_SET:          ${{ inputs.only_set }}
+          IMG_WORKER_URL:    ${{ secrets.IMG_WORKER_URL }}
+          IMG_WORKER_SECRET: ${{ secrets.IMG_WORKER_SECRET }}
+        run: python -u arts_pool_job.py
+
+      - name: Report on failure
+        if: failure()
+        env:
+          INPUT_JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$INPUT_JOB_ID/pool/status.txt" \
+            <<< "error: workflow failed" || true
