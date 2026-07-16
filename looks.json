@@ -1,0 +1,24 @@
+{
+  "_doc": "ЗАМКИ ПАЛИТРЫ (looks) — цвет задаётся НА ГЕНЕРАЦИИ, неизменным хвостом промпта. НЕ путать со styles.json: там пост-грейды ffmpeg (colorbalance/зерно/виньетка) ПОСЛЕ рендера, здесь — константа В ПРОМПТЕ. Формула: '<что в кадре>, <lock>'. Хвост не меняется НИКОГДА → палитра держится через любые сюжеты (салон авто ↔ офисный коридор ↔ космос). Новый лук выводится из НОВОГО рефа тем же путём: деконструкция → reference_recipes.json поле 'color' → строка. Замок держит ТОЛЬКО цвет/свет — физику, анатомию и композицию он не чинит.",
+  "_version": 1,
+  "looks": {
+    "cold_noir_portishead": {
+      "title": "Холодный нуар (Portishead)",
+      "status": "цвет ПРИНЯТ yaromat 2026-07-16 («цвет шикарный и он один и тот же на всех артах»)",
+      "source_ref": "Portishead — Only You (TmDkzVvherk), курировал yaromat",
+      "source_field": "reference_recipes.json → color: «минималистичная палитра: глубокий тёмно-зелёный/холодный чёрный в тенях, один источник холодного голубого/белого — классический холодный нуар»",
+      "lock": "single cold backlight source only, deep teal and cold black shadows, cold noir, film grain, subtle vignette, vertical composition, photographic, documentary, cinematic",
+      "negative": "text, watermark, logo, neon, cartoon, vector, 3d render, plastic skin, oversaturated, adult figure",
+      "verified_on": {
+        "engine": "Pollinations (модель sana — параметр model игнорируется)",
+        "shots": 8,
+        "result": "единая палитра через 3 разных мира (машина/коридор/космос); брак был по физике и силуэту, НЕ по цвету"
+      },
+      "caveats": [
+        "На другом движке (CF flux/sdxl) почерк иной — замок ПЕРЕПРОВЕРЯТЬ, не считать переносимым по умолчанию.",
+        "Негатив как ТЕКСТ в промпте не работает на диффузии: 'no face' повышает шанс лица. Лицо убирается КОМПОЗИЦИЕЙ (со спины, в глубину, контровой свет, капюшон в тени), а не запретом.",
+        "Проверять на табу-цвет: не уходить в неон (feedback_no_neon)."
+      ]
+    }
+  }
+}
