@@ -1,0 +1,92 @@
+name: Arts Assemble
+
+# Узел арт-конвейера: арты (CF/Pollinations) → parallax_planes → СЮДА → клип.
+# Склейка оживлённых артов + «шум» оверлеем на кадры + футаж-вспышка на стыки.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID — папка render_jobs/<job_id>/ с art_N.mp4 (выход parallax)'
+        required: true
+        default: 'arts_cold_noir_2026-07-16'
+        type: string
+      arts:
+        description: 'Какие арты склеить, через запятую (art_1,art_5)'
+        required: true
+        default: 'art_1,art_5'
+        type: string
+      noise_id:
+        description: 'ID оверлея-шума на кадры (пусто = без шума)'
+        required: false
+        default: '621848661095635757'
+        type: string
+      noise_op:
+        description: 'Сила шума (0.35)'
+        required: false
+        default: '0.35'
+        type: string
+      flash_id:
+        description: 'ID футажа-вспышки на стык (пусто = без вспышки)'
+        required: false
+        default: '621848661095641297'
+        type: string
+      flash_op:
+        description: 'Сила вспышки (0.55)'
+        required: false
+        default: '0.55'
+        type: string
+      flash_win:
+        description: 'Окно вспышки на стыке, сек (1.2)'
+        required: false
+        default: '1.2'
+        type: string
+      noise_gray:
+        description: 'Обесцветить шум (1) или сохранить его холодный цвет (0)'
+        required: false
+        default: '0'
+        type: string
+      seam:
+        description: 'Стык: cut или xfade'
+        required: false
+        default: 'cut'
+        type: string
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Assemble
+        env:
+          JOB_ID:     ${{ inputs.job_id }}
+          ARTS:       ${{ inputs.arts }}
+          NOISE_ID:   ${{ inputs.noise_id }}
+          NOISE_OP:   ${{ inputs.noise_op }}
+          FLASH_ID:   ${{ inputs.flash_id }}
+          FLASH_OP:   ${{ inputs.flash_op }}
+          FLASH_WIN:  ${{ inputs.flash_win }}
+          NOISE_GRAY: ${{ inputs.noise_gray }}
+          SEAM:       ${{ inputs.seam }}
+        run: python -u arts_assemble_job.py
