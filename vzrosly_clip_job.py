@@ -451,7 +451,7 @@ COVER_SPEC = {
 
 
 def main():
-    global MOTION_SPEED, MOTION_AMP, BLEND_OPACITY
+    global MOTION_SPEED, MOTION_AMP, BLEND_OPACITY, SCRATCH, GRIT
     print(f"Job: {JOB_ID}")
     jf = WORK / "job.json"
     if not yd_get(f"{JOB_YD}/job.json", jf):
@@ -496,6 +496,21 @@ def main():
     for k in video_keys:
         if not yd_get(f"{JOB_YD}/{k}.mp4", WORK / f"{k}.mp4"):
             print(f"  WARN: нет видео {k}.mp4 — упаду на стилл")
+
+    # оверлеи из библиотеки Pinterest (доска yaromat/overlay) вместо репо-дефолтов.
+    # job["overlays"] = {"scratch": "<pin_id>", "grit": "<pin_id>"} → assets/overlay_assets/board/.
+    # Оба идут в screen через format=gray → нейтральны by design (тон оверлея кадр не красит).
+    for slot in ("scratch", "grit"):
+        pid = (job.get("overlays") or {}).get(slot)
+        if not pid:
+            continue
+        dst = WORK / f"ovl_{slot}.mp4"
+        if yd_get(f"Content factory/assets/overlay_assets/board/{pid}.mp4", dst):
+            if slot == "scratch": SCRATCH = str(dst)
+            else:                 GRIT = str(dst)
+            print(f"  оверлей {slot} ← доска {pid}")
+        else:
+            print(f"  WARN: оверлей {pid} не скачался — остаётся репо-дефолт")
     print(f"  format={fmt} {W}x{H} audio_start={audio_start} preview={preview}")
 
     # covers
