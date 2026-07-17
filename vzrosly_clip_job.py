@@ -42,6 +42,12 @@ MOTION_SPEED  = 0.5    # скорость/плотность дрейфа
 MOTION_AMP    = 1.15   # амплитуда движения (margin-фактор)
 BLEND_OPACITY = 0.5    # сила двойной экспозиции
 
+# Тинт видео-футажа под лук замка палитры (cold_noir_portishead, hue ~178° teal).
+# Реальный сток приходит серым/цветным и без него выпадает из пула артов. Проверено на storm-футаже:
+# hue 0°/sat 0%/ярк 92 → hue 176°/sat 44%/ярк 61 (арты: 178°/60%/53). job["footage_tint"] переопределяет.
+FOOTAGE_TINT = ("colorbalance=rs=-0.14:gs=0.04:bs=0.10:rm=-0.12:gm=0.04:bm=0.09:"
+                "rh=-0.08:gh=0.02:bh=0.05,eq=saturation=0.9:brightness=-0.06")
+
 STYLES_FILE = REPO / "styles.json"
 _DEFAULT_STYLE = {"name": "cold_steel",
                   "eq": "contrast=1.14:saturation=0.9:brightness=-0.02:gamma=0.96",
@@ -213,12 +219,16 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
 
 
 def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
-                   crf: str = "22", preset: str = "veryfast") -> bool:
+                   crf: str = "22", preset: str = "veryfast", tint: str = "") -> bool:
     """Сегмент из видео-футажа (Pexels): slice длины dur, cover-crop в WxH, fps.
     Короткий футаж зацикливается (-stream_loop). Грейд под стиль — общим density-пассом тела.
-    Энкод как у motion_seg (timescale 12800) → совместимо с xfade_chain."""
+    Энкод как у motion_seg (timescale 12800) → совместимо с xfade_chain.
+    tint: арты цветные ПО ГЕНЕРАЦИИ (замок палитры), реальный сток — нет. Общий density-пасс
+    (eq контраст/сатурация) серый футаж в палитру НЕ приводит → грозовые облака садятся
+    серо-белым пятном посреди нуара. Тинт красит футаж в лук замка ДО сборки."""
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
-          f"fps={FPS},setsar=1,format=yuv420p")
+          + (f"{tint}," if tint else "")
+          + f"fps={FPS},setsar=1,format=yuv420p")
     r = run(["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "-1",
              "-t", f"{dur:.4f}", "-i", str(src), "-vf", vf, "-an",
              "-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
@@ -470,6 +480,8 @@ def main():
     track_credit = job.get("track_credit", "")   # старт: «Артист — Трек» (режим reference)
     watermark    = job.get("watermark", "")       # весь клип: кредит yaromat (привязка охватов)
     video_keys   = job.get("video_keys", [])      # ключи-сегменты из видео-футажа (Pexels) вместо стиллов
+    # тинт футажа в лук замка палитры (замер 17.07: серые облака hue 0°/sat 0% → 176°/44%, к артам 178°/60%)
+    footage_tint = job.get("footage_tint", FOOTAGE_TINT)
     seed         = int(job.get("seed", 42))        # per-track: монтаж + текстура (см. build_timeline)
     calm         = bool(job.get("calm", False))     # безударные/амбиентные версии: мягкий строб
     split        = bool(job.get("split", False))     # распил кадра на 2 части + дрейф половин
@@ -545,7 +557,8 @@ def main():
         enc_dur = s["dur"] + s["tdur"]
         vid = WORK / f"{s['key']}.mp4"
         if s["key"] in video_keys and vid.exists():
-            ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
+            ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset,
+                                tint=footage_tint)
         elif grid_srcs and s["region"] in ("intro", "breath"):
             # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
             ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
@@ -642,8 +655,15 @@ def main():
     tex = random.Random(seed)
     scr_flip = ",hflip" if tex.random() < 0.5 else ""
     grt_flip = ",hflip" if tex.random() < 0.5 else ""
-    scr_op   = round(tex.uniform(0.5, 0.7), 2)
-    grt_op   = round(tex.uniform(0.4, 0.6), 2)
+    # Сила оверлеев. Дефолты — под тусклые репо-ассеты. ЯРКИЙ оверлей с доски (635747 = нейтрал
+    # 190/190/190) на этих значениях подмешивает белое в каждый кадр и ВЫСАСЫВАЕТ цвет: замер
+    # 2026-07-17 — сатурация 46%→33%. Для доски передавать job["overlay_opacity"] ~0.15-0.25.
+    ovl_op   = job.get("overlay_opacity")
+    if ovl_op is not None:
+        scr_op = grt_op = float(ovl_op)
+    else:
+        scr_op   = round(tex.uniform(0.5, 0.7), 2)
+        grt_op   = round(tex.uniform(0.4, 0.6), 2)
     nz_str   = tex.randint(style["grain"][0], style["grain"][1])   # сила зерна — из стиля
     nz_seed  = tex.randint(1, 99999)
     scr_ss   = round(tex.uniform(0.0, 4.0), 2)   # старт scratch-петли
