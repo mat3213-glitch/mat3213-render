@@ -1,46 +1,46 @@
 {
   "verdicts": [
     {
-      "name": "scout_warm_night_muted",
+      "name": "scout_warm_night_soft",
       "keep": true,
       "score": 8,
-      "reason": "Warm muted night fits internal depth aesthetic."
+      "reason": "Soft cinematic warmth, fits downtempo intimacy"
+    },
+    {
+      "name": "scout_warm_night_muted",
+      "keep": true,
+      "score": 9,
+      "reason": "Expensive muted balance, ideal for the brand"
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": false,
-      "score": 7,
-      "reason": "Cool muted tone, mid-range lacks sufficient depth."
+      "keep": true,
+      "score": 8,
+      "reason": "Good cool alternative, clean and deep"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
       "score": 8,
-      "reason": "Enhanced warm muted night, cohesive with vibe."
+      "reason": "Strong contender, slightly more definition"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 5,
-      "reason": "Green cast risks cheap look, not premium."
+      "score": 4,
+      "reason": "Green cast feels like a cheap filter"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 6,
-      "reason": "Neutral soft, too flat for internal depth."
-    },
-    {
-      "name": "scout_warm_mid_soft",
-      "keep": false,
+      "keep": true,
       "score": 7,
-      "reason": "Warm soft, but mid exposure reduces moodiness."
+      "reason": "Versatile but lacks a bit of depth"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
     "scout_warm_night_muted_2"
   ],
-  "_generated": "2026-07-16",
+  "_generated": "2026-07-17",
   "_judge": "mimo-auto"
 }
