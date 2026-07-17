@@ -72,7 +72,9 @@ def gen_cf(prompt, out):
     except Exception as e:
         return False, f"net: {e}"
     if r.status_code != 200 or not r.content or len(r.content) < 5000:
-        return False, f"http {r.status_code} len={len(r.content or b'')}"
+        # тело ошибки в лог: без него 500-я неотличима от квоты (грабля 16.07 — 22 арта молча)
+        body = (r.content or b"")[:300].decode("utf-8", "replace").replace("\n", " ")
+        return False, f"http {r.status_code} len={len(r.content or b'')} body={body}"
     Path(out).write_bytes(r.content)
     return True, ""
 
