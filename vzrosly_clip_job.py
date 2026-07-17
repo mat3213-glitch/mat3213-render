@@ -674,7 +674,17 @@ def main():
         grade += f",colorbalance={style['balance']}"
     vig = f"vignette={style['vignette']}," if style.get("vignette") else ""
     result = WORK / out_name
+    # Аудио-фейды рассчитаны на ОДИНОЧНЫЙ клип. При сборке трека из сегментов каждый кусок принесёт
+    # свой fade-in/fade-out → трек «дышит» затуханиями каждые 22с (услышано yaromat 2026-07-17).
+    # job["audio_fade"]: true (деф.) | false (середина трека) | "in" (первый сегм.) | "out" (последний).
+    af_mode = job.get("audio_fade", True)
     afade_out = max(0.0, duration - 1.5)
+    af_parts = []
+    if af_mode is True or af_mode == "in":
+        af_parts.append("afade=t=in:st=0:d=0.6")
+    if af_mode is True or af_mode == "out":
+        af_parts.append(f"afade=t=out:st={afade_out}:d=1.5")
+    af_chain = ",".join(af_parts) or "anull"
     fc = (
         f"[0:v]fps={FPS},{grade},"
         f"format=gbrp,setpts=PTS-STARTPTS[v];"
@@ -694,7 +704,7 @@ def main():
         "-ss", str(audio_start), "-t", str(duration), "-i", str(WORK / "track.mp3"),
         "-filter_complex", fc,
         "-map", "[vout]", "-map", "3:a",
-        "-af", f"afade=t=in:st=0:d=0.6,afade=t=out:st={afade_out}:d=1.5",
+        "-af", af_chain,
         "-c:v", "libx264",
         *(["-crf", "30", "-preset", "ultrafast"] if preview
           else ["-crf", "23", "-preset", "fast", "-maxrate", "9M", "-bufsize", "18M"]),
