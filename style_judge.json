@@ -4,45 +4,45 @@
       "name": "scout_warm_night_soft",
       "keep": true,
       "score": 8,
-      "reason": "Мягкое тепло, кинематографичная глубина, дорого"
+      "reason": "Tёплый кинематографичный вайб, глубина, не перенасыщен"
     },
     {
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Приглушённое тепло, цельно, глубина сохранена"
+      "reason": "Хорошая приглушённость, дорого, целостно"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 7,
-      "reason": "Холодный каст уместен, но менее тёплый фокус"
+      "reason": "Холодный тон для контрастных треков, атмосферно"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": true,
-      "score": 7,
-      "reason": "Хороший грейд, но дубль предыдущего варианта"
+      "keep": false,
+      "score": 6,
+      "reason": "Дублирует первый тайл, нет уникального характера"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 5,
-      "reason": "Зелёный каст как дешёвый фильтр, не дорого"
+      "score": 4,
+      "reason": "Зелёный каст дёшево, не вписывается в палитру"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 6,
-      "reason": "Слишком нейтрально, теряет эмоциональную глубину"
+      "keep": true,
+      "score": 7,
+      "reason": "Нейтральный баланс, универсален для разных треков"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_soft",
     "scout_warm_night_muted",
     "scout_cool_mid_muted",
-    "scout_warm_night_muted_2"
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-07-18",
+  "_generated": "2026-07-19",
   "_judge": "mimo-auto"
 }
