@@ -4,45 +4,44 @@
       "name": "scout_warm_night_soft",
       "keep": true,
       "score": 8,
-      "reason": "Tёплый кинематографичный вайб, глубина, не перенасыщен"
+      "reason": "Тёплый кинематографичный тон, глубина атмосферы"
     },
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 8,
-      "reason": "Хорошая приглушённость, дорого, целостно"
+      "score": 7,
+      "reason": "Приглушённый, но цельный. Работает в ротации"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 7,
-      "reason": "Холодный тон для контрастных треков, атмосферно"
+      "reason": "Холодный контраст, хороший диапазон от тёплого к холодному"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": false,
+      "keep": true,
       "score": 6,
-      "reason": "Дублирует первый тайл, нет уникального характера"
+      "reason": "Дублирует тёплый тон, чуть тусклее"
     },
     {
       "name": "scout_green_night_soft",
-      "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст дёшево, не вписывается в палитру"
+      "keep": true,
+      "score": 5,
+      "reason": "Зеленоватый оттенок может читаться как фильтр"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 7,
-      "reason": "Нейтральный баланс, универсален для разных треков"
+      "score": 6,
+      "reason": "Нейтрально, нетипично для бренда, но допустимо"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_soft",
     "scout_warm_night_muted",
-    "scout_cool_mid_muted",
-    "scout_neutral_night_soft"
+    "scout_cool_mid_muted"
   ],
-  "_generated": "2026-07-19",
+  "_generated": "2026-07-20",
   "_judge": "mimo-auto"
 }
