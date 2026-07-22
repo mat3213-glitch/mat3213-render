@@ -2,46 +2,46 @@
   "verdicts": [
     {
       "name": "scout_warm_night_soft",
-      "keep": false,
-      "score": 6,
-      "reason": "Greenish cast feels like cheap filter"
+      "keep": true,
+      "score": 7,
+      "reason": "Nice warmth but slightly flat shadows, less cinematic depth."
     },
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 7,
-      "reason": "Muted warmth, subtle depth, downtempo vibe"
+      "score": 8,
+      "reason": "Restrained warmth, rich tonal depth, cinematic and premium feel."
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
-      "score": 8,
-      "reason": "Cool muted tones, cinematic moodiness"
+      "score": 7,
+      "reason": "Muted cool tones, contemplative mood, slightly neutral."
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": false,
-      "score": 6,
-      "reason": "Similar green cast, filter-like appearance"
+      "keep": true,
+      "score": 7,
+      "reason": "Lifted blacks soften the image, good warmth but less depth."
     },
     {
       "name": "scout_green_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Overpowering green tint, unnatural"
+      "keep": true,
+      "score": 6,
+      "reason": "Green cast visible in shadows, stylised but may feel narrow."
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 9,
-      "reason": "Balanced, subdued, expensive cohesive feel"
+      "score": 6,
+      "reason": "Clean but too neutral, lacks moody cinematic character."
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
     "scout_cool_mid_muted",
-    "scout_neutral_night_soft"
+    "scout_warm_night_soft"
   ],
-  "_generated": "2026-07-21",
+  "_generated": "2026-07-22",
   "_judge": "mimo-auto"
 }
