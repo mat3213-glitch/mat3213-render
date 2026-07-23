@@ -2,46 +2,45 @@
   "verdicts": [
     {
       "name": "scout_warm_night_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Nice warmth but slightly flat shadows, less cinematic depth."
+      "keep": false,
+      "score": 5,
+      "reason": "Too warm, neon-like glow contradicts muted cinematic direction"
     },
     {
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 8,
-      "reason": "Restrained warmth, rich tonal depth, cinematic and premium feel."
+      "reason": "Cohesive warmth with cinematic restraint, matches downtempo mood"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": true,
       "score": 7,
-      "reason": "Muted cool tones, contemplative mood, slightly neutral."
+      "reason": "Clean cool tones, professional feel, good depth"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
-      "score": 7,
-      "reason": "Lifted blacks soften the image, good warmth but less depth."
+      "score": 8,
+      "reason": "Refined warmth, expensive grade quality, great cohesion"
     },
     {
       "name": "scout_green_night_soft",
       "keep": true,
-      "score": 6,
-      "reason": "Green cast visible in shadows, stylised but may feel narrow."
+      "score": 7,
+      "reason": "Subtle green cast adds cinematic depth, mood-appropriate"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 6,
-      "reason": "Clean but too neutral, lacks moody cinematic character."
+      "keep": false,
+      "score": 5,
+      "reason": "Too flat, lacks cinematic character for internal depth aesthetic"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_muted",
-    "scout_cool_mid_muted",
-    "scout_warm_night_soft"
+    "scout_warm_night_muted_2"
   ],
-  "_generated": "2026-07-22",
+  "_generated": "2026-07-23",
   "_judge": "mimo-auto"
 }
