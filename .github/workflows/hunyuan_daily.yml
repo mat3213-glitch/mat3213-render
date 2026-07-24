@@ -1,8 +1,8 @@
-name: Hunyuan i2v Daily
+name: Hunyuan i2v Daily [DISABLED — модель снята 2026-07-24]
 
-# Ежедневное «оживление» фото в видео (Hunyuan i2v): берёт готовые фото из пулов на ЯД
-# (qwen_pool / pexels_pool / openverse_pool) → видео → hunyuan_pool/<дата>/ + TG.
-# cron включаем ПОСЛЕ зелёной ручной пробы (Hunyuan = Tencent, проверить US-IP).
+# ОТКЛЮЧЕНО 2026-07-24: Hunyuan i2v как сервис БОЛЬШЕ НЕ СУЩЕСТВУЕТ (модель снята).
+# Дейли-крон убран, из пайплайна исключён. Живые i2v/t2v движки: VeoFree + Qwen (замена i2v — wan_i2v.py).
+# workflow_dispatch оставлен как исторический артефакт; НЕ запускать — упадёт (эндпоинта нет).
 on:
   workflow_dispatch:
     inputs:
@@ -18,8 +18,7 @@ on:
       custom_prompts:
         description: 'Промпты движения под каждый исходник (|||-разделитель)'
         default: ''
-  schedule:
-    - cron: '0 4 * * *'   # ежедневно 04:00 UTC (после Qwen 02); проба US-IP пройдена 16.06
+  # schedule убран 2026-07-24 (модель Hunyuan снята) — дейли-прогонов больше нет.
 
 jobs:
   gen:

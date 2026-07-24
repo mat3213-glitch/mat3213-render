@@ -34,7 +34,7 @@ from plastic_gate_core import frames_of, make_strip, extract_json, MIMO, sh  # �
 
 YD = "ydrive:Content factory"
 CATALOG_REL = "cloud_io/ai_pool_catalog.jsonl"
-POOLS = ["qwen_pool", "veofree_pool", "hunyuan_pool"]
+POOLS = ["qwen_pool", "veofree_pool"]  # hunyuan_pool убран 2026-07-24: модель Hunyuan снята, новых видео нет
 SCALES = ("wide", "medium", "macro", "close")
 
 TAG_RUBRIC = (

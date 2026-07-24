@@ -51,11 +51,11 @@ MAX_RETRIES_DEFAULT = 3
 RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 
 ENGINE_WORKFLOWS = {
-    "hunyuan": "sp_scene_hunyuan.yml",
+    # hunyuan снят 2026-07-24 (модель мёртвая) — исключён из роутинга. Замена i2v = wan_i2v.py.
     "veofree": "sp_scene_veofree.yml",   # i2v, watermark-free, ВСЕГДА выход 9:16 (см. project_video_gen_veofree)
     "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
 }
-ENGINE_ORDER = ["hunyuan", "veofree", "qwen"]  # round-robin по кругу; hunyuan первый пока не убедимся, что квота не исчерпана
+ENGINE_ORDER = ["veofree", "qwen"]  # round-robin по кругу (hunyuan убран 2026-07-24: модель снята)
 
 
 def engine_for(shot: dict) -> str:
