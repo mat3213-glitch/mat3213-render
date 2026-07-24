@@ -2,45 +2,47 @@
   "verdicts": [
     {
       "name": "scout_warm_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Too warm, neon-like glow contradicts muted cinematic direction"
+      "keep": true,
+      "score": 8,
+      "reason": "Тёплый кинематографичный тон, глубина, дорогая текстура"
     },
     {
       "name": "scout_warm_night_muted",
       "keep": true,
-      "score": 8,
-      "reason": "Cohesive warmth with cinematic restraint, matches downtempo mood"
+      "score": 7,
+      "reason": "Приглушённое тепло, атмосферно, но чуть темнее"
     },
     {
       "name": "scout_cool_mid_muted",
-      "keep": true,
-      "score": 7,
-      "reason": "Clean cool tones, professional feel, good depth"
+      "keep": false,
+      "score": 5,
+      "reason": "Холодный каст, ощущение холода, не глубина"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": true,
-      "score": 8,
-      "reason": "Refined warmth, expensive grade quality, great cohesion"
+      "score": 7,
+      "reason": "Тёмное тепло, драматично, цельно"
     },
     {
       "name": "scout_green_night_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Subtle green cast adds cinematic depth, mood-appropriate"
+      "keep": false,
+      "score": 4,
+      "reason": "Зелёный каст как дешёвый фильтр, не дорого"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Too flat, lacks cinematic character for internal depth aesthetic"
+      "keep": true,
+      "score": 7,
+      "reason": "Нейтрально-чистый, универсален для даунтемпо"
     }
   ],
   "recommend_merge": [
+    "scout_warm_night_soft",
     "scout_warm_night_muted",
-    "scout_warm_night_muted_2"
+    "scout_warm_night_muted_2",
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-07-23",
+  "_generated": "2026-07-24",
   "_judge": "mimo-auto"
 }
