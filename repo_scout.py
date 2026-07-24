@@ -24,10 +24,14 @@ import math
 import os
 import re
 import time
-from datetime import datetime
+from collections import defaultdict, deque
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
+
+# github.com/trending — какие языки скрейпить как 2-й источник ("" = все языки)
+TRENDING_LANGS = ["python", "typescript", ""]
 
 HERE = Path(__file__).parent
 QUERY_FILE = HERE / "repo_scout_queries.json"
@@ -49,12 +53,21 @@ PROJECT_CONTEXT = (
     "Локальное железо слабое (Atom, 1.8 ГБ RAM, без GPU) — всё тяжёлое выносим на GH Actions или в облако."
 )
 
+# Категории trending-репо ДОЛЖНЫ совпадать со схемой запросов (repo_scout_queries.json),
+# иначе diversify дробит слоты на две несовместимые таксономии (Grok-аудит 2026-07-24).
 KEYWORDS = {
-    "automation": ["automation", "workflow", "bot", "scheduler", "pipeline", "autopost", "scraper"],
-    "social": ["social", "instagram", "tiktok", "twitter", "telegram", "pinterest"],
-    "video": ["video", "shorts", "reels", "clip", "render", "ffmpeg"],
-    "audio": ["audio", "music", "librosa", "beat", "mix", "master", "playlist"],
-    "workflow": ["workflow", "github actions", "ci", "orchestrator"],
+    "craft": ["camera move", "lut", "color grade", "film emulation", "grain", "halation",
+              "light leak", "visualizer", "parallax", "depth map", "cinematic", "overlay",
+              "reels", "shorts", "hook"],
+    "video": ["ffmpeg", "glsl", "shader", "motion graphics", "scene detect", "shot boundary",
+              "transition", "video editing", "render"],
+    "aigen": ["text to video", "image to video", "i2v", "t2v", "diffusion", "stable video",
+              "flux", "sdxl", "comfyui", "image generation"],
+    "audio": ["audio", "music", "librosa", "aubio", "beat", "onset", "tempo", "pydub", "pedalboard"],
+    "vision": ["aesthetic", "watermark", "ocr", "quality scoring", "predictor", "detection"],
+    "orchestration": ["openai compatible", "llm gateway", "inference", "agent", "router",
+                      "proxy", "aggregator"],
+    "publishing": ["scheduler", "autopost", "social media", "cross-post", "publish"],
 }
 
 RELEVANCE_TERMS = [
@@ -69,6 +82,15 @@ RELEVANCE_TERMS = [
     "transcription", "subtitle", "motion", "procedural", "diffusion", "comfyui",
 ]
 _REL_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in RELEVANCE_TERMS) + r")\b")
+
+# СИЛЬНЫЕ термы — однозначно наши; только они матчатся по ИМЕНИ репо (у trending описание
+# бывает терсовым/пустым). Широкие термы (api/model/local/agent…) по имени тащат мусор — только desc.
+STRONG_TERMS = [
+    "ffmpeg", "librosa", "aubio", "comfyui", "remotion", "lottie", "glsl", "shader",
+    "visualizer", "datamosh", "whisperx", "pyscenedetect", "diffusion", "i2v", "t2v",
+    "lut", "halation", "parallax", "bodymovin", "pedalboard",
+]
+_STRONG_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in STRONG_TERMS) + r")\b")
 
 DEFAULT_QUERIES = [
     {"label": "ffmpeg python automation", "category": "video", "query": "ffmpeg python video automation OR pipeline"},
@@ -119,21 +141,116 @@ def save_seen(seen: set[str]):
     SEEN_FILE.write_text(json.dumps(sorted(seen), indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def search_github(query: str, per_page: int = 5) -> list[dict]:
+def axis_for_today() -> tuple[str, str]:
+    """3-суточный цикл ОСИ поиска — антидот «hall-of-fame replay» (см. аудит 2026-07-24).
+    Возвращает (sort, qualifier): классика по звёздам / недавно активные / новорождённые."""
+    mode = datetime.now(timezone.utc).toordinal() % 3
+    today = datetime.now(timezone.utc).date()
+    if mode == 0:
+        # «витрина по звёздам», НО живая: только пушенные за ~полгода (не мёртвые музеи)
+        return "stars", f"pushed:>{(today - timedelta(days=180)).isoformat()}"
+    if mode == 1:
+        return "updated", f"pushed:>{(today - timedelta(days=30)).isoformat()}"  # живые
+    return "", f"created:>{(today - timedelta(days=90)).isoformat()}"  # свежесозданные (best-match)
+
+
+def search_github(query: str, per_page: int = 8, sort: str = "stars", qualifier: str = "") -> list[dict]:
+    q = f"{query} {qualifier}".strip()
+    params = {"q": q, "order": "desc", "per_page": per_page}
+    if sort:
+        params["sort"] = sort  # пустой sort = best-match (relevance)
     r = requests.get("https://api.github.com/search/repositories",
-                     params={"q": query, "sort": "stars", "order": "desc", "per_page": per_page},
-                     headers=gh_headers(), timeout=30)
+                     params=params, headers=gh_headers(), timeout=30)
     if r.status_code in (403, 429):
         # вторичный rate-limit GitHub Search → подождать и повторить один раз
         time.sleep(8)
         r = requests.get("https://api.github.com/search/repositories",
-                         params={"q": query, "sort": "stars", "order": "desc", "per_page": per_page},
-                         headers=gh_headers(), timeout=30)
+                         params=params, headers=gh_headers(), timeout=30)
     if r.status_code != 200:
-        print(f"  search HTTP {r.status_code} for '{query[:40]}'")
+        print(f"  search HTTP {r.status_code} for '{q[:40]}'")
         return []
     items = r.json().get("items", [])
     return items if isinstance(items, list) else []
+
+
+def fetch_trending(languages: list[str], since: str = "daily") -> list[dict]:
+    """2-й источник — скрейп github.com/trending (ось velocity: звёзды за период, не абсолютные).
+    Регэкс-парсинг сверен с живой разметкой 2026-07-24. Не падает — язык с ошибкой пропускается."""
+    seen, results = set(), []
+    headers = {"User-Agent": "Mozilla/5.0"}
+    for lang in languages:
+        path = f"/{lang}" if lang else ""
+        try:
+            resp = requests.get(f"https://github.com/trending{path}?since={since}", headers=headers, timeout=30)
+            if resp.status_code != 200:
+                continue
+        except Exception:
+            continue
+        for b in re.split(r'<article\s+class="Box-row">', resp.text)[1:]:
+            m = re.search(r'<h2[^>]*>\s*<a[^>]*href="(/[^"]+)"', b, re.DOTALL)
+            if not m:
+                continue
+            parts = m.group(1).strip("/").split("/")
+            if len(parts) != 2:
+                continue
+            full_name = f"{parts[0]}/{parts[1]}"
+            if full_name in seen:
+                continue
+            seen.add(full_name)
+            dm = re.search(r'<p[^>]*class="col-9[^"]*"[^>]*>(.*?)</p>', b, re.DOTALL)
+            desc = re.sub(r"<[^>]+>", "", dm.group(1)).strip() if dm else ""
+            sm = re.search(r'href="/[^"]+/stargazers"[^>]*>\s*(?:<[^>]*>\s*)*([\d,]+)', b, re.DOTALL)
+            stars = int(sm.group(1).replace(",", "")) if sm else 0
+            pm = re.search(r'>\s*([\d,]+)\s+stars?\s+(?:today|this week|this month)\s*<', b, re.IGNORECASE)
+            period = int(pm.group(1).replace(",", "")) if pm else 0
+            results.append({"full_name": full_name, "html_url": f"https://github.com/{full_name}",
+                            "description": desc, "language": lang or "", "stars": stars,
+                            "period_stars": period, "source": "trending"})
+    return results
+
+
+def velocity_score(stars: int, period_stars: int, pushed_at: str) -> float:
+    """Ранжирование с упором на свежесть/velocity, а НЕ на абсолютные звёзды (ядро mimo)."""
+    base = math.log10(stars + 1) * 4          # звёзды — слабый вклад
+    vel = math.log10(period_stars + 1) * 8    # звёзды за период — сильный (velocity)
+    rec = 0.0
+    if pushed_at:
+        try:
+            age = (datetime.now(timezone.utc) - datetime.fromisoformat(pushed_at.replace("Z", "+00:00"))).days
+            rec = max(0.0, 15.0 - age / 7.0)  # свежий push до +15, ~14 недель до нуля
+        except Exception:
+            rec = 0.0
+    mid = 4.0 if 50 <= stars <= 3000 else 0.0  # bonus mid-star (не музей, не пусто)
+    return round(base + vel + rec + mid, 2)
+
+
+def diversify(items: list[dict], total: int = 25, per_cat: int = 4) -> list[dict]:
+    """Round-robin по category с ЖЁСТКИМ капом per_cat на категорию — вместо глобального topN."""
+    if not items:
+        return []
+    buckets: dict[str, deque] = defaultdict(deque)
+    for it in items:
+        buckets[it.get("category", "misc")].append(it)
+    for cat in buckets:
+        buckets[cat] = deque(sorted(buckets[cat], key=lambda x: x.get("score", 0), reverse=True))
+    taken: dict[str, int] = defaultdict(int)
+    result: list[dict] = []
+    progress = True
+    while len(result) < total and progress:
+        progress = False
+        for cat, q in buckets.items():
+            if len(result) >= total:
+                break
+            if q and taken[cat] < per_cat:
+                result.append(q.popleft())
+                taken[cat] += 1
+                progress = True
+    # backfill: если после квот слотов не хватило — добираем лучшим из остатка (Grok-аудит)
+    if len(result) < total:
+        leftover = sorted((it for q in buckets.values() for it in q),
+                          key=lambda x: x.get("score", 0), reverse=True)
+        result.extend(leftover[: total - len(result)])
+    return result
 
 
 def text_of(repo: dict) -> str:
@@ -150,39 +267,65 @@ def categorize(repo: dict) -> str:
 
 def is_relevant(repo: dict) -> bool:
     desc = str(repo.get("description") or "").lower()
-    return bool(desc) and bool(_REL_RE.search(desc))
+    if desc and _REL_RE.search(desc):        # описание — по полному списку термов
+        return True
+    name = str(repo.get("full_name") or "").lower()
+    return bool(_STRONG_RE.search(name))     # имя — только по СИЛЬНЫМ (без мусора api/model/local)
 
 
-def score(repo: dict) -> float:
-    stars = int(repo.get("stargazers_count") or 0)
-    s = math.log10(stars + 1) * 10
-    desc = str(repo.get("description") or "").lower()
-    if any(k in desc for k in ["music", "audio", "video", "ffmpeg", "automation", "render", "social"]):
-        s += 3
-    if str(repo.get("updated_at") or "")[:4] == str(datetime.now().year):
-        s += 1.5
-    return round(s, 2)
+def build_candidates(max_per_query: int = 8) -> list[dict]:
+    """Два источника: Search API (ось ротируется по дню) + github.com/trending (ось velocity).
+    Скоринг — velocity_score (звёзды слабо, свежесть/период сильно). Дедуп: выше score побеждает."""
+    by_name: dict[str, dict] = {}
+    sort, qualifier = axis_for_today()
+    print(f"[scout] ось дня: sort='{sort or 'best-match'}' qualifier='{qualifier or '-'}'")
 
+    def consider(cand: dict):
+        fn = cand["full_name"]
+        old = by_name.get(fn)
+        if old is None or cand["score"] > old["score"]:
+            # при перезаписи сохраняем осмысленную категорию, если у победителя она "misc"
+            if old is not None and cand.get("category") == "misc" and old.get("category") != "misc":
+                cand["category"] = old["category"]
+            by_name[fn] = cand
 
-def build_candidates(max_per_query: int = 5) -> list[dict]:
-    seen: set[str] = set()
-    out: list[dict] = []
+    # источник 1 — Search API, категория берётся из ЗАПРОСА (не keyword-угадайка)
     for q in load_queries():
         time.sleep(2.5)  # антидот вторичному rate-limit Search API
-        for repo in search_github(str(q["query"]).strip(), per_page=max_per_query):
+        cat = str(q.get("category") or "misc")
+        for repo in search_github(str(q["query"]).strip(), per_page=max_per_query,
+                                  sort=sort, qualifier=qualifier):
             fn = str(repo.get("full_name") or "")
-            if not fn or fn in seen or not is_relevant(repo):
+            if not fn or not is_relevant(repo):
                 continue
-            seen.add(fn)
-            out.append({
+            stars = int(repo.get("stargazers_count") or 0)
+            consider({
                 "full_name": fn,
                 "html_url": repo.get("html_url", ""),
                 "description": repo.get("description", ""),
                 "language": repo.get("language", ""),
-                "stars": int(repo.get("stargazers_count") or 0),
-                "category": categorize(repo),
-                "score": score(repo),
+                "stars": stars,
+                "category": cat,
+                "score": velocity_score(stars, 0, str(repo.get("pushed_at") or "")),
+                "source": "search",
             })
+
+    # источник 2 — trending (velocity), фильтр релевантности + категория по ключевым словам
+    for repo in fetch_trending(TRENDING_LANGS, since="daily"):
+        if not is_relevant(repo):
+            continue
+        consider({
+            "full_name": repo["full_name"],
+            "html_url": repo["html_url"],
+            "description": repo["description"],
+            "language": repo["language"],
+            "stars": repo["stars"],
+            "category": categorize(repo),
+            "score": velocity_score(repo["stars"], repo["period_stars"], ""),
+            "source": "trending",
+        })
+
+    out = list(by_name.values())
     out.sort(key=lambda x: (x["score"], x["stars"]), reverse=True)
     return out
 
@@ -349,7 +492,9 @@ def main():
     ap.add_argument("--seed", action="store_true", help="Пометить текущее виденным без дайджеста")
     args = ap.parse_args()
 
-    items = build_candidates()[: max(1, args.top)]
+    candidates = build_candidates()
+    items = diversify(candidates, total=max(1, args.top), per_cat=4)
+    print(f"[scout] кандидатов {len(candidates)} → шортлист {len(items)} (round-robin по категориям)")
     enrich_with_llm(items)
     write_report(items)
 
