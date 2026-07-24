@@ -1,24 +1,88 @@
-# Repo Scout — 2026-07-24T11:42:13.385898
+# Repo Scout — 2026-07-24T17:14:29.186908
 
-Всего в шортлисте: 5
+Всего в шортлисте: 21
 
-- **piyush-tyagi-13/llm-keypool** ⭐50 [misc]
-  - https://github.com/piyush-tyagi-13/llm-keypool
-  - 💡 Автоматизирует управление ключами API для крупномасштабных языковых моделей, что может быть полезно для проекта yaromat, если он будет использовать такие модели для генерации музыкального контента, но для этого нужно иметь доступ к этим ключам API.
-  - 📄 Free-tier LLM API key pool with rotation, cooldown handling, and an OpenAI-compatible proxy. Use with Hermes Agent or any OpenAI-compatible tool - no paid API k
-- **shinggao/diffusion-bending-live** ⭐0 [video]
-  - https://github.com/shinggao/diffusion-bending-live
-  - 💡 Позволяет генерировать музыкальные видео в реальном времени, что может быть полезно для проекта yaromat, поскольку он занимается автоматизацией музыкального контента и может использовать эту технологию для создания видео для своих треков.
-  - 📄 Code for the paper "Generating Music Reactive Videos by Applying Network Bending to Stable Diffusion" which appears in the June 2025 edition of the Journal of t
-- **leeguooooo/cloudflare-llm-gateway** ⭐0 [misc]
-  - https://github.com/leeguooooo/cloudflare-llm-gateway
-  - 💡 Автоматизирует создание шлюза для крупномасштабных языковых моделей, что может быть полезно для проекта yaromat, если он будет использовать облачные сервисы для обработки и генерации музыкального контента, но требует настройки и опыта работы с Cloudflare Workers.
-  - 📄 A serverless, OpenAI-compatible LLM API gateway for Cloudflare Workers — a new-api / one-api alternative that runs on the free tier (Workers + D1, no server).
-- **dorucioclea/LocalAIPlatform** ⭐0 [workflow]
-  - https://github.com/dorucioclea/LocalAIPlatform
-  - 💡 Позволяет создавать локальную платформу для крупномасштабных языковых моделей, что может быть полезно для проекта yaromat, если он будет использовать такие модели для генерации музыкального контента и имеет слабое локальное железо, поскольку эта платформа может работать на слабом оборудовании.
-  - 📄 🤖 Self-hosted, community-driven, local OpenAI compatible API. Drop-in replacement for OpenAI running LLMs on consumer-grade hardware. Free Open Source OpenAI al
-- **chrolloolucilferr/GroqChatbot** ⭐0 [automation]
-  - https://github.com/chrolloolucilferr/GroqChatbot
-  - 💡 Автоматизирует создание чат-бота с использованием крупномасштабных языковых моделей, что для проекта yaromat вряд ли пригодится, поскольку он занимается генерацией музыкального контента и автоматизацией постинга, а не созданием чат-ботов.
-  - 📄 This project is a terminal-based chatbot built using Groq API and Llama3/Mixtral models.  Features: Simple and clean Python code  Real-time chatbot responses us
+- **mattpocock/skills** ⭐186348 [orchestration]
+  - https://github.com/mattpocock/skills
+  - 💡 Автоматизирует навыки для реальных инженеров, может быть полезен для создания умных агентов в проекте yaromat.
+  - 📄 Skills for Real Engineers. Straight from my .agents directory.
+- **diegosouzapw/OmniRoute** ⭐28433 [misc]
+  - https://github.com/diegosouzapw/OmniRoute
+  - 💡 Предоставляет бесплатный MIT AI шлюз для взаимодействия с различными провайдерами, может быть полезен для интеграции с AI-моделями в проекте.
+  - 📄 Never stop coding. Free MIT AI gateway: one endpoint, 290+ providers (90+ free), 500+ models — Kimi, Claude, GPT, OpenAI, Gemini, GLM, DeepSeek, MiniMax. Works 
+- **ruvnet/RuView** ⭐85763 [vision]
+  - https://github.com/ruvnet/RuView
+  - 💡 Для проекта вряд ли пригодится, поскольку занимается пространственной интеллектом и мониторингом на основе WiFi-сигналов.
+  - 📄 π RuView turns commodity WiFi signals into real-time spatial intelligence, vital sign monitoring, and presence detection — all without a single pixel of video.
+- **ai-driven-dev/framework** ⭐325 [craft]
+  - https://github.com/ai-driven-dev/framework
+  - 💡 Предоставляет marketplace-фреймворк для разработки AI-ориентированных приложений, может быть полезен для создания агентов и умных систем в проекте.
+  - 📄 Marketplace Framework AI-Driven Dev : Context Engineering, Plugins, Agents, Skills, Hooks, Templates, SDLC
+- **earendil-works/pi** ⭐76967 [orchestration]
+  - https://github.com/earendil-works/pi
+  - 💡 Предоставляет инструментарий для создания AI-агентов, может быть полезен для разработки умных агентов в проекте yaromat.
+  - 📄 AI agent toolkit: unified LLM API, agent loop, TUI, coding agent CLI
+- **firecrawl/firecrawl** ⭐155462 [misc]
+  - https://github.com/firecrawl/firecrawl
+  - 💡 Предоставляет API для поиска, сбора и взаимодействия с веб-страницами, может быть полезен для сбора данных для проекта.
+  - 📄 The API to search, scrape, and interact with the web at scale. 🔥
+- **citrolabs/ego-lite** ⭐2329 [orchestration]
+  - https://github.com/citrolabs/ego-lite
+  - 💡 Предоставляет быстрый браузер для запуска веб-автоматизации AI-агентов, может быть полезен для тестирования и отладки проекта.
+  - 📄 The fastest browser for AI agents to run web automation, built for sharing your logged-in browser state with your AI agents, like Codex or Claude Code, without 
+- **unclecode/crawl4ai** ⭐74843 [misc]
+  - https://github.com/unclecode/crawl4ai
+  - 💡 Предоставляет открытое программное обеспечение для веб-краулинга и сбора данных для AI, может быть полезен для сбора данных для проекта.
+  - 📄 🚀🤖 Crawl4AI: Open-source LLM Friendly Web Crawler &amp; Scraper. Don't be shy, join here: https://discord.gg/jP8KfhDhyN
+- **Panniantong/Agent-Reach** ⭐60558 [orchestration]
+  - https://github.com/Panniantong/Agent-Reach
+  - 💡 Предоставляет инструмент для предоставления AI-агентам доступа к интернету, может быть полезен для расширения возможностей агентов в проекте.
+  - 📄 Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.
+- **shiyu-coder/Kronos** ⭐33403 [misc]
+  - https://github.com/shiyu-coder/Kronos
+  - 💡 Для проекта вряд ли пригодится, поскольку занимается языком финансовых рынков.
+  - 📄 Kronos: A Foundation Model for the Language of Financial Markets
+- **browser-use/browser-use** ⭐106579 [orchestration]
+  - https://github.com/browser-use/browser-use
+  - 💡 Предоставляет инструмент для автоматизации задач на веб-страницах для AI-агентов, может быть полезен для создания умных агентов в проекте.
+  - 📄 🌐 Make websites accessible for AI agents. Automate tasks online with ease.
+- **calesthio/OpenMontage** ⭐41917 [orchestration]
+  - https://github.com/calesthio/OpenMontage
+  - 💡 Предоставляет открытое программное обеспечение для видеопроизводства, может быть полезен для создания видеоконтента в проекте.
+  - 📄 World's first open-source, agentic video production system. 12 production pipelines, 100+ tools, 700+ agent skill and production-knowledge files. Turn your AI c
+- **langgenius/dify** ⭐150113 [orchestration]
+  - https://github.com/langgenius/dify
+  - 💡 Предоставляет рабочее пространство для создания агентских рабочих процессов, может быть полезен для интеграции с AI-моделями в проекте.
+  - 📄 Build Agentic workflows, RAG pipelines, with rich AI model and tool support on one collaborative workspace. Deploy on cloud, VPC, or self-hosted, so teams move 
+- **agegr/pi-web** ⭐2589 [orchestration]
+  - https://github.com/agegr/pi-web
+  - 💡 Предоставляет веб-интерфейс для кодирования агентов, может быть полезен для разработки и тестирования агентов в проекте.
+  - 📄 Web UI for the pi coding agent
+- **cheahjs/free-llm-api-resources** ⭐28096 [orchestration]
+  - https://github.com/cheahjs/free-llm-api-resources
+  - 💡 Предоставляет список бесплатных ресурсов для взаимодействия с LLM-моделями, может быть полезен для интеграции с AI-моделями в проекте.
+  - 📄 A list of free LLM inference resources accessible via API.
+- **C4illin/ConvertX** ⭐17923 [misc]
+  - https://github.com/C4illin/ConvertX
+  - 💡 Предоставляет инструмент для конвертации файлов, может быть полезен для обработки медиафайлов в проекте.
+  - 📄 💾 Self-hosted online file converter. Supports 1000+ formats ⚙️
+- **CoreBunch/Instatic** ⭐4145 [orchestration]
+  - https://github.com/CoreBunch/Instatic
+  - 💡 Предоставляет открытое программное обеспечение для создания визуальных CMS, может быть полезен для создания веб-интерфейса проекта.
+  - 📄 The open-source alternative to Webflow, Framer and WordPress. Agentic self-hosted visual CMS outputting clean static pages. Users, roles, plugins, content, data
+- **apify/crawlee** ⭐24967 [orchestration]
+  - https://github.com/apify/crawlee
+  - 💡 Предоставляет библиотеку для веб-краулинга и автоматизации, может быть полезен для сбора данных и тестирования проекта.
+  - 📄 Crawlee—A web scraping and browser automation library for Node.js to build reliable crawlers. In JavaScript and TypeScript. Extract data for AI, LLMs, RAG, or G
+- **theopenco/llmgateway** ⭐1458 [misc]
+  - https://github.com/theopenco/llmgateway
+  - 💡 Предоставляет шлюз для управления и анализа запросов к LLM-моделям, может быть полезен для интеграции с AI-моделями в проекте.
+  - 📄 Route, manage, and analyze your LLM requests across multiple providers with a unified API interface.
+- **flashinfer-ai/flashinfer** ⭐6018 [misc]
+  - https://github.com/flashinfer-ai/flashinfer
+  - 💡 Предоставляет ядро для обслуживания LLM-моделей, может быть полезен для оптимизации производительности AI-моделей в проекте.
+  - 📄 FlashInfer: Kernel Library for LLM Serving
+- **moorcheh-ai/memanto** ⭐1679 [orchestration]
+  - https://github.com/moorcheh-ai/memanto
+  - 💡 Предоставляет инструмент для управления памятью AI-агентов, может быть полезен для оптимизации производительности агентов в проекте.
+  - 📄 Memory that AI Agents Love!
