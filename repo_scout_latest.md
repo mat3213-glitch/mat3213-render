@@ -1,88 +1,68 @@
-# Repo Scout — 2026-07-24T17:14:29.186908
+# Repo Scout — 2026-07-25T11:10:09.031548
 
-Всего в шортлисте: 21
+Всего в шортлисте: 16
 
-- **mattpocock/skills** ⭐186348 [orchestration]
+- **mattpocock/skills** ⭐187528 [orchestration]
   - https://github.com/mattpocock/skills
-  - 💡 Автоматизирует навыки для реальных инженеров, может быть полезен для создания умных агентов в проекте yaromat.
+  - 💡 Этот репозиторий содержит набор навыков для инженеров, но для нашего проекта он вряд ли будет полезен, поскольку не имеет прямого отношения к автоматизации музыкального контента.
   - 📄 Skills for Real Engineers. Straight from my .agents directory.
-- **diegosouzapw/OmniRoute** ⭐28433 [misc]
+- **diegosouzapw/OmniRoute** ⭐29459 [misc]
   - https://github.com/diegosouzapw/OmniRoute
-  - 💡 Предоставляет бесплатный MIT AI шлюз для взаимодействия с различными провайдерами, может быть полезен для интеграции с AI-моделями в проекте.
+  - 💡 Этот проект предоставляет бесплатный AI-шлюз с поддержкой множества провайдеров и моделей, что может быть полезно для нашего проекта в части генерации артов и видео с помощью AI.
   - 📄 Never stop coding. Free MIT AI gateway: one endpoint, 290+ providers (90+ free), 500+ models — Kimi, Claude, GPT, OpenAI, Gemini, GLM, DeepSeek, MiniMax. Works 
-- **ruvnet/RuView** ⭐85763 [vision]
-  - https://github.com/ruvnet/RuView
-  - 💡 Для проекта вряд ли пригодится, поскольку занимается пространственной интеллектом и мониторингом на основе WiFi-сигналов.
-  - 📄 π RuView turns commodity WiFi signals into real-time spatial intelligence, vital sign monitoring, and presence detection — all without a single pixel of video.
-- **ai-driven-dev/framework** ⭐325 [craft]
-  - https://github.com/ai-driven-dev/framework
-  - 💡 Предоставляет marketplace-фреймворк для разработки AI-ориентированных приложений, может быть полезен для создания агентов и умных систем в проекте.
-  - 📄 Marketplace Framework AI-Driven Dev : Context Engineering, Plugins, Agents, Skills, Hooks, Templates, SDLC
-- **earendil-works/pi** ⭐76967 [orchestration]
+- **heygen-com/hyperframes** ⭐37546 [video]
+  - https://github.com/heygen-com/hyperframes
+  - 💡 Этот репозиторий позволяет писать HTML и рендерить видео, что может быть полезно для создания визуального контента для нашего музыкального проекта.
+  - 📄 Write HTML. Render video. Built for agents.
+- **mksglu/context-mode** ⭐19315 [craft]
+  - https://github.com/mksglu/context-mode
+  - 💡 Этот проект оптимизирует контекстное окно для AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
+  - 📄 Context window optimization for AI coding agents. Sandboxes tool output (98% reduction), persists session memory, and enforces routing across 17 platforms via M
+- **earendil-works/pi** ⭐77307 [orchestration]
   - https://github.com/earendil-works/pi
-  - 💡 Предоставляет инструментарий для создания AI-агентов, может быть полезен для разработки умных агентов в проекте yaromat.
+  - 💡 Этот репозиторий содержит инструментарий для AI-агентов, включая унифицированный API для языковых моделей, что может быть полезно для нашего проекта в части автоматизации музыкального контента с помощью AI.
   - 📄 AI agent toolkit: unified LLM API, agent loop, TUI, coding agent CLI
-- **firecrawl/firecrawl** ⭐155462 [misc]
-  - https://github.com/firecrawl/firecrawl
-  - 💡 Предоставляет API для поиска, сбора и взаимодействия с веб-страницами, может быть полезен для сбора данных для проекта.
-  - 📄 The API to search, scrape, and interact with the web at scale. 🔥
-- **citrolabs/ego-lite** ⭐2329 [orchestration]
-  - https://github.com/citrolabs/ego-lite
-  - 💡 Предоставляет быстрый браузер для запуска веб-автоматизации AI-агентов, может быть полезен для тестирования и отладки проекта.
-  - 📄 The fastest browser for AI agents to run web automation, built for sharing your logged-in browser state with your AI agents, like Codex or Claude Code, without 
-- **unclecode/crawl4ai** ⭐74843 [misc]
-  - https://github.com/unclecode/crawl4ai
-  - 💡 Предоставляет открытое программное обеспечение для веб-краулинга и сбора данных для AI, может быть полезен для сбора данных для проекта.
-  - 📄 🚀🤖 Crawl4AI: Open-source LLM Friendly Web Crawler &amp; Scraper. Don't be shy, join here: https://discord.gg/jP8KfhDhyN
-- **Panniantong/Agent-Reach** ⭐60558 [orchestration]
-  - https://github.com/Panniantong/Agent-Reach
-  - 💡 Предоставляет инструмент для предоставления AI-агентам доступа к интернету, может быть полезен для расширения возможностей агентов в проекте.
-  - 📄 Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.
-- **shiyu-coder/Kronos** ⭐33403 [misc]
+- **shiyu-coder/Kronos** ⭐33640 [misc]
   - https://github.com/shiyu-coder/Kronos
-  - 💡 Для проекта вряд ли пригодится, поскольку занимается языком финансовых рынков.
+  - 💡 Этот проект представляет собой модель для финансовых рынков, но для нашего музыкального проекта он вряд ли будет полезен, поскольку не имеет прямого отношения к музыке или контенту.
   - 📄 Kronos: A Foundation Model for the Language of Financial Markets
-- **browser-use/browser-use** ⭐106579 [orchestration]
-  - https://github.com/browser-use/browser-use
-  - 💡 Предоставляет инструмент для автоматизации задач на веб-страницах для AI-агентов, может быть полезен для создания умных агентов в проекте.
-  - 📄 🌐 Make websites accessible for AI agents. Automate tasks online with ease.
-- **calesthio/OpenMontage** ⭐41917 [orchestration]
-  - https://github.com/calesthio/OpenMontage
-  - 💡 Предоставляет открытое программное обеспечение для видеопроизводства, может быть полезен для создания видеоконтента в проекте.
-  - 📄 World's first open-source, agentic video production system. 12 production pipelines, 100+ tools, 700+ agent skill and production-knowledge files. Turn your AI c
-- **langgenius/dify** ⭐150113 [orchestration]
-  - https://github.com/langgenius/dify
-  - 💡 Предоставляет рабочее пространство для создания агентских рабочих процессов, может быть полезен для интеграции с AI-моделями в проекте.
-  - 📄 Build Agentic workflows, RAG pipelines, with rich AI model and tool support on one collaborative workspace. Deploy on cloud, VPC, or self-hosted, so teams move 
-- **agegr/pi-web** ⭐2589 [orchestration]
+- **NVlabs/Sana** ⭐8544 [craft]
+  - https://github.com/NVlabs/Sana
+  - 💡 Этот репозиторий содержит инструмент для синтеза высококачественных изображений с помощью трансформера диффузии, что может быть полезно для генерации артов для нашего музыкального проекта.
+  - 📄 SANA: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer
+- **affaan-m/ECC** ⭐233053 [orchestration]
+  - https://github.com/affaan-m/ECC
+  - 💡 Этот проект представляет собой систему оптимизации производительности для AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
+  - 📄 The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor 
+- **n8n-io/n8n** ⭐197898 [misc]
+  - https://github.com/n8n-io/n8n
+  - 💡 Этот репозиторий содержит платформу для автоматизации рабочих процессов с поддержкой AI, что может быть полезно для нашего проекта в части автоматизации музыкального контента и автопостинга.
+  - 📄 Fair-code workflow automation platform with native AI capabilities. Combine visual building with custom code, self-host or cloud, 400+ integrations.
+- **alibaba/open-code-review** ⭐12550 [orchestration]
+  - https://github.com/alibaba/open-code-review
+  - 💡 Этот проект представляет собой инструмент для код-ревью с поддержкой AI, но для нашего проекта он вряд ли будет полезен, поскольку мы не занимаемся разработкой программного обеспечения на таком уровне.
+  - 📄 Open-source &amp; free — Battle-tested at Alibaba's scale. Hybrid architecture code review tool: deterministic pipelines + LLM Agent, precise line-level comment
+- **palmier-io/palmier-pro** ⭐11983 [misc]
+  - https://github.com/palmier-io/palmier-pro
+  - 💡 Этот репозиторий содержит видеоредактор для macOS, ориентированный на работу с AI, что может быть полезно для создания видеоконтента для нашего музыкального проекта.
+  - 📄 macOS video editor built for AI
+- **agegr/pi-web** ⭐2680 [orchestration]
   - https://github.com/agegr/pi-web
-  - 💡 Предоставляет веб-интерфейс для кодирования агентов, может быть полезен для разработки и тестирования агентов в проекте.
+  - 💡 Этот проект представляет собой веб-интерфейс для кодирования с помощью AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
   - 📄 Web UI for the pi coding agent
-- **cheahjs/free-llm-api-resources** ⭐28096 [orchestration]
-  - https://github.com/cheahjs/free-llm-api-resources
-  - 💡 Предоставляет список бесплатных ресурсов для взаимодействия с LLM-моделями, может быть полезен для интеграции с AI-моделями в проекте.
-  - 📄 A list of free LLM inference resources accessible via API.
-- **C4illin/ConvertX** ⭐17923 [misc]
-  - https://github.com/C4illin/ConvertX
-  - 💡 Предоставляет инструмент для конвертации файлов, может быть полезен для обработки медиафайлов в проекте.
-  - 📄 💾 Self-hosted online file converter. Supports 1000+ formats ⚙️
-- **CoreBunch/Instatic** ⭐4145 [orchestration]
+- **citrolabs/ego-lite** ⭐3071 [orchestration]
+  - https://github.com/citrolabs/ego-lite
+  - 💡 Этот репозиторий содержит браузер для AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
+  - 📄 The fastest browser for AI agents to run web automation, built for sharing your logged-in browser state with your AI agents, like Codex or Claude Code, without 
+- **CoreBunch/Instatic** ⭐4449 [orchestration]
   - https://github.com/CoreBunch/Instatic
-  - 💡 Предоставляет открытое программное обеспечение для создания визуальных CMS, может быть полезен для создания веб-интерфейса проекта.
+  - 💡 Этот проект представляет собой альтернативу системам управления контентом, но для нашего проекта он вряд ли будет полезен, поскольку мы не занимаемся созданием сложных веб-сайтов или систем управления контентом.
   - 📄 The open-source alternative to Webflow, Framer and WordPress. Agentic self-hosted visual CMS outputting clean static pages. Users, roles, plugins, content, data
-- **apify/crawlee** ⭐24967 [orchestration]
-  - https://github.com/apify/crawlee
-  - 💡 Предоставляет библиотеку для веб-краулинга и автоматизации, может быть полезен для сбора данных и тестирования проекта.
-  - 📄 Crawlee—A web scraping and browser automation library for Node.js to build reliable crawlers. In JavaScript and TypeScript. Extract data for AI, LLMs, RAG, or G
-- **theopenco/llmgateway** ⭐1458 [misc]
-  - https://github.com/theopenco/llmgateway
-  - 💡 Предоставляет шлюз для управления и анализа запросов к LLM-моделям, может быть полезен для интеграции с AI-моделями в проекте.
-  - 📄 Route, manage, and analyze your LLM requests across multiple providers with a unified API interface.
-- **flashinfer-ai/flashinfer** ⭐6018 [misc]
-  - https://github.com/flashinfer-ai/flashinfer
-  - 💡 Предоставляет ядро для обслуживания LLM-моделей, может быть полезен для оптимизации производительности AI-моделей в проекте.
-  - 📄 FlashInfer: Kernel Library for LLM Serving
-- **moorcheh-ai/memanto** ⭐1679 [orchestration]
-  - https://github.com/moorcheh-ai/memanto
-  - 💡 Предоставляет инструмент для управления памятью AI-агентов, может быть полезен для оптимизации производительности агентов в проекте.
-  - 📄 Memory that AI Agents Love!
+- **MODSetter/SurfSense** ⭐15447 [misc]
+  - https://github.com/MODSetter/SurfSense
+  - 💡 Этот репозиторий содержит инструмент для исследования данных из различных источников, включая социальные сети, что может быть полезно для нашего проекта в части анализа и генерации контента на основе данных.
+  - 📄 Open-source NotebookLM alternative. Research the open web with live data(Reddit, YT, IG, TikTok, Google Search, Maps etc) through one platform, API or MCP serve
+- **open-metadata/OpenMetadata** ⭐14560 [orchestration]
+  - https://github.com/open-metadata/OpenMetadata
+  - 💡 Этот проект представляет собой платформу для создания контекста данных и бизнес-семантики с поддержкой AI, но для нашего проекта он вряд ли будет полезен, поскольку мы не занимаемся разработкой сложных систем управления данными.
+  - 📄 The Open Context Layer for Data and AI , OpenMetadata is the open platform for building trusted data context and business semantics for humans, AI assistants, a
