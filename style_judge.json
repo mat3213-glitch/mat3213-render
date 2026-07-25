@@ -4,45 +4,43 @@
       "name": "scout_warm_night_soft",
       "keep": true,
       "score": 8,
-      "reason": "Тёплый кинематографичный тон, глубина, дорогая текстура"
+      "reason": "Цельный тёплый тон, глубина без дешёвого каста"
     },
     {
       "name": "scout_warm_night_muted",
       "keep": true,
       "score": 7,
-      "reason": "Приглушённое тепло, атмосферно, но чуть темнее"
+      "reason": "Хорошая мутность, лёгкая перекличка с первым"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": false,
       "score": 5,
-      "reason": "Холодный каст, ощущение холода, не глубина"
+      "reason": "Холод убивает глубину, выглядит отстранённо"
     },
     {
       "name": "scout_warm_night_muted_2",
-      "keep": true,
-      "score": 7,
-      "reason": "Тёмное тепло, драматично, цельно"
+      "keep": false,
+      "score": 6,
+      "reason": "Дубль muted — добавит лишнее без ценности"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
       "score": 4,
-      "reason": "Зелёный каст как дешёвый фильтр, не дорого"
+      "reason": "Зелёный каст ощущается дешёвым фильтром"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 7,
-      "reason": "Нейтрально-чистый, универсален для даунтемпо"
+      "keep": false,
+      "score": 5,
+      "reason": "Нейтраль плоская, теряет кинематографичность"
     }
   ],
   "recommend_merge": [
     "scout_warm_night_soft",
-    "scout_warm_night_muted",
-    "scout_warm_night_muted_2",
-    "scout_neutral_night_soft"
+    "scout_warm_night_muted"
   ],
-  "_generated": "2026-07-24",
+  "_generated": "2026-07-25",
   "_judge": "mimo-auto"
 }
