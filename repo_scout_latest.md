@@ -1,68 +1,68 @@
-# Repo Scout — 2026-07-25T11:10:09.031548
+# Repo Scout — 2026-07-26T11:19:33.909439
 
 Всего в шортлисте: 16
 
-- **mattpocock/skills** ⭐187528 [orchestration]
-  - https://github.com/mattpocock/skills
-  - 💡 Этот репозиторий содержит набор навыков для инженеров, но для нашего проекта он вряд ли будет полезен, поскольку не имеет прямого отношения к автоматизации музыкального контента.
-  - 📄 Skills for Real Engineers. Straight from my .agents directory.
-- **diegosouzapw/OmniRoute** ⭐29459 [misc]
-  - https://github.com/diegosouzapw/OmniRoute
-  - 💡 Этот проект предоставляет бесплатный AI-шлюз с поддержкой множества провайдеров и моделей, что может быть полезно для нашего проекта в части генерации артов и видео с помощью AI.
-  - 📄 Never stop coding. Free MIT AI gateway: one endpoint, 290+ providers (90+ free), 500+ models — Kimi, Claude, GPT, OpenAI, Gemini, GLM, DeepSeek, MiniMax. Works 
-- **heygen-com/hyperframes** ⭐37546 [video]
-  - https://github.com/heygen-com/hyperframes
-  - 💡 Этот репозиторий позволяет писать HTML и рендерить видео, что может быть полезно для создания визуального контента для нашего музыкального проекта.
-  - 📄 Write HTML. Render video. Built for agents.
-- **mksglu/context-mode** ⭐19315 [craft]
-  - https://github.com/mksglu/context-mode
-  - 💡 Этот проект оптимизирует контекстное окно для AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
-  - 📄 Context window optimization for AI coding agents. Sandboxes tool output (98% reduction), persists session memory, and enforces routing across 17 platforms via M
-- **earendil-works/pi** ⭐77307 [orchestration]
-  - https://github.com/earendil-works/pi
-  - 💡 Этот репозиторий содержит инструментарий для AI-агентов, включая унифицированный API для языковых моделей, что может быть полезно для нашего проекта в части автоматизации музыкального контента с помощью AI.
-  - 📄 AI agent toolkit: unified LLM API, agent loop, TUI, coding agent CLI
-- **shiyu-coder/Kronos** ⭐33640 [misc]
-  - https://github.com/shiyu-coder/Kronos
-  - 💡 Этот проект представляет собой модель для финансовых рынков, но для нашего музыкального проекта он вряд ли будет полезен, поскольку не имеет прямого отношения к музыке или контенту.
-  - 📄 Kronos: A Foundation Model for the Language of Financial Markets
-- **NVlabs/Sana** ⭐8544 [craft]
-  - https://github.com/NVlabs/Sana
-  - 💡 Этот репозиторий содержит инструмент для синтеза высококачественных изображений с помощью трансформера диффузии, что может быть полезно для генерации артов для нашего музыкального проекта.
-  - 📄 SANA: Efficient High-Resolution Image Synthesis with Linear Diffusion Transformer
-- **affaan-m/ECC** ⭐233053 [orchestration]
-  - https://github.com/affaan-m/ECC
-  - 💡 Этот проект представляет собой систему оптимизации производительности для AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
-  - 📄 The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor 
-- **n8n-io/n8n** ⭐197898 [misc]
-  - https://github.com/n8n-io/n8n
-  - 💡 Этот репозиторий содержит платформу для автоматизации рабочих процессов с поддержкой AI, что может быть полезно для нашего проекта в части автоматизации музыкального контента и автопостинга.
-  - 📄 Fair-code workflow automation platform with native AI capabilities. Combine visual building with custom code, self-host or cloud, 400+ integrations.
-- **alibaba/open-code-review** ⭐12550 [orchestration]
-  - https://github.com/alibaba/open-code-review
-  - 💡 Этот проект представляет собой инструмент для код-ревью с поддержкой AI, но для нашего проекта он вряд ли будет полезен, поскольку мы не занимаемся разработкой программного обеспечения на таком уровне.
-  - 📄 Open-source &amp; free — Battle-tested at Alibaba's scale. Hybrid architecture code review tool: deterministic pipelines + LLM Agent, precise line-level comment
-- **palmier-io/palmier-pro** ⭐11983 [misc]
-  - https://github.com/palmier-io/palmier-pro
-  - 💡 Этот репозиторий содержит видеоредактор для macOS, ориентированный на работу с AI, что может быть полезно для создания видеоконтента для нашего музыкального проекта.
-  - 📄 macOS video editor built for AI
-- **agegr/pi-web** ⭐2680 [orchestration]
-  - https://github.com/agegr/pi-web
-  - 💡 Этот проект представляет собой веб-интерфейс для кодирования с помощью AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
-  - 📄 Web UI for the pi coding agent
-- **citrolabs/ego-lite** ⭐3071 [orchestration]
+- **citrolabs/ego-lite** ⭐3960 [orchestration]
   - https://github.com/citrolabs/ego-lite
-  - 💡 Этот репозиторий содержит браузер для AI-агентов, но для нашего проекта он вряд ли будет полезен, поскольку мы не используем такие агенты напрямую.
+  - 💡 Автоматизирует взаимодействие AI-агентов с веб-страницами, может быть полезен для создания Telegram-бота-админки в проекте yaromat.
   - 📄 The fastest browser for AI agents to run web automation, built for sharing your logged-in browser state with your AI agents, like Codex or Claude Code, without 
-- **CoreBunch/Instatic** ⭐4449 [orchestration]
+- **shiyu-coder/Kronos** ⭐33947 [misc]
+  - https://github.com/shiyu-coder/Kronos
+  - 💡 Предоставляет основу для моделирования языка финансовых рынков, для проекта вряд ли пригодится — нет прямой связи с музыкальным контентом.
+  - 📄 Kronos: A Foundation Model for the Language of Financial Markets
+- **davepoon/buildwithclaude** ⭐3215 [craft]
+  - https://github.com/davepoon/buildwithclaude
+  - 💡 Предоставляет коллекцию инструментов и плагинов для расширения возможностей AI-агентов, может быть полезен для создания более сложных функций в проекте yaromat.
+  - 📄 A single hub to find Claude Skills, Agents, Commands, Hooks, Plugins, and Marketplace collections to extend Claude Code, Claude Desktop, Agent SDK and OpenClaw
+- **alibaba/open-code-review** ⭐13376 [orchestration]
+  - https://github.com/alibaba/open-code-review
+  - 💡 Автоматизирует процесс код-ревью, может быть полезен для проверки качества кода в проекте yaromat.
+  - 📄 Open-source &amp; free — Battle-tested at Alibaba's scale. Hybrid architecture code review tool: deterministic pipelines + LLM Agent, precise line-level comment
+- **home-assistant/core** ⭐89467 [misc]
+  - https://github.com/home-assistant/core
+  - 💡 Предоставляет платформу для домашней автоматизации, может быть полезен для интеграции с другими устройствами в проекте yaromat.
+  - 📄 🏡 Open source home automation that puts local control and privacy first.
+- **CoreBunch/Instatic** ⭐5324 [orchestration]
   - https://github.com/CoreBunch/Instatic
-  - 💡 Этот проект представляет собой альтернативу системам управления контентом, но для нашего проекта он вряд ли будет полезен, поскольку мы не занимаемся созданием сложных веб-сайтов или систем управления контентом.
+  - 💡 Предоставляет альтернативу Webflow и WordPress для создания статических страниц, может быть полезен для создания веб-интерфейса проекта yaromat.
   - 📄 The open-source alternative to Webflow, Framer and WordPress. Agentic self-hosted visual CMS outputting clean static pages. Users, roles, plugins, content, data
-- **MODSetter/SurfSense** ⭐15447 [misc]
-  - https://github.com/MODSetter/SurfSense
-  - 💡 Этот репозиторий содержит инструмент для исследования данных из различных источников, включая социальные сети, что может быть полезно для нашего проекта в части анализа и генерации контента на основе данных.
-  - 📄 Open-source NotebookLM alternative. Research the open web with live data(Reddit, YT, IG, TikTok, Google Search, Maps etc) through one platform, API or MCP serve
-- **open-metadata/OpenMetadata** ⭐14560 [orchestration]
-  - https://github.com/open-metadata/OpenMetadata
-  - 💡 Этот проект представляет собой платформу для создания контекста данных и бизнес-семантики с поддержкой AI, но для нашего проекта он вряд ли будет полезен, поскольку мы не занимаемся разработкой сложных систем управления данными.
-  - 📄 The Open Context Layer for Data and AI , OpenMetadata is the open platform for building trusted data context and business semantics for humans, AI assistants, a
+- **puppeteer/puppeteer** ⭐95358 [misc]
+  - https://github.com/puppeteer/puppeteer
+  - 💡 Предоставляет API для взаимодействия с браузерами Chrome и Firefox, может быть полезен для автоматизации взаимодействия с веб-страницами в проекте yaromat.
+  - 📄 JavaScript API for Chrome and Firefox
+- **xbtlin/ai-berkshire** ⭐14135 [orchestration]
+  - https://github.com/xbtlin/ai-berkshire
+  - 💡 Предоставляет框架 для исследования инвестиций с помощью AI, для проекта вряд ли пригодится — нет прямой связи с музыкальным контентом.
+  - 📄 AI 时代的伯克希尔：基于 Claude Code / Codex 的价值投资研究框架。巴菲特·芒格·段永平·李录四大师方法论 + 多Agent并行研究。| AI-era Berkshire: a value investing research framework built for Claude Code / Co
+- **freemocap/freemocap** ⭐9808 [misc]
+  - https://github.com/freemocap/freemocap
+  - 💡 Предоставляет бесплатный инструмент для захвата движения, может быть полезен для создания музыкальных видеороликов в проекте yaromat.
+  - 📄 Free Motion Capture for Everyone 💀✨
+- **tashfeenahmed/freellmapi** ⭐17048 [orchestration]
+  - https://github.com/tashfeenahmed/freellmapi
+  - 💡 Предоставляет прокси для доступа к нескольким провайдерам LLM, может быть полезен для создания более сложных функций в проекте yaromat.
+  - 📄 OpenAI-compatible proxy that stacks the free tiers of 28 LLM providers (~4B tokens/month) behind one /v1 endpoint — plus any custom OpenAI-compatible endpoint. 
+- **BuilderIO/agent-native** ⭐4005 [orchestration]
+  - https://github.com/BuilderIO/agent-native
+  - 💡 Предоставляет фреймворк для создания агент-ориентированных приложений, может быть полезен для создания более сложных функций в проекте yaromat.
+  - 📄 A framework for building agent-native applications.
+- **huggingface/speech-to-speech** ⭐6402 [orchestration]
+  - https://github.com/huggingface/speech-to-speech
+  - 💡 Предоставляет инструменты для создания голосовых агентов, может быть полезен для создания музыкальных треков в проекте yaromat.
+  - 📄 Build local voice agents with open-source models
+- **777genius/agent-teams-ai** ⭐1679 [orchestration]
+  - https://github.com/777genius/agent-teams-ai
+  - 💡 Предоставляет инструменты для создания команд агентов, может быть полезен для создания более сложных функций в проекте yaromat.
+  - 📄 You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and giv
+- **nrwl/nx** ⭐29138 [orchestration]
+  - https://github.com/nrwl/nx
+  - 💡 Предоставляет платформу для оптимизации процессов разработки, может быть полезен для улучшения производительности проекта yaromat.
+  - 📄 The Monorepo Platform that amplifies both developers and AI agents. Nx optimizes your builds, scales your CI, and fixes failed PRs automatically. Ship in half t
+- **jenkinsci/jenkins** ⭐25623 [misc]
+  - https://github.com/jenkinsci/jenkins
+  - 💡 Предоставляет сервер для автоматизации процессов, может быть полезен для автоматизации процессов в проекте yaromat.
+  - 📄 Jenkins automation server
+- **microsoft/agent-governance-toolkit** ⭐4918 [orchestration]
+  - https://github.com/microsoft/agent-governance-toolkit
+  - 💡 Предоставляет инструменты для управления агентами, может быть полезен для создания более безопасных и надежных функций в проекте yaromat.
+  - 📄 AI Agent Governance Toolkit — Policy enforcement, zero-trust identity, execution sandboxing, and reliability engineering for autonomous AI agents. Covers 10/10 
