@@ -92,7 +92,7 @@ print("\n" + text)
 worker = os.environ.get("CLOUDFLARE_WORKER")
 token = os.environ.get("TELEGRAM_BOT_TOKEN")
 chat = os.environ.get("TG_CHAT_ID")
-thread = os.environ.get("TG_THREAD_ID", "5")
+thread = os.environ.get("TG_THREAD_ID", "2182")  # сервис-тред, не фактори(5)
 if worker and token and chat:
     try:
         body = {"chat_id": chat, "text": text[:3800]}

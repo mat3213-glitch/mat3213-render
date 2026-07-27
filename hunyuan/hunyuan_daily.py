@@ -94,7 +94,7 @@ def tg(text):
     worker = os.environ.get("CLOUDFLARE_WORKER")
     token = os.environ.get("TELEGRAM_BOT_TOKEN")
     chat = os.environ.get("TG_CHAT_ID") or os.environ.get("FACTORY_CHAT_ID")
-    thread = os.environ.get("TG_THREAD_ID") or os.environ.get("FACTORY_THREAD_ID", "5")
+    thread = os.environ.get("TG_THREAD_ID") or os.environ.get("FACTORY_THREAD_ID", "2182")  # сервис-тред, не фактори(5)
     if not (worker and token and chat):
         print("[tg] секреты не заданы — пропуск")
         return
