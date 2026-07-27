@@ -29,7 +29,7 @@ on:
         description: 'HF Space id'
         required: false
         type: string
-        default: 'Wan-AI/Wan2.1-I2V-14B-720P'
+        default: 'multimodalart/wan2-1-fast'   # [2026-07-27] Wan-AI/... gated; живой i2v ZeroGPU
       api_name:
         description: 'api_name предикта (опц., после первого прогона по view_api)'
         required: false

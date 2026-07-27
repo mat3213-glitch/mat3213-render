@@ -24,9 +24,16 @@ NEG = os.environ.get("NEG_PROMPT",
     "still image, no motion, low quality")
 DEST = os.environ.get("DEST_FOLDER", "Content factory/cloud_io/render_jobs/vzrosly_2026-07-05/wan2")
 OUT = os.environ.get("OUT_NAME", "wan_clip.mp4"); OUT = OUT if OUT.endswith(".mp4") else OUT + ".mp4"
-SPACE = os.environ.get("SPACE", "Wan-AI/Wan2.1-I2V-14B-720P")
+SPACE = os.environ.get("SPACE", "multimodalart/wan2-1-fast")  # [2026-07-27] Wan-AI/... стал gated; этот — живой i2v на ZeroGPU
 API_NAME = os.environ.get("API_NAME") or None
 HF_TOKEN = os.environ.get("HUGGINGFACE_TOKEN") or None
+# Параметры под сигнатуру multimodalart/wan2-1-fast /generate_video (h/w кратны 32, ≤896)
+HEIGHT   = int(os.environ.get("HEIGHT", "896"))    # 896×512 = вертикаль 9:16
+WIDTH    = int(os.environ.get("WIDTH", "512"))
+DURATION = float(os.environ.get("DURATION", "2"))
+STEPS    = int(os.environ.get("STEPS", "4"))        # Wan2.1 fast = 4 шага
+GUIDANCE = float(os.environ.get("GUIDANCE", "1.0"))
+SEED     = int(os.environ.get("SEED", "42"))
 TMP = Path("/tmp/wan_i2v"); TMP.mkdir(parents=True, exist_ok=True)
 
 
@@ -107,6 +114,9 @@ try:
     if API_NAME:
         attempts.append(dict(api_name=API_NAME, args=(img, PROMPT)))
         attempts.append(dict(api_name=API_NAME, args=(img, PROMPT, NEG)))
+    # multimodalart/wan2-1-fast (дефолт): /generate_video(image, prompt, h, w, neg, dur, guidance, steps, seed, randomize)
+    attempts.append(dict(api_name="/generate_video",
+        args=(img, PROMPT, HEIGHT, WIDTH, NEG, DURATION, GUIDANCE, STEPS, SEED, False)))
     attempts += [
         dict(api_name="/generate", args=(img, PROMPT, NEG)),
         dict(api_name="/i2v_generation", args=(img, PROMPT, NEG)),
