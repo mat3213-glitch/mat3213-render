@@ -1,9 +1,9 @@
 name: auto analyst (repo/site)
 
 # Автономная облачная система анализа-теста репо/сайтов по рубрике пользы.
-# Полностью в облаке (GH Actions), исполнитель — mimo на раннере (gh-mimo).
-# ПАРАЛЛЕЛЬНЫЙ FAN-OUT через matrix: 1 облачный ран mimo на цель (без SQLite-локов,
-# без нагрузки на бук). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред 634.
+# Полностью в облаке (GH Actions), исполнитель — Qwen-чат на раннере (chat.qwen.ai через Playwright).
+# [2026-07-27] переехал с mimo (снят free-тариф). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
+# один Qwen-аккаунт). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред.
 # Финал «внедряем/нет» — за yaromat. Решения хранятся в ADOPTION_BOARD.md.
 #
 # Триггеры:
@@ -61,14 +61,14 @@ jobs:
           echo "targets: $OUT"
           echo "matrix=$OUT" >> "$GITHUB_OUTPUT"
 
-  # ── 2. Анализ: ПАРАЛЛЕЛЬНЫЙ fan-out, 1 раннер+mimo на цель ────────────────────────
+  # ── 2. Анализ: fan-out через matrix, 1 раннер+Qwen на цель (последовательно) ──────
   analyze:
     needs: plan
     if: needs.plan.outputs.matrix != '[]' && needs.plan.outputs.matrix != ''
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      max-parallel: 5
+      max-parallel: 1   # [2026-07-27] Qwen = один аккаунт/сессия → последовательно (параллель рискует конфликтом сессии)
       matrix:
         target: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
@@ -85,14 +85,14 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
-      - name: Restore mimo from ydrive
+      - name: Setup Qwen (session + Playwright)
+        # [2026-07-27] mimo снял free-тариф → Stage A на Qwen-чат (текст) через chat.qwen.ai.
+        # Тёплую сессию держит qwen_daily; тянем её с ЯД + ставим Playwright/chromium.
         run: |
           set -e
-          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
-          chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
+          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
       - name: Analyze target
         env:
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}

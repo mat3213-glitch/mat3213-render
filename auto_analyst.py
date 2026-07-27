@@ -45,7 +45,7 @@ except Exception:
 
 HERE = Path(__file__).resolve().parent
 RUBRIC_PATH = HERE / "analyst_rubric.yaml"
-MIMO = Path.home() / ".mimocode" / "bin" / "mimo"
+QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"   # [2026-07-27] mimo free снят → Qwen-чат (текст)
 
 YD = "ydrive:Content factory"
 YD_QUEUE_PENDING = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
@@ -232,7 +232,7 @@ def fetch(url: str, dest: Path) -> dict:
     return ctx
 
 
-# ── Stage A: mimo-анализ по рубрике ────────────────────────────────────────────────
+# ── Stage A: Qwen-анализ по рубрике (текст) ─────────────────────────────────────────
 
 def _extract_json(s: str) -> dict | None:
     s = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", s)
@@ -294,11 +294,11 @@ def analyze(ctx: dict, rubric: dict) -> dict:
   "verdict": "1-2 предложения: брать/на заметку/мимо и почему"
 }}"""
 
-    rc, out = sh([str(MIMO), "run", "--pure", "--dangerously-skip-permissions", prompt],
-                 timeout=420)
+    rc, out = sh(["python3", str(QWEN_CHAT), prompt, "--model", "", "--timeout", "420"],
+                 timeout=480)
     data = _extract_json(out)
     if not data:
-        return {"_error": f"mimo не вернул JSON (rc={rc}): {out[:300]}"}
+        return {"_error": f"qwen не вернул JSON (rc={rc}): {out[:300]}"}
     return data
 
 
