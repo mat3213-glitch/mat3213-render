@@ -83,9 +83,11 @@ def rclone(*args):
     return subprocess.run(["rclone"] + list(args), capture_output=True, text=True)
 
 
-def _tg_one(text: str):
+SERVICE_THREAD = "2182"   # «🔧 сервис · логи» — статус-пинги, не курируемый скаут-тред
+
+def _tg_one(text: str, thread: str | None = None):
     data = urllib.parse.urlencode({
-        "chat_id": TG_CHAT, "message_thread_id": TG_THREAD,
+        "chat_id": TG_CHAT, "message_thread_id": thread or TG_THREAD,
         "text": text, "parse_mode": "HTML",
     }).encode()
     # CF Worker режет дефолтный Python-urllib UA (403/1010) — притворяемся curl
@@ -94,8 +96,9 @@ def _tg_one(text: str):
     urllib.request.urlopen(req, timeout=30)
 
 
-def tg(text: str, chunk: int = 3800):
-    """Отчёт в TG-тред 634 через CF Worker. TG-лимит 4096 → длинное РАЗБИВАЕМ (грабля №8), не обрезаем."""
+def tg(text: str, chunk: int = 3800, thread: str | None = None):
+    """Отчёт в TG-тред через CF Worker. thread=None → скаут-тред (TG_THREAD); задан → override.
+    TG-лимит 4096 → длинное РАЗБИВАЕМ (грабля №8), не обрезаем."""
     if not (TG_WORKER and TG_TOKEN and TG_CHAT):
         log("TG: секреты не заданы — пропуск"); return
     parts, buf = [], ""
@@ -112,7 +115,7 @@ def tg(text: str, chunk: int = 3800):
         parts.append(buf)
     for i, p in enumerate(parts or [text]):
         try:
-            _tg_one(p + (f"\n<i>…({i+1}/{len(parts)})</i>" if len(parts) > 1 else ""))
+            _tg_one(p + (f"\n<i>…({i+1}/{len(parts)})</i>" if len(parts) > 1 else ""), thread=thread)
         except Exception as e:
             log(f"TG err: {e}")
     log("TG: отчёт отправлен")
@@ -427,7 +430,7 @@ def rebuild_board():
     rclone("copyto", str(tmp), YD_BOARD)
     pending = sum(1 for r in rows if r["status"] == "PENDING")
     tg(f"🏁 <b>Авто-анализатор</b> — доска обновлена: {len(rows)} инструментов, {pending} PENDING.\n"
-       f"Решай внедрение: verified_tools/ADOPTION_BOARD.md")
+       f"Решай внедрение: verified_tools/ADOPTION_BOARD.md", thread=SERVICE_THREAD)
     log(f"board rebuilt: {len(rows)} rows, {pending} pending")
 
 
