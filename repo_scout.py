@@ -48,7 +48,7 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 PROJECT_CONTEXT = (
     "Проект yaromat — автоматизация музыкального контента (Future Garage / Downtempo). "
     "Компоненты: нарезка клипов под BPM (ffmpeg + librosa, тяжёлое крутится на GitHub Actions), "
-    "генерация артов и AI-видео/фото (Qwen, Hunyuan, Gemini/Imagen), автопостинг в "
+    "генерация артов и AI-видео/фото (Qwen, LTX, Gemini/Imagen), автопостинг в "
     "Telegram/VK/OK/Pinterest/YouTube, Telegram-бот-админка. "
     "Локальное железо слабое (Atom, 1.8 ГБ RAM, без GPU) — всё тяжёлое выносим на GH Actions или в облако."
 )

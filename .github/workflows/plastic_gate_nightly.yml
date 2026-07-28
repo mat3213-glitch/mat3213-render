@@ -1,7 +1,7 @@
 name: Plastic Gate Nightly (отбраковка пластика из пулов)
 
 # Вариант B (консенсус Claude+mimo): изолированный ночной гейт ПОСЛЕ генераций.
-# Проходит свежие пулы qwen/veofree/hunyuan за сегодня/вчера (UTC), гейтит каждый
+# Проходит свежие пулы qwen/veofree за сегодня/вчера (UTC), гейтит каждый
 # через plastic_gate.py (mimo+рубрика Claude, enforce → пластик в _rejected/, обратимо).
 
 on:

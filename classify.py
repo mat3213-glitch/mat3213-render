@@ -52,7 +52,7 @@ def classify_generated(
     date: str,
 ) -> dict:
     """
-    Классифицировать сгенерированный контент (Qwen/VeoFree/Hunyuan).
+    Классифицировать сгенерированный контент (Qwen/VeoFree/LTX).
     Теги берутся ИЗ промпта через catalog_tagger.
     """
     tags = _normalize_tags_from_prompt(prompt)
@@ -156,7 +156,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--pool", type=str, default=None,
-        help="Пул (qwen_pool, veofree_pool, hunyuan_pool, pexels_pool, openverse_pool, footage_catalog)"
+        help="Пул (qwen_pool, veofree_pool, pexels_pool, openverse_pool, footage_catalog)"
     )
     parser.add_argument(
         "--type", type=str, default=None, choices=["image", "video"],

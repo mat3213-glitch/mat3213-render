@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pool_tagger.py — семантическое тегирование AI-пула (qwen_pool/veofree_pool/hunyuan_pool).
+pool_tagger.py — семантическое тегирование AI-пула (qwen_pool/veofree_pool).
 
 Цель: превратить накопленный generic-пул в ИЩЕЙ каталог (аналог asset_catalog.py для
 footage_catalog), чтобы раскадровка могла подбирать атмосферные кадры под imagery_cues
@@ -34,7 +34,7 @@ from plastic_gate_core import frames_of, make_strip, extract_json, MIMO, sh  # �
 
 YD = "ydrive:Content factory"
 CATALOG_REL = "cloud_io/ai_pool_catalog.jsonl"
-POOLS = ["qwen_pool", "veofree_pool"]  # hunyuan_pool убран 2026-07-24: модель Hunyuan снята, новых видео нет
+POOLS = ["qwen_pool", "veofree_pool"]
 SCALES = ("wide", "medium", "macro", "close")
 
 TAG_RUBRIC = (

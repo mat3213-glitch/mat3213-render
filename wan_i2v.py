@@ -1,6 +1,6 @@
 """
 wan_i2v.py — Wan2.1 image-to-video на GH (US-IP) через HF Space + gradio_client.
-Замена мёртвого Hunyuan i2v (модель снята). Watermark-free. Оживляет ОДИН стилл → клип → ЯД.
+Watermark-free. Оживляет ОДИН стилл → клип → ЯД.
 
 Зеркалит env-контракт и rclone-хелперы veofree_i2v_gen.py; отличие — ядро генерации не Playwright,
 а gradio_client к HF Space (по умолчанию Wan-AI/Wan2.1-I2V-14B-720P). Сигнатура predict у Space

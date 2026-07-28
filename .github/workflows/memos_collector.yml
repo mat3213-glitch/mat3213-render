@@ -7,7 +7,6 @@ on:
       - Download Wikimedia Clips
       - Fetch Media (runner-side, US-IP)
       - Finish Clip
-      - Hunyuan i2v Daily
       - Image Teaser
       - Image Gen (CF Workers AI)
       - pack render

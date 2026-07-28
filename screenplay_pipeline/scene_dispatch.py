@@ -13,7 +13,7 @@ climax-шоты (несут вес истории) → свежая AI-гене�
 накопленного и протегированного AI-пула (pool_matcher.py/pool_tagger.py), НЕ новая генерация.
 Обоснование: LLM режиссёра сам решает число кадров по энергосегментам ПОЛНОГО трека (десятки
 шотов на 2-4-мин трек) — прогнать ВСЕ через генерацию упёрлось бы в лимит VeoFree (1 ген/IP/
-прогон) и дневную квоту Hunyuan на первом же реальном треке (та же стена, что уже ловили).
+прогон) и квоту i2v-движка на первом же реальном треке (та же стена, что уже ловили).
 hero_object для пул-подбора берётся из archetypes/library.yaml по storyboard["archetype_id"]
 (passthrough уже есть в director.py::assemble(), схема storyboard.json не менялась). Пул-клип
 гейтится тем же plastic_gate_core.judge_media() перед использованием (пул не панацея —
@@ -22,7 +22,7 @@ hero_object для пул-подбора берётся из archetypes/library.
 (pool-клип неотличим от AI-generated на этом этапе). --all-generated возвращает старое
 поведение (все шоты через AI-генерацию), если понадобится полный дорогой прогон.
 
-v1 генератора: round-robin Qwen/VeoFree/Hunyuan (sp_scene_*.yml, тот же паттерн). Никакого LLM
+v1 генератора: round-robin по движкам (sp_scene_*.yml, тот же паттерн). Никакого LLM
 в этом файле — только детерминированная логика (по принципу пайплайна).
 
 Usage:
@@ -51,12 +51,12 @@ MAX_RETRIES_DEFAULT = 3
 RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 
 ENGINE_WORKFLOWS = {
-    # hunyuan снят 2026-07-24 (модель мёртвая). Замена i2v = ltx (заведён 2026-07-28).
+    # ltx — i2v-движок, заведён 2026-07-28.
     "veofree": "sp_scene_veofree.yml",   # i2v, watermark-free, ВСЕГДА выход 9:16 (см. project_video_gen_veofree)
     "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
     "ltx":     "sp_scene_ltx.yml",       # i2v self-host на Kaggle GPU (LTX-Video 0.9.5), ~11 мин/клип
 }
-ENGINE_ORDER = ["veofree", "qwen", "ltx"]  # round-robin (hunyuan убран 2026-07-24, ltx добавлен 2026-07-28)
+ENGINE_ORDER = ["veofree", "qwen", "ltx"]  # round-robin по трём движкам
 
 # LTX-Video 0.9.5 — профиль сильных/слабых сторон, замерен на трёх стиллах 2026-07-28
 # (тест `mat3213/ltx-physics-test`, вердикт yaromat принят):
@@ -114,7 +114,7 @@ def build_scene_prompt(shot: dict) -> str:
 
 
 def build_still_query(shot: dict) -> str:
-    """Короткий запрос для Openverse (сток-стилл под Hunyuan i2v). Openverse (как YouTube Data
+    """Короткий запрос для Openverse (сток-стилл под i2v). Openverse (как YouTube Data
     API) не любит длинные многословные запросы — держим 3-4 слова, берём только 'visual' (не
     intent/cues, те часто на русском или слишком абстрактны для стокового поиска)."""
     visual = shot.get("visual", "") or shot.get("base", {}).get("query", "")

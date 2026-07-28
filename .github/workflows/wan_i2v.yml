@@ -1,6 +1,6 @@
 name: Wan2 i2v
 
-# Wan2.1 image-to-video на US-раннере через HF Space (gradio_client). Замена мёртвого Hunyuan i2v.
+# Wan2.1 image-to-video на US-раннере через HF Space (gradio_client).
 # Оживляет ОДИН стилл → клип на ЯД. Дефолт Space = Wan-AI/Wan2.1-I2V-14B-720P (переопределяемо).
 
 on:

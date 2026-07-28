@@ -2,7 +2,7 @@
 """
 parallax_planes.py — генератор video_keys через 2.5D depth-параллакс.
 
-Альтернатива внешнему Hunyuan i2v (animate_planes.py): из ОДНОГО стилла делает план с
+Альтернатива внешним i2v-движкам (animate_planes.py): из ОДНОГО стилла делает план с
 медленным объёмным движением камеры. Depth считается ОДИН раз на стилл (Depth-Anything-V2),
 дальше дешёвый numpy/cv2 warp по кадрам → по времени на GH укладывается (в отличие от
 покадрового i2v/upscale). Без внешних API и без вотермарков.
@@ -140,7 +140,7 @@ def main():
     print(f"[parallax] job={args.job_id} work={workdir}")
 
     # источник списка планов: gen_job.json если есть, иначе *.png в папке джоба ∩ маппинг.
-    # (parallax-у нужен только список ИМЁН — промпт движения, в отличие от Hunyuan i2v, не требуется.)
+    # (parallax-у нужен только список ИМЁН — промпт движения, в отличие от i2v, не требуется.)
     local_gen = os.path.join(workdir, "gen_job.json")
     if sh(["rclone", "copyto", f"{base}/gen_job.json", local_gen]).returncode == 0:
         names = [it["name"] for it in

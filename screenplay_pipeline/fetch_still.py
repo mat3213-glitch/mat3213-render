@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-fetch_still.py — сток-стилл (Openverse, CC0/CC-BY) для Hunyuan i2v (Фаза 1, Стадия 4).
+fetch_still.py — сток-стилл (Openverse, CC0/CC-BY) под i2v-движки (Фаза 1, Стадия 4).
 
-Hunyuan умеет ТОЛЬКО i2v (t2v стабильно 500'ит — см. [[project_hunyuan]], не пробовать снова).
 Источник кадра для оживления — ОПЕНСОРС/СТОК (Openverse), НЕ AI-генерация (yaromat 2026-07-03:
 дороже и не нужно при бесплатном стоке). Самодостаточная копия логики Instrument/Openverse/GEN.py
 (тот файл вне чекаута mat3213-render — не шарим кросс-репо императивную зависимость).

@@ -15,7 +15,7 @@ import os, subprocess, datetime, json, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GATE = os.path.join(HERE, "plastic_gate.py")
-POOLS = ["qwen_pool", "veofree_pool", "hunyuan_pool"]
+POOLS = ["qwen_pool", "veofree_pool"]
 THRESHOLD = os.environ.get("THRESHOLD", "55")
 FORCE = os.environ.get("FORCE", "0") == "1"
 YD = "ydrive:Content factory"

@@ -3,7 +3,7 @@ name: SP Scene Gen — VeoFree i2v
 # Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через VeoFree i2v (Seedance 2.0).
 # watermark-free, но лимит 1 генерация/IP — каждая сцена = отдельный workflow_dispatch (свежий
 # GH-раннер = свежий IP, обходит лимит естественно). Стилл — Openverse (сток, не AI-генерация,
-# тот же принцип что Hunyuan-путь). ВЫХОД ВСЕГДА 720x1280 (вертикаль) — см. [[project_video_gen_veofree]],
+# тот же принцип что у остальных i2v). ВЫХОД ВСЕГДА 720x1280 (вертикаль) — см. [[project_video_gen_veofree]],
 # ratio-параметр сайта на выход не влияет несмотря на видимость.
 
 on:

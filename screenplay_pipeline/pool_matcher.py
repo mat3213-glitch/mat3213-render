@@ -131,7 +131,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hero", required=True, help="hero_object архетипа, через запятую")
     ap.add_argument("--cues", help="imagery_cues через запятую (опционально)")
-    ap.add_argument("--engine", choices=["qwen", "veofree", "hunyuan"])
+    ap.add_argument("--engine", choices=["qwen", "veofree", "ltx"])
     ap.add_argument("--scale", choices=["wide", "medium", "macro", "close"])
     ap.add_argument("--n", type=int, default=5)
     ap.add_argument("--seed")
