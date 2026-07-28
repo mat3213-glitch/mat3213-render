@@ -68,7 +68,13 @@ def kill_overlays(pg):
             sels.forEach(s => document.querySelectorAll(s).forEach(safeRemove));
             if (!document.getElementById('__killads')) {
                 const st = document.createElement('style'); st.id = '__killads';
-                st.textContent = '[class*="__lxG__"],div[id^="lx_"],[id^="google_ads_iframe"],iframe[title*="Advertisement"],iframe[aria-label*="Advertisement"],.adsbygoogle{display:none!important;pointer-events:none!important;visibility:hidden!important}';
+                // :not(body):not(html) — БЕЗ этого правило прячет ВЕСЬ САЙТ. Скрипт согласия
+                // вешает класс с '__lxG__' на body, подстрочный селектор его цепляет, и
+                // display:none гасит страницу целиком. DOM при этом ЖИВОЙ (querySelector
+                // находит и body, и кнопку — скрытые элементы никуда не делись), поэтому
+                // диагностика выглядела здоровой, а скриншот был белым. Ровно это давало
+                // 13 «таймаутов» с 11.07: клики уходили в невидимую страницу.
+                st.textContent = '[class*="__lxG__"]:not(body):not(html),div[id^="lx_"],[id^="google_ads_iframe"],iframe[title*="Advertisement"],iframe[aria-label*="Advertisement"],.adsbygoogle{display:none!important;pointer-events:none!important;visibility:hidden!important}';
                 document.head.appendChild(st);
             }
         }""")
@@ -150,11 +156,20 @@ with sync_playwright() as pw:
         # жив ли вообще документ — если body исчез, виноваты МЫ (см. safeRemove выше),
         # а не сайт. Раньше это стоило 13 провалов и 17 дней тишины.
         try:
-            st=pg.evaluate("""() => ({
-                body: !!document.body, len: (document.body?document.body.innerHTML.length:0),
-                btn: !!document.querySelector('#generate_it'),
-                ta: !!document.querySelector('textarea'),
-                video: !!document.querySelector('video'), url: location.href })""")
+            # ВАЖНО: наличия элементов в DOM НЕДОСТАТОЧНО — querySelector находит и скрытые.
+            # Меряем ВИДИМОСТЬ: display у body и реальный размер кнопки. Именно этой строки
+            # не хватало, чтобы отличить «сайт не отдал видео» от «мы погасили себе страницу».
+            st=pg.evaluate("""() => {
+                const b=document.body, g=document.querySelector('#generate_it');
+                const r=g?g.getBoundingClientRect():null;
+                return {
+                  body: !!b, len: (b?b.innerHTML.length:0),
+                  bodyDisplay: b?getComputedStyle(b).display:'-',
+                  bodyVisible: b?(b.getBoundingClientRect().height>0):false,
+                  btn: !!g, btnBox: r?`${Math.round(r.width)}x${Math.round(r.height)}`:'-',
+                  ta: !!document.querySelector('textarea'),
+                  video: !!document.querySelector('video'), url: location.href };
+            }""")
             log(f"  [dom] {st}")
         except Exception as e: log(f"  [dom] недоступен: {e}")
         try: pg.screenshot(path=str(TMP/"fail.png"))  # viewport-only, лёгкий
