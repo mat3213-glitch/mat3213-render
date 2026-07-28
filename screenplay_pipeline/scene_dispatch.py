@@ -51,11 +51,21 @@ MAX_RETRIES_DEFAULT = 3
 RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 
 ENGINE_WORKFLOWS = {
-    # hunyuan снят 2026-07-24 (модель мёртвая) — исключён из роутинга. Замена i2v = wan_i2v.py.
+    # hunyuan снят 2026-07-24 (модель мёртвая). Замена i2v = ltx (заведён 2026-07-28).
     "veofree": "sp_scene_veofree.yml",   # i2v, watermark-free, ВСЕГДА выход 9:16 (см. project_video_gen_veofree)
     "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
+    "ltx":     "sp_scene_ltx.yml",       # i2v self-host на Kaggle GPU (LTX-Video 0.9.5), ~11 мин/клип
 }
-ENGINE_ORDER = ["veofree", "qwen"]  # round-robin по кругу (hunyuan убран 2026-07-24: модель снята)
+ENGINE_ORDER = ["veofree", "qwen", "ltx"]  # round-robin (hunyuan убран 2026-07-24, ltx добавлен 2026-07-28)
+
+# LTX-Video 0.9.5 — профиль сильных/слабых сторон, замерен на трёх стиллах 2026-07-28
+# (тест `mat3213/ltx-physics-test`, вердикт yaromat принят):
+#   ✅ жидкость/среда (вода, туман, дождь) — лучший результат, цвет стабилен
+#   ✅ твёрдое тело вдалеке (транспорт) — верная перспектива, отражения едут синхронно,
+#      НО на длинном клипе сносит цвет в зелень (красный канал падает) → держать грейдом
+#   ❌ человек крупнее силуэта — почти не движется, ноги слипаются (пластмассовость)
+# Практика: слать на ltx среду и транспорт, НЕ слать шоты с человеком.
+LTX_WEAK_SUBJECTS = ("человек", "фигура", "person", "figure", "walk", "hand", "face")
 
 
 def engine_for(shot: dict) -> str:
@@ -66,7 +76,13 @@ def engine_for(shot: dict) -> str:
     if prov in ENGINE_WORKFLOWS:
         return prov
     idx = shot.get("idx", 0)
-    return ENGINE_ORDER[idx % len(ENGINE_ORDER)]
+    engine = ENGINE_ORDER[idx % len(ENGINE_ORDER)]
+    # ltx не умеет человека (см. LTX_WEAK_SUBJECTS) — на таких шотах уступаем место veofree
+    if engine == "ltx":
+        text = " ".join(str(shot.get(k, "")) for k in ("visual", "intent")).lower()
+        if any(w in text for w in LTX_WEAK_SUBJECTS):
+            return "veofree"
+    return engine
 
 
 # Qwen (t2v, "с нуля") ловлен вживую 2026-07-03 на генерации ЧИТАЕМОГО ТЕКСТА на предметах
@@ -79,8 +95,8 @@ QWEN_TEXT_SUPPRESS_SUFFIX = ", absolutely no text or lettering anywhere in frame
 
 def engine_inputs(engine: str, idx: int, prompt: str, still_query: str, ratio: str) -> dict:
     """У каждого движка свой набор workflow_dispatch inputs — gh CLI падает на незаявленных -f."""
-    if engine == "hunyuan":
-        return {"scene_idx": str(idx), "prompt": prompt, "ratio": ratio, "still_query": still_query}
+    if engine == "ltx":
+        return {"scene_idx": str(idx), "prompt": prompt, "still_query": still_query}
     if engine == "veofree":
         return {"scene_idx": str(idx), "prompt": prompt, "still_query": still_query, "aspect": "9:16"}
     if engine == "qwen":
@@ -254,10 +270,9 @@ def main():
     ap.add_argument("--max-retries", type=int, default=MAX_RETRIES_DEFAULT)
     ap.add_argument("--poll", type=int, default=15, help="интервал поллинга ЯД (с)")
     ap.add_argument("--timeout", type=int, default=1200, help="таймаут на сцену (с)")
-    ap.add_argument("--max-hunyuan-per-run", type=int, default=8,
-                    help="консервативный потолок вызовов Hunyuan за один прогон (у Hunyuan есть "
-                         "дневной лимит генераций, точное число не известно — yaromat 2026-07-03, "
-                         "начинаем осторожно, не бьём пачками/параллельно)")
+    ap.add_argument("--max-ltx-per-run", type=int, default=8,
+                    help="потолок вызовов LTX за прогон. LTX жжёт квоту Kaggle GPU (30ч/неделю), "
+                         "~11 мин на клип → 8 вызовов ≈ 1.5ч. Не даём одному треку съесть неделю.")
     ap.add_argument("--all-generated", action="store_true",
                     help="старое поведение: ВСЕ шоты через AI-генерацию, пул не участвует "
                          "(дорого — упрётся в лимиты на реальном треке, см. докстринг)")
@@ -277,7 +292,7 @@ def main():
 
     tmpdir = Path(tempfile.mkdtemp(prefix="scene_dispatch_"))
     used_pool_ids: set = set()
-    ok, failed, hunyuan_calls = 0, 0, 0
+    ok, failed, ltx_calls = 0, 0, 0
     for shot in shots:
         idx = shot.get("idx")
         if idx is None:
@@ -289,18 +304,17 @@ def main():
             base = pool_fill_shot(args.job_id, idx, shot, hero_object, tmpdir, used_pool_ids)
         else:
             engine = engine_for(shot)
-            # дневной лимит Hunyuan не известен точно — консервативный потолок ЗА ПРОГОН, чтобы
-            # один трек не сжёг всю дневную квоту (yaromat 2026-07-03). Каждая попытка (включая
-            # ретраи) считается отдельным вызовом.
-            if engine == "hunyuan" and hunyuan_calls + args.max_retries > args.max_hunyuan_per_run:
-                print(f"  scene {idx}: потолок Hunyuan за прогон исчерпан "
-                      f"({hunyuan_calls}/{args.max_hunyuan_per_run}) — пропуск", file=sys.stderr)
+            # LTX жжёт общую квоту Kaggle GPU (30ч/нед) — потолок ЗА ПРОГОН, чтобы один трек
+            # не съел неделю. Каждая попытка (включая ретраи) считается отдельным вызовом.
+            if engine == "ltx" and ltx_calls + args.max_retries > args.max_ltx_per_run:
+                print(f"  scene {idx}: потолок LTX за прогон исчерпан "
+                      f"({ltx_calls}/{args.max_ltx_per_run}) — пропуск", file=sys.stderr)
                 failed += 1
                 continue
             base = dispatch_and_gate(args.job_id, idx, shot, ratio, args.timeout, args.poll,
                                      args.max_retries, tmpdir)
-            if engine == "hunyuan":
-                hunyuan_calls += args.max_retries  # верхняя оценка (сколько попыток реально ушло — не знаем)
+            if engine == "ltx":
+                ltx_calls += args.max_retries  # верхняя оценка (сколько попыток реально ушло — не знаем)
 
         if base:
             shot["base"] = base

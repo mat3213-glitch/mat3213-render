@@ -1,0 +1,96 @@
+name: SP Scene Gen — LTX i2v (Kaggle GPU)
+
+# Screenplay-pipeline Фаза 1, Стадия 4: генерация ОДНОЙ сцены через LTX-Video 0.9.5.
+# Заменяет мёртвый Hunyuan i2v (снят 2026-07-24). Заведён 2026-07-28 после теста физики.
+#
+# ПОЧЕМУ ЧЕРЕЗ KAGGLE: LTX нужен GPU, а у GH-раннеров его нет. Раннер здесь = дирижёр:
+# готовит стилл, собирает ноутбук, толкает его на бесплатный Kaggle GPU (P100/T4),
+# ждёт, забирает mp4 и кладёт на ЯД. Сам считать нечего — CPU почти простаивает.
+#
+# ПРОФИЛЬ ДВИЖКА (замер на трёх стиллах 2026-07-28):
+#   ✅ вода/туман/дождь — лучший результат, цвет держится
+#   ✅ транспорт вдалеке — верная перспектива, отражения синхронны; на длинном клипе сносит в зелень
+#   ❌ человек крупнее силуэта — почти не движется, ноги слипаются
+# Роутинг в scene_dispatch.engine_for() сам уводит «человеческие» шоты на veofree.
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+      scene_idx:
+        required: true
+      prompt:
+        required: true
+        description: 'Motion prompt для i2v — с НАБЛЮДАЕМЫМ действием (параллакс, рост объектов). Слова вроде "slow/gentle drift" разрешают нулевое движение и дают фриз.'
+      still_query:
+        required: true
+        description: 'Короткий (2-3 слова) запрос для стилла на Openverse'
+      seed:
+        default: '42'
+
+permissions:
+  contents: read
+
+jobs:
+  gen:
+    runs-on: ubuntu-latest
+    # Kaggle: ~4 мин загрузка модели + ~5 мин генерация, плюс очередь на свободный GPU
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+          pip install -q requests pillow numpy kaggle
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch stock still (Openverse) + upload to ЯД
+        env:
+          INPUT_STILL_QUERY: ${{ inputs.still_query }}
+          OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
+          OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          python3 screenplay_pipeline/fetch_still.py "$INPUT_STILL_QUERY" --out still.jpg
+          rclone copyto still.jpg "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/still_${SCENE_IDX}.jpg"
+
+      - name: Generate scene (LTX i2v on Kaggle GPU)
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+          IMG_LOCAL: still.jpg
+          PROMPT: ${{ inputs.prompt }}
+          SEED: ${{ inputs.seed }}
+          DEST_FOLDER: Content factory/cloud_io/render_jobs/${{ inputs.job_id }}/generated
+          OUT_NAME: scene_${{ inputs.scene_idx }}.mp4
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY:      ${{ secrets.KAGGLE_KEY }}
+          # своё ядро на сцену — иначе параллельные сцены затрут версии друг друга
+          LTX_KERNEL_SLUG: ${{ secrets.KAGGLE_USERNAME }}/ltx-scene-${{ inputs.job_id }}-${{ inputs.scene_idx }}
+        run: python3 ltx_i2v_gen.py
+
+      - name: Report status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SCENE_IDX: ${{ inputs.scene_idx }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/scene_${SCENE_IDX}.status.txt" \
+            <<< "error: sp_scene_ltx failed" || true
