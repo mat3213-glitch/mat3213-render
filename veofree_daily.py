@@ -62,7 +62,7 @@ VIDEO_PROMPTS = [
     "rain slowly running down a window pane at night, bokeh city lights behind, melancholic mood, cinematic",
     "water surface with slow ripples, dark reflection, deep blue hour light, no text, photorealistic",
     "light rays through thick fog over still water, volumetric, desaturated, no people, slow drift",
-    "mist rolling over abandoned industrial landscape at dawn, muted earth tones, vast empty space, cinematic",
+    "mist rolling over abandoned industrial landscape at dawn, muted earth tones, vast open landscape, cinematic",
     "raindrops on dark glass with blurred street lights behind, shallow depth of field, downtempo atmosphere",
 ]
 

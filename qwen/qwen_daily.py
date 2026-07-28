@@ -70,7 +70,7 @@ IMAGE_PROMPTS = [
     "dust particles in light beam dark room, volumetric light, photorealistic",
     "rain on window at night, bokeh city lights behind, melancholic mood",
     "candle flame in darkness, warm glow on old wood, intimate atmosphere",
-    "misty field at dawn, muted earth tones, vast empty space",
+    "misty field at dawn, muted earth tones, vast open landscape",   # не «empty space»: Qwen рисует космос
     "abandoned interior with deep shadows, peeling paint, soft natural light",
     "dark moody clouds over still water, reflection, desaturated",
     "cracked earth texture close up, dark tones, abstract natural pattern",

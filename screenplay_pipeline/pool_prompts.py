@@ -22,7 +22,9 @@ YD_ROOT = "ydrive:Content factory/cloud_io/render_jobs"
 
 # фолбэк на случай пустого конвейера — старый generic-вайб (не выкидываем, это safety net)
 FALLBACK_MOOD_WORDS = ["melancholic", "nostalgic", "atmospheric", "muted", "desaturated"]
-FALLBACK_VISUAL = "dark moody empty space, dim light, film grain"
+# «empty space» Qwen читает БУКВАЛЬНО и рисует открытый космос со спутником
+# (замерено 28.07 на боевом промпте) — только «room/interior», никакого «space».
+FALLBACK_VISUAL = "dark moody empty room, dim light, film grain"
 FALLBACK_GENRE = "future garage downtempo"
 
 FRAMING = ["wide establishing shot of", "extreme close-up detail of", "macro texture shot of",
