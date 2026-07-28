@@ -30,6 +30,26 @@ def yd_put(local,remote):
         log(f"  up err rc={r.returncode} {r.stderr[:200]}"); time.sleep(4)
     return False
 
+def find_video(pg):
+    """Ссылка на готовый ролик. Сайт мог сменить вёрстку — щупаем ВСЕ разумные места,
+    а не один селектор <video src> (из-за него 100%-готовые генерации читались как таймаут)."""
+    try:
+        return pg.evaluate("""() => {
+            const ok = u => u && /^https?:/.test(u) && u.toLowerCase().includes('.mp4');
+            for (const v of document.querySelectorAll('video')) {
+                if (ok(v.src)) return v.src;
+                if (ok(v.currentSrc)) return v.currentSrc;
+                for (const s of v.querySelectorAll('source')) if (ok(s.src)) return s.src;
+            }
+            for (const a of document.querySelectorAll('a[href],[download]')) {
+                const u = a.href || a.getAttribute('download'); if (ok(u)) return u;
+            }
+            return null;
+        }""")
+    except Exception:
+        return None
+
+
 def paywall(pg):
     for sel in [".pf-btn","#pfEmail",".plan-btn",".btn-month",".btn-life"]:
         try:
@@ -93,7 +113,10 @@ with sync_playwright() as pw:
         user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36")
     pg=ctx.new_page()
     seen=set()
-    pg.on("response", lambda r: seen.add(r.url) if ".mp4" in r.url and "/video/uploads/" in r.url else None)
+    # ЛОВИМ ЛЮБОЙ .mp4, не только /video/uploads/. Скриншот 2026-07-28 показал «Generating
+    # Video... 100%» при status=timeout: генерация ДОХОДИЛА ДО КОНЦА, а детектор искал
+    # устаревший путь и ссылку не узнавал. Узкий фильтр = слепота.
+    pg.on("response", lambda r: seen.add(r.url) if ".mp4" in r.url.lower() else None)
     pg.goto(URL,wait_until="domcontentloaded",timeout=60000); pg.wait_for_timeout(5000)
     dismiss(pg)
     ta=pg.query_selector("textarea#fn__include_textarea") or pg.query_selector("textarea")
@@ -156,8 +179,7 @@ with sync_playwright() as pw:
                   return b ? {t:b.innerText.trim().slice(0,24), d:!!b.disabled} : null; }""")
               log(f"  [click {attempt+1}/5] способ={how} кнопка={st}")
               pg.wait_for_timeout(2500)
-              v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
-              if seen or (src and src.startswith("http")): break
+              if seen or find_video(pg): break
           try:
               post=pg.evaluate("""() => {
                   const b=document.querySelector('#generate_it');
@@ -172,9 +194,9 @@ with sync_playwright() as pw:
           for _ in range(84):                            # до 420с: 200с могло не хватать на очередь Seedance
               pg.wait_for_timeout(5000)
               if paywall(pg): status="paywall"; break
-              v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
-              if (src and src.startswith("http")) or seen:
-                  video_url=src if (src and src.startswith("http")) else sorted(seen)[-1]
+              src=find_video(pg)
+              if src or seen:
+                  video_url=src or sorted(seen)[-1]
                   status="ok"; break
           else: status="timeout"
       else:
@@ -204,6 +226,12 @@ with sync_playwright() as pw:
                   video: !!document.querySelector('video'), url: location.href };
             }""")
             log(f"  [dom] {st}")
+            res=pg.evaluate("""() => {
+                const t=[...document.querySelectorAll('*')].find(e =>
+                    /Generating Video|Download|%/.test(e.textContent||'') && e.children.length<6);
+                return t ? (t.closest('div')||t).outerHTML.slice(0,1200) : 'блок результата не найден';
+            }""")
+            log(f"  [result-html] {res}")
         except Exception as e: log(f"  [dom] недоступен: {e}")
         try:
             # проматываем К ГЕНЕРАТОРУ: вьюпорт-скриншот со случайной позиции показывал
