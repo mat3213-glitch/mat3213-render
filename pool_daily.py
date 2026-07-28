@@ -35,9 +35,27 @@ def pick_todo():
         sys.exit("[pool_daily] нет pool_prompts.json на гейте")
     prompts = json.load(open("pool_prompts.json"))["prompts"]
     existing = sh(["rclone", "lsf", GATE]).stdout or ""
-    done = {int(m.group(1)) for m in re.finditer(rf"{ENGINE}_(\d+)_", existing)}
+    # СДЕЛАННЫМ считается ТОЛЬКО реальный .mp4. Раньше искали подстроку `<engine>_<id>_`
+    # по всему листингу — и маркер провала `veofree_6_clip.mp4.FAILED.txt` тоже под неё
+    # подходил. Из-за этого 13 таймаутов VeoFree записались как выполненная работа, пул
+    # объявился полным, и дейли 17 дней просыпался вхолостую (разбор 2026-07-28).
+    done, failed = set(), set()
+    for line in existing.splitlines():
+        line = line.strip()
+        m = re.match(rf"{ENGINE}_(\d+)_.*\.mp4$", line)
+        if m:
+            done.add(int(m.group(1)))
+            continue
+        m = re.match(rf"{ENGINE}_(\d+)_.*\.(FAILED\.txt|fail\.png)$", line)
+        if m:
+            failed.add(int(m.group(1)))
+    failed -= done                      # провалился, потом добился — уже не провал
     todo = [p for p in prompts if int(p["id"]) not in done]
     print(f"[pool_daily {ENGINE}] сделано={len(done)} осталось={len(todo)}", flush=True)
+    if failed:
+        print(f"[pool_daily {ENGINE}] ⚠ ретрай после провала: {sorted(failed)} "
+              f"({len(failed)} шт). Если один и тот же id висит тут прогон за прогоном — "
+              f"промпт или движок не тянут, чинить руками.", flush=True)
     return todo
 
 
