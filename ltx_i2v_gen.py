@@ -159,6 +159,11 @@ image = Image.open(io.BytesIO(base64.b64decode(IMAGE_B64))).convert("RGB")
 """ % json.dumps(image_b64)
     pipeline = """import os
 import torch
+# САНИТИ: если Kaggle выдал ядро без GPU, LTX уползёт считать на CPU и будет
+# крутиться часами вместо минут. Падаем сразу и с понятной причиной.
+assert torch.cuda.is_available(), "Kaggle kernel has no GPU - enable_gpu did not take effect"
+_p = torch.cuda.get_device_properties(0)
+print(f"GPU: {_p.name} | VRAM {_p.total_memory/1024**3:.1f}GB", flush=True)
 from diffusers import LTXImageToVideoPipeline
 from diffusers.utils import export_to_video
 
