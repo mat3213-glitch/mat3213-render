@@ -136,7 +136,18 @@ with sync_playwright() as pw:
               pg.wait_for_timeout(2500)
               v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
               if seen or (src and src.startswith("http")): break
-          for _ in range(40):                            # до 200с (генерация бывает медленной)
+          try:
+              post=pg.evaluate("""() => {
+                  const b=document.querySelector('#generate_it');
+                  const t=document.querySelector('textarea');
+                  return {btnText:(b?b.innerText.trim().slice(0,40):'-'),
+                          btnDisabled:(b?!!b.disabled:null),
+                          taLen:(t?t.value.length:0),
+                          spinner: !!document.querySelector('[class*="load"],[class*="spin"],[class*="progress"]')};
+              }""")
+              log(f"  [after-click] {post}")
+          except Exception as e: log(f"  [after-click] н/д: {e}")
+          for _ in range(84):                            # до 420с: 200с могло не хватать на очередь Seedance
               pg.wait_for_timeout(5000)
               if paywall(pg): status="paywall"; break
               v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
@@ -172,6 +183,12 @@ with sync_playwright() as pw:
             }""")
             log(f"  [dom] {st}")
         except Exception as e: log(f"  [dom] недоступен: {e}")
+        try:
+            # проматываем К ГЕНЕРАТОРУ: вьюпорт-скриншот со случайной позиции показывал
+            # маркетинговый текст, а не форму, из-за которой пришли
+            pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b) b.scrollIntoView({block:'center'}); }")
+            pg.wait_for_timeout(500)
+        except Exception: pass
         try: pg.screenshot(path=str(TMP/"fail.png"))  # viewport-only, лёгкий
         except: pass
     br.close()
