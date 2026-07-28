@@ -1,76 +1,80 @@
-# Repo Scout — 2026-07-27T12:55:41.736740
+# Repo Scout — 2026-07-28T11:58:14.617100
 
-Всего в шортлисте: 18
+Всего в шортлисте: 19
 
-- **alibaba/open-code-review** ⭐14408 [orchestration]
-  - https://github.com/alibaba/open-code-review
-  - 💡 Автоматизирует процесс код-ревью, может быть полезен для проверки качества кода в проекте, но для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом.
-  - 📄 Open-source &amp; free — Battle-tested at Alibaba's scale. Hybrid architecture code review tool: deterministic pipelines + LLM Agent, precise line-level comment
-- **shiyu-coder/Kronos** ⭐34404 [misc]
-  - https://github.com/shiyu-coder/Kronos
-  - 💡 Предоставляет foundation модель для финансовых рынков, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 Kronos: A Foundation Model for the Language of Financial Markets
-- **immich-app/immich** ⭐108940 [craft]
-  - https://github.com/immich-app/immich
-  - 💡 Автоматизирует управление фотографиями и видео, может быть полезен для хранения и организации медиафайлов проекта.
-  - 📄 High performance self-hosted photo and video management solution.
-- **Augani/openreel-video** ⭐4564 [vision]
-  - https://github.com/Augani/openreel-video
-  - 💡 Предоставляет браузерный видеоредактор, может быть полезен для редактирования видеоконтента проекта.
-  - 📄 OpenReel Video - Professional browser-based video editor. Open source CapCut alternative. 100% browser-based, no installation, no cloud uploads, no watermarks.
-- **CoreBunch/Instatic** ⭐6060 [orchestration]
-  - https://github.com/CoreBunch/Instatic
-  - 💡 Предоставляет визуальный CMS для создания статических страниц, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 The open-source alternative to Webflow, Framer and WordPress. Agentic self-hosted visual CMS outputting clean static pages. Users, roles, plugins, content, data
-- **bradautomates/claude-video** ⭐10695 [misc]
+- **firecrawl/firecrawl** ⭐157304 [misc]
+  - https://github.com/firecrawl/firecrawl
+  - 💡 Автоматизирует поиск, парсинг и взаимодействие с вебом. Может быть полезен для сбора данных о музыкальных треках и артистах.
+  - 📄 The API to search, scrape, and interact with the web at scale. 🔥
+- **affaan-m/ECC** ⭐234425 [orchestration]
+  - https://github.com/affaan-m/ECC
+  - 💡 Оптимизирует производительность агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor 
+- **bradautomates/claude-video** ⭐11605 [misc]
   - https://github.com/bradautomates/claude-video
-  - 💡 Автоматизирует обработку видео, может быть полезен для проекта, если необходимо обрабатывать видеоконтент.
+  - 💡 Позволяет агенту Claude смотреть видео. Может быть полезен для анализа музыкальных видеоклипов.
   - 📄 Give Claude the ability to watch any video. /watch downloads, extracts frames, transcribes, hands it all to Claude.
-- **mvanhorn/last30days-skill** ⭐53957 [orchestration]
-  - https://github.com/mvanhorn/last30days-skill
-  - 💡 Предоставляет AI-агент, который может собирать информацию из различных источников, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 AI agent skill that researches any topic across Reddit, X, YouTube, HN, Polymarket, and the web - then synthesizes a grounded summary
-- **jenkinsci/jenkins** ⭐25805 [misc]
+- **microsoft/flint-chart** ⭐2369 [orchestration]
+  - https://github.com/microsoft/flint-chart
+  - 💡 Помогает создавать визуализации данных. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 🪄 Flint is a visualization language that lets AI agents reliably create expressive, good-looking charts from simple, human-editable chart specs.
+- **jenkinsci/jenkins** ⭐25973 [misc]
   - https://github.com/jenkinsci/jenkins
-  - 💡 Автоматизирует процесс сборки и развертывания проекта, может быть полезен для автоматизации процессов проекта.
+  - 💡 Автоматизирует процесс сборки и тестирования. Может быть полезен для автоматизации процесса генерации музыкального контента.
   - 📄 Jenkins automation server
-- **ruvnet/ruflo** ⭐66209 [orchestration]
-  - https://github.com/ruvnet/ruflo
-  - 💡 Предоставляет инструмент для создания и управления автономными рабочими процессами, может быть полезен для проекта, если необходимо создавать сложные рабочие процессы.
-  - 📄 🌊 The leading agent meta-harness. Deploy intelligent multi-player swarms, coordinate autonomous workflows, and build conversational AI systems. Features adaptiv
-- **Asabeneh/30-Days-Of-Python** ⭐69228 [misc]
-  - https://github.com/Asabeneh/30-Days-Of-Python
-  - 💡 Предоставляет учебный материал для изучения Python, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 The 30 Days of Python programming challenge is a step-by-step guide to learn the Python programming language in 30 days. This challenge may take more than 100 d
-- **tashfeenahmed/freellmapi** ⭐17144 [orchestration]
-  - https://github.com/tashfeenahmed/freellmapi
-  - 💡 Предоставляет прокси для доступа к бесплатным LLM-моделям, может быть полезен для проекта, если необходимо использовать LLM-модели для обработки текста или других задач.
-  - 📄 OpenAI-compatible proxy that stacks the free tiers of 28 LLM providers (~4B tokens/month) behind one /v1 endpoint — plus any custom OpenAI-compatible endpoint. 
-- **home-assistant/core** ⭐89501 [misc]
-  - https://github.com/home-assistant/core
-  - 💡 Предоставляет систему домашней автоматизации, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 🏡 Open source home automation that puts local control and privacy first.
-- **nesquena/hermes-webui** ⭐16607 [orchestration]
-  - https://github.com/nesquena/hermes-webui
-  - 💡 Предоставляет веб-интерфейс для работы с Hermes Agent, может быть полезен для проекта, если необходимо использовать Hermes Agent для обработки текста или других задач.
-  - 📄 Hermes WebUI: The best way to use Hermes Agent from the web or from your phone!
-- **google-labs-code/design.md** ⭐26459 [orchestration]
-  - https://github.com/google-labs-code/design.md
-  - 💡 Предоставляет спецификацию формата для описания визуальной идентичности, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 A format specification for describing a visual identity to coding agents. DESIGN.md gives agents a persistent, structured understanding of a design system.
-- **arc53/DocsGPT** ⭐18112 [orchestration]
+- **volcengine/OpenViking** ⭐27550 [orchestration]
+  - https://github.com/volcengine/OpenViking
+  - 💡 Помогает создавать базу знаний для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 Self-evolving Context Database for AI Agents. Unify Agent Memory, Knowledge RAG and Skills.
+- **modelcontextprotocol/modelcontextprotocol** ⭐8719 [misc]
+  - https://github.com/modelcontextprotocol/modelcontextprotocol
+  - 💡 Определяет протокол для контекста моделей. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 Specification and documentation for the Model Context Protocol
+- **xbtlin/ai-berkshire** ⭐14548 [orchestration]
+  - https://github.com/xbtlin/ai-berkshire
+  - 💡 Помогает создавать инвестиционные стратегии с помощью ИИ. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 AI 时代的伯克希尔：基于 Claude Code / Codex 的价值投资研究框架。巴菲特·芒格·段永平·李录四大师方法论 + 多Agent并行研究。| AI-era Berkshire: a value investing research framework built for Claude Code / Co
+- **huggingface/speech-to-speech** ⭐6768 [orchestration]
+  - https://github.com/huggingface/speech-to-speech
+  - 💡 Позволяет создавать голосовых агентов. Может быть полезен для создания голосовых интерфейсов для музыкальных приложений.
+  - 📄 Build local voice agents with open-source models
+- **humanlayer/12-factor-agents** ⭐24890 [orchestration]
+  - https://github.com/humanlayer/12-factor-agents
+  - 💡 Помогает создавать приложения с агентами. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 What are the principles we can use to build LLM-powered software that is actually good enough to put in the hands of production customers?
+- **HKUDS/OpenSpace** ⭐7127 [orchestration]
+  - https://github.com/HKUDS/OpenSpace
+  - 💡 Помогает создавать слой управления навыками для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 "OpenSpace: The Skill Management Layer for AI Agents" -- https://open-space.cloud/
+- **medusajs/medusa** ⭐35429 [orchestration]
+  - https://github.com/medusajs/medusa
+  - 💡 Помогает создавать платформы электронной коммерции. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 The world's most flexible commerce platform for agents and developers
+- **lightseekorg/tokenspeed** ⭐1713 [orchestration]
+  - https://github.com/lightseekorg/tokenspeed
+  - 💡 Ускоряет работу моделей ИИ. Может быть полезен для ускорения процесса генерации музыкального контента.
+  - 📄 TokenSpeed is a speed-of-light LLM inference engine.
+- **arc53/DocsGPT** ⭐18147 [orchestration]
   - https://github.com/arc53/DocsGPT
-  - 💡 Предоставляет платформу для работы с документами и агентами, может быть полезен для проекта, если необходимо обрабатывать документы или использовать агенты для обработки текста.
+  - 💡 Помогает создавать платформы для агентов и поиска документов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
   - 📄 Private AI platform for agents, assistants and enterprise search. Built-in Agent Builder, Deep research, Document analysis, Multi-model support, and API connect
-- **lightningpixel/modly** ⭐4694 [misc]
-  - https://github.com/lightningpixel/modly
-  - 💡 Предоставляет инструмент для генерации 3D-моделей из изображений, для проекта вряд ли пригодится, так как не связан напрямую с музыкальным контентом или автоматизацией.
-  - 📄 Desktop app to generate 3D models from images using local AI — runs entirely on your GPU
-- **BuilderIO/agent-native** ⭐4081 [orchestration]
+- **NanmiCoder/cc-haha** ⭐13664 [orchestration]
+  - https://github.com/NanmiCoder/cc-haha
+  - 💡 Помогает создавать рабочие столы для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 本地优先的跨平台 Claude Code / Agent 桌面工作台：多 Agent、Git Worktree、代码 Diff、技能市场、多模型、Computer Use、任务感知桌面宠物，并支持微信、飞书、钉钉、Telegram、WhatsApp 与 H5 访问。
+- **basketikun/infinite-canvas** ⭐4083 [orchestration]
+  - https://github.com/basketikun/infinite-canvas
+  - 💡 Помогает создавать творческие проекты с помощью ИИ. Может быть полезен для генерации музыкальных видеоклипов.
+  - 📄 面向 AI 创作的开源无限画布工作台，集成 AI 生图、参考图编辑、视频生成、Agent 智能助手、画布编排、对话创作、提示词库与素材管理等能力，支持可视化创作流程与多 Agent 协同工作。兼容 OpenAI 接口生态，支持 chatgpt2api、grok2api、flow2api、newapi 等渠道接入。
+- **BuilderIO/agent-native** ⭐4200 [orchestration]
   - https://github.com/BuilderIO/agent-native
-  - 💡 Предоставляет фреймворк для создания агент-ориентированных приложений, может быть полезен для проекта, если необходимо создавать сложные рабочие процессы или использовать агенты для обработки текста или других задач.
+  - 💡 Помогает создавать приложения для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
   - 📄 A framework for building agent-native applications.
-- **777genius/agent-teams-ai** ⭐1725 [orchestration]
-  - https://github.com/777genius/agent-teams-ai
-  - 💡 Предоставляет инструмент для создания и управления командами агентов, может быть полезен для проекта, если необходимо создавать сложные рабочие процессы или использовать агенты для обработки текста или других задач.
-  - 📄 You're the boss, agents are your team. They handle tasks on their own, message each other, and review each other's work. You just watch the kanban board and giv
+- **microsoft/agent-governance-toolkit** ⭐4975 [orchestration]
+  - https://github.com/microsoft/agent-governance-toolkit
+  - 💡 Помогает создавать инструменты для управления агентами. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 AI Agent Governance Toolkit — Policy enforcement, zero-trust identity, execution sandboxing, and reliability engineering for autonomous AI agents. Covers 10/10 
+- **microsoft/azure-devops-mcp** ⭐1914 [orchestration]
+  - https://github.com/microsoft/azure-devops-mcp
+  - 💡 Помогает создавать серверы для Azure DevOps. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 📄 The MCP server for Azure DevOps, bringing the power of Azure DevOps directly to your agents.
