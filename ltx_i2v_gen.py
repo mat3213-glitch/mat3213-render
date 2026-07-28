@@ -21,7 +21,14 @@ TARGET_WIDTH = 480
 TARGET_HEIGHT = 704
 TARGET_LUMA = 120.0
 POLL_SECONDS = 60
-TIMEOUT_SECONDS = 45 * 60
+# 100 минут. Ручные прогоны укладывались в 11 мин, но там GPU был свободен сразу;
+# смоук 2026-07-28 крутился 57+ мин (очередь Kaggle + установка torch внутри ядра).
+TIMEOUT_SECONDS = 100 * 60
+
+
+def say(message: str) -> None:
+    """stdout с флашем — иначе на GH порядок строк рвётся относительно stderr."""
+    print(message, flush=True)
 
 
 def fail(message: str) -> None:
@@ -295,7 +302,7 @@ def status_until_done(slug: str, output_directory: Path) -> None:
             fail(f"Kaggle kernel {slug} ended with an error or cancellation.")
         print(f"Kaggle kernel status: {last_status}", file=sys.stderr)
         time.sleep(POLL_SECONDS)
-    fail(f"Timed out after 45 minutes waiting for Kaggle kernel {slug}. Last status: {last_status}")
+    fail(f"Timed out after {TIMEOUT_SECONDS // 60} minutes waiting for Kaggle kernel {slug}. Last status: {last_status}")
 
 
 def find_output_video(directory: Path) -> Path:
@@ -389,7 +396,7 @@ def main() -> None:
         push = run(["kaggle", "kernels", "push", "-p", str(workdir)])
         # Печатаем ответ push: в нём URL реально созданного ядра. Без этого расхождение
         # «просили один слаг — создался другой/никакой» видно только по загадочному 403.
-        print(f"kaggle push: {(push.stdout or push.stderr).strip()[-500:]}")
+        say(f"kaggle push: {(push.stdout or push.stderr).strip()[-500:]}")
         wait_until_started(slug)
         status_until_done(slug, workdir)
         pull_output(slug, workdir, required=True)

@@ -36,7 +36,7 @@ jobs:
   gen:
     runs-on: ubuntu-latest
     # Kaggle: ~4 мин загрузка модели + ~5 мин генерация, плюс очередь на свободный GPU
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
