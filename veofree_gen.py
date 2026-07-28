@@ -30,13 +30,34 @@ def yd_put(local,remote):
         log(f"  up err rc={r.returncode} {r.stderr[:200]}"); time.sleep(4)
     return False
 
+# Хосты и признаки РЕКЛАМНОГО видео. Расширив детектор до «любого .mp4», я тут же поймал
+# 15-секундный ролик Peacock TV с ad-сервера 2mdn.net и залил его как готовую генерацию
+# (2026-07-28). Слепоту поменял на доверчивость — нужен фильтр, а не отсутствие фильтра.
+AD_MARKERS = ("2mdn.net", "doubleclick", "googlesyndication", "googleadservices",
+              "adservice", "web_video_ads", "/ads/", "videoplayback")
+
+
+def is_ad(u):
+    u = (u or "").lower()
+    return any(m in u for m in AD_MARKERS)
+
+
 def find_video(pg):
     """Ссылка на готовый ролик. Сайт мог сменить вёрстку — щупаем ВСЕ разумные места,
     а не один селектор <video src> (из-за него 100%-готовые генерации читались как таймаут)."""
     try:
         return pg.evaluate("""() => {
-            const ok = u => u && /^https?:/.test(u) && u.toLowerCase().includes('.mp4');
+            const AD = ["2mdn.net","doubleclick","googlesyndication","googleadservices",
+                        "adservice","web_video_ads","/ads/","videoplayback"];
+            const ok = u => {
+                if (!u || !/^https?:/.test(u)) return false;
+                const l = u.toLowerCase();
+                if (!l.includes('.mp4')) return false;
+                return !AD.some(m => l.includes(m));      // реклама — не наш результат
+            };
+            const inAd = e => !!e.closest('[id*="google_ads"],[class*="adsbygoogle"],[id^="lx_"],ins,iframe');
             for (const v of document.querySelectorAll('video')) {
+                if (inAd(v)) continue;                     // <video> внутри рекламного блока
                 if (ok(v.src)) return v.src;
                 if (ok(v.currentSrc)) return v.currentSrc;
                 for (const s of v.querySelectorAll('source')) if (ok(s.src)) return s.src;
@@ -116,7 +137,8 @@ with sync_playwright() as pw:
     # ЛОВИМ ЛЮБОЙ .mp4, не только /video/uploads/. Скриншот 2026-07-28 показал «Generating
     # Video... 100%» при status=timeout: генерация ДОХОДИЛА ДО КОНЦА, а детектор искал
     # устаревший путь и ссылку не узнавал. Узкий фильтр = слепота.
-    pg.on("response", lambda r: seen.add(r.url) if ".mp4" in r.url.lower() else None)
+    pg.on("response", lambda r: seen.add(r.url)
+          if (".mp4" in r.url.lower() and not is_ad(r.url)) else None)
     pg.goto(URL,wait_until="domcontentloaded",timeout=60000); pg.wait_for_timeout(5000)
     dismiss(pg)
     ta=pg.query_selector("textarea#fn__include_textarea") or pg.query_selector("textarea")
