@@ -54,7 +54,18 @@ def kill_overlays(pg):
             const sels = ['.__lxG__splash','div[id^="lx_"]','[id^="google_ads_iframe"]',
                           'iframe[title*="Advertisement"]','iframe[aria-label*="Advertisement"]',
                           '.adsbygoogle','[class*="__lxG__"]','[id^="clickio"]'];
-            sels.forEach(s => document.querySelectorAll(s).forEach(e => e.remove()));
+            // ЗАЩИТА (2026-07-28): '[class*="__lxG__"]' — подстрочный матч по class. Скрипты
+            // согласия вешают свои классы на <body>/<html>, и тогда e.remove() сносил ВЕСЬ
+            // документ. Симптом: статус timeout при найденных ta/btn + белый пустой fail.png
+            // (13 провалов VeoFree с 11.07 — все скриншоты байт-в-байт одинаковые).
+            // Никогда не удаляем корень и контейнер, внутри которого лежит кнопка генерации.
+            const keep = document.querySelector('#generate_it') || document.querySelector('textarea');
+            const safeRemove = e => {
+                if (!e || e === document.body || e === document.documentElement) return;
+                if (keep && e.contains(keep)) return;
+                e.remove();
+            };
+            sels.forEach(s => document.querySelectorAll(s).forEach(safeRemove));
             if (!document.getElementById('__killads')) {
                 const st = document.createElement('style'); st.id = '__killads';
                 st.textContent = '[class*="__lxG__"],div[id^="lx_"],[id^="google_ads_iframe"],iframe[title*="Advertisement"],iframe[aria-label*="Advertisement"],.adsbygoogle{display:none!important;pointer-events:none!important;visibility:hidden!important}';
@@ -107,6 +118,17 @@ with sync_playwright() as pw:
     else:
         status="no_ui"
     if status!="ok":
+        # ДИАГНОСТИКА: пустой белый скриншот сам по себе ничего не объясняет. Печатаем,
+        # жив ли вообще документ — если body исчез, виноваты МЫ (см. safeRemove выше),
+        # а не сайт. Раньше это стоило 13 провалов и 17 дней тишины.
+        try:
+            st=pg.evaluate("""() => ({
+                body: !!document.body, len: (document.body?document.body.innerHTML.length:0),
+                btn: !!document.querySelector('#generate_it'),
+                ta: !!document.querySelector('textarea'),
+                video: !!document.querySelector('video'), url: location.href })""")
+            log(f"  [dom] {st}")
+        except Exception as e: log(f"  [dom] недоступен: {e}")
         try: pg.screenshot(path=str(TMP/"fail.png"))  # viewport-only, лёгкий
         except: pass
     br.close()
