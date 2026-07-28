@@ -10,7 +10,7 @@ generic-фразами не привязанными ни к чему. Дете�
 Если брифов ещё нет (конвейер пуст) — деградирует на старый generic-список (не ломает daily-крон).
 
 Usage (как модуль):
-    from pool_prompts import build_image_prompts, build_video_prompts, build_motion_prompts
+    from pool_prompts import build_image_prompts, build_video_prompts
     prompts = build_image_prompts(n=4)
 """
 import json
@@ -107,33 +107,10 @@ def build_video_prompts(n: int, brief: dict | None = None) -> list[str]:
     return out
 
 
-def build_motion_prompts(n: int, brief: dict | None = None) -> list[str]:
-    """Для i2v-daily (оживление УЖЕ существующих фото пулов) — промпт только про ДВИЖЕНИЕ,
-    без описания сцены (сцена уже задана исходным фото).
-
-    ⚠️ Формулировки ниже («subtle drift», «barely perceptible») писались под движок, который
-    больше не используется. На LTX такие слова разрешают НУЛЕВОЕ движение и дают застывший кадр
-    (замерено 2026-07-28) — если поднимать эту ветку, переписать на наблюдаемое действие.
-    Сейчас функция никем не вызывается, кроме самотеста в __main__."""
-    if brief is None:
-        brief = get_latest_track_brief()
-    v = _track_vocab(brief)
-    motions = ["slow subtle drift, gentle movement within the frame",
-              "faint photographic motion, barely perceptible drift",
-              "gentle parallax-like drift, subtle depth movement",
-              "slow breathing motion, soft ambient movement"]
-    out = []
-    for i in range(n):
-        mood = v["mood_words"][i % len(v["mood_words"])] if v["mood_words"] else "atmospheric"
-        out.append(f"{motions[i % len(motions)]}, {mood} mood{BRAND_SUFFIX}")
-    return out
-
-
 if __name__ == "__main__":
     brief = get_latest_track_brief()
     print(f"brief найден: {bool(brief)}", file=sys.stderr)
     print(json.dumps({
         "image": build_image_prompts(4, brief),
         "video": build_video_prompts(2, brief),
-        "motion": build_motion_prompts(2, brief),
     }, ensure_ascii=False, indent=2))
