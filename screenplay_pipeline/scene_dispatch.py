@@ -52,11 +52,15 @@ RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 
 ENGINE_WORKFLOWS = {
     # ltx — i2v-движок, заведён 2026-07-28.
-    "veofree": "sp_scene_veofree.yml",   # i2v, watermark-free, ВСЕГДА выход 9:16 (см. project_video_gen_veofree)
+    # ❄️ veofree ЗАМОРОЖЕН 2026-07-28 (решение yaromat): сервис доходит до «Generating Video 100%»
+    # и не отдаёт результат. Проверено владельцем с ДОМАШНЕГО IP и с регистрацией — то же самое,
+    # значит дело не в наших раннерах и не в датацентровых адресах. Ломается сам сервис.
+    # Строка оставлена закомментированной: вернуть = раскомментировать + добавить в ENGINE_ORDER.
+    # "veofree": "sp_scene_veofree.yml",
     "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
     "ltx":     "sp_scene_ltx.yml",       # i2v self-host на Kaggle GPU (LTX-Video 0.9.5), ~11 мин/клип
 }
-ENGINE_ORDER = ["veofree", "qwen", "ltx"]  # round-robin по трём движкам
+ENGINE_ORDER = ["qwen", "ltx"]  # veofree заморожен 2026-07-28 — остались два движка
 
 # LTX-Video 0.9.5 — профиль сильных/слабых сторон, замерен на трёх стиллах 2026-07-28
 # (тест `mat3213/ltx-physics-test`, вердикт yaromat принят):
@@ -77,11 +81,13 @@ def engine_for(shot: dict) -> str:
         return prov
     idx = shot.get("idx", 0)
     engine = ENGINE_ORDER[idx % len(ENGINE_ORDER)]
-    # ltx не умеет человека (см. LTX_WEAK_SUBJECTS) — на таких шотах уступаем место veofree
+    # ltx не умеет человека (см. LTX_WEAK_SUBJECTS). Раньше такие шоты уходили на veofree,
+    # но он заморожен → остаётся qwen. ⚠️ Он t2v: сгенерит сцену заново, а НЕ оживит стилл.
+    # Пока veofree мёртв, шотов с человеком крупнее силуэта делать по сути нечем.
     if engine == "ltx":
         text = " ".join(str(shot.get(k, "")) for k in ("visual", "intent")).lower()
         if any(w in text for w in LTX_WEAK_SUBJECTS):
-            return "veofree"
+            return "qwen"
     return engine
 
 
