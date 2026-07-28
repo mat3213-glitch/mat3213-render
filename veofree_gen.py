@@ -202,6 +202,15 @@ with sync_playwright() as pw:
               log(f"  [click {attempt+1}/5] способ={how} кнопка={st}")
               pg.wait_for_timeout(2500)
               if seen or find_video(pg): break
+          # ГИПОТЕЗА (2026-07-28): сервис ad-gated. Мы вешаем ПОСТОЯННЫЙ стиль, который прячет
+          # рекламу навсегда — и если выдача ролика завязана на открут рекламы, она никогда
+          # не наступает. Симптом ровно такой: «Generating Video... 100%» висит бесконечно,
+          # плейсхолдер серый, видео не появляется. Клик уже сделан, перехватывать нечего —
+          # снимаем глушилку и даём рекламе крутиться, пока ждём результат.
+          try:
+              pg.evaluate("() => { const s=document.getElementById('__killads'); if(s) s.remove(); }")
+              log("  [ads] глушилка снята на время ожидания результата")
+          except Exception: pass
           try:
               post=pg.evaluate("""() => {
                   const b=document.querySelector('#generate_it');
