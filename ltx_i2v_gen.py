@@ -254,22 +254,38 @@ def wait_until_started(slug: str) -> None:
     while time.monotonic() < deadline:
         result = run(["kaggle", "kernels", "status", slug], check=False)
         text = "\n".join(p for p in (result.stdout, result.stderr) if p).upper()
+        if result.returncode != 0:
+            # Свежесозданное ядро несколько секунд НЕ видно API: `status` отвечает
+            # «Permission kernels.get was denied», хотя push прошёл. Это задержка
+            # распространения, а не отказ доступа — ждём (ловили на смоуке 2026-07-28).
+            print("Kernel is not queryable yet; waiting for Kaggle to propagate it.", file=sys.stderr)
+            time.sleep(20)
+            continue
         if "COMPLETE" not in text:
             return
         print("Kaggle still reports the previous run as COMPLETE; waiting for the new version.", file=sys.stderr)
         time.sleep(20)
-    print("Warning: kernel never left COMPLETE; proceeding, output may be stale.", file=sys.stderr)
+    print("Warning: kernel never became queryable/left COMPLETE; proceeding.", file=sys.stderr)
 
 
 def status_until_done(slug: str, output_directory: Path) -> None:
     deadline = time.monotonic() + TIMEOUT_SECONDS
+    # Пока ни один запрос статуса не прошёл, ошибки считаем задержкой распространения,
+    # а не отказом: свежее ядро становится видно API не мгновенно.
+    grace_deadline = time.monotonic() + 5 * 60
+    seen_ok = False
     last_status = ""
     while time.monotonic() < deadline:
         result = run(["kaggle", "kernels", "status", slug], check=False)
         last_status = "\n".join(part for part in (result.stdout, result.stderr) if part).strip()
         upper = last_status.upper()
         if result.returncode != 0:
+            if not seen_ok and time.monotonic() < grace_deadline:
+                print(f"Kernel not queryable yet, retrying: {last_status[-300:]}", file=sys.stderr)
+                time.sleep(20)
+                continue
             fail(f"Could not query Kaggle kernel status for {slug}: {last_status[-2000:]}")
+        seen_ok = True
         if "COMPLETE" in upper:
             return
         if "ERROR" in upper or "CANCEL" in upper:
