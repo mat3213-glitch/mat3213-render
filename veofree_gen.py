@@ -257,12 +257,26 @@ with sync_playwright() as pw:
                   video: !!document.querySelector('video'), url: location.href };
             }""")
             log(f"  [dom] {st}")
+            # ПРЕДЫДУЩИЙ дамп ловил <style> (в нём тоже встречается «%») — бесполезно.
+            # Теперь собираем ФАКТЫ: все src у video (включая blob:, который наш детектор
+            # отвергает из-за требования ^https?:), все source/href и HTML контейнера,
+            # в котором реально написано «Generating Video».
             res=pg.evaluate("""() => {
-                const t=[...document.querySelectorAll('*')].find(e =>
-                    /Generating Video|Download|%/.test(e.textContent||'') && e.children.length<6);
-                return t ? (t.closest('div')||t).outerHTML.slice(0,1200) : 'блок результата не найден';
+                const vids=[...document.querySelectorAll('video')].map(v => ({
+                    src:(v.src||'').slice(0,120), cur:(v.currentSrc||'').slice(0,120),
+                    inAd:!!v.closest('[id*="google_ads"],[class*="adsbygoogle"],ins,iframe'),
+                    w:v.videoWidth, h:v.videoHeight, ready:v.readyState}));
+                const srcs=[...document.querySelectorAll('source')].map(s=>(s.src||'').slice(0,120));
+                const links=[...document.querySelectorAll('a[href]')]
+                    .map(a=>a.href).filter(u=>/\.mp4|download|blob:/i.test(u)).slice(0,6);
+                const node=[...document.querySelectorAll('div,section')].find(e =>
+                    /Generating Video/i.test(e.textContent||'') && e.children.length<12);
+                return {vids, srcs, links,
+                        holder: node ? node.outerHTML.replace(/\s+/g,' ').slice(0,900) : 'нет'};
             }""")
-            log(f"  [result-html] {res}")
+            log(f"  [videos] {res.get('vids')}")
+            log(f"  [sources] {res.get('srcs')}  [links] {res.get('links')}")
+            log(f"  [holder] {res.get('holder')}")
         except Exception as e: log(f"  [dom] недоступен: {e}")
         try:
             # проматываем К ГЕНЕРАТОРУ: вьюпорт-скриншот со случайной позиции показывал
