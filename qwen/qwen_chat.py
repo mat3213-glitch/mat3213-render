@@ -70,6 +70,28 @@ def poll_for_text(cookies: dict, chat_id: str, timeout: int = 240) -> str:
     return ""
 
 
+def _token_exp(state: dict) -> int:
+    """Unix-время истечения JWT из localStorage сессии Qwen (0 = не нашли/не разобрали)."""
+    import base64
+    for o in (state or {}).get("origins", []):
+        for kv in o.get("localStorage", []):
+            v = kv.get("value", "")
+            if kv.get("name") == "token" and v.count(".") == 2:
+                try:
+                    pl = v.split(".")[1]
+                    pl += "=" * (-len(pl) % 4)
+                    return int(json.loads(base64.urlsafe_b64decode(pl)).get("exp", 0))
+                except Exception:
+                    return 0
+    return 0
+
+
+def _exp_human(state: dict) -> str:
+    from datetime import datetime
+    e = _token_exp(state)
+    return datetime.fromtimestamp(e).strftime("%Y-%m-%d") if e else "нет токена"
+
+
 async def chat(prompt: str, model: str, timeout: int) -> str:
     if not SESSION_FILE.exists():
         print("Нет сессии. Сначала: python3 Instrument/Qwen/AUTH.py", file=sys.stderr)
@@ -141,6 +163,22 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
             if chat_ids:
                 break
             await page.wait_for_timeout(500)
+
+        # Сохранить обновлённую сессию: Qwen может ротировать JWT в localStorage,
+        # а раннер одноразовый — без этого ротация выбрасывается и токен доживает
+        # до своего исходного exp (замер 28.07: JWT жил до 26.08). Перезаписываем
+        # ТОЛЬКО если новый токен не хуже старого — иначе рискуем затереть рабочую
+        # сессию огрызком (не залогинилось / редирект на форму входа).
+        try:
+            fresh = await ctx.storage_state()
+            if _token_exp(fresh) >= _token_exp(state) and _token_exp(fresh) > 0:
+                SESSION_FILE.write_text(json.dumps(fresh, ensure_ascii=False))
+                print(f"  [session] обновлена, JWT до {_exp_human(fresh)}", file=sys.stderr)
+            else:
+                print(f"  [session] НЕ обновляю: новый токен хуже старого "
+                      f"({_exp_human(fresh)} vs {_exp_human(state)})", file=sys.stderr)
+        except Exception as e:
+            print(f"  [session] не смог сохранить: {str(e)[:100]}", file=sys.stderr)
 
         await browser.close()
 

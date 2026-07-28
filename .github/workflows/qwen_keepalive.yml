@@ -1,0 +1,130 @@
+name: Qwen session keepalive
+
+# Держит живой Playwright-сессию chat.qwen.ai, на которой стоит воркер qwen-coder-gh.
+#
+# Зачем отдельный воркфлоу (аудит 2026-07-28): сессию раньше «грел» крон qwen_daily,
+# но грел он её только на словах — все воркфлоу СКАЧИВАЛИ qwen_session.json с ЯД и
+# ни один не заливал обновлённый обратно. Любая ротация токена умирала вместе с
+# одноразовым раннером, а JWT жил по своему таймеру (замер 28.07: до 26.08).
+# 28.07 крон qwen_daily сняли — грелка исчезла совсем, а qwen-coder-gh на тот момент
+# был одним из двух живых воркеров оркестра.
+#
+# Что делает: тривиальный запрос к Qwen → qwen_chat.py сохраняет обновлённый
+# storage_state (только если новый токен не хуже старого) → заливаем на ЯД →
+# смотрим, сколько дней осталось, и заранее кричим в фактори-тред.
+#
+# ⚠️ Честная оговорка: продлевает ли Qwen токен при использовании — не подтверждено.
+# Если нет, воркфлоу это ПОКАЖЕТ (дни будут таять) и предупредит заранее, чтобы
+# переавторизоваться (Instrument/Qwen/AUTH.py) до, а не после потери воркера.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 */3 * *"   # раз в 3 дня, 05:00 UTC = 12:00 NSK
+
+permissions:
+  contents: read
+
+env:
+  WARN_DAYS: "10"           # осталось меньше — кричим в TG
+  ALERT_THREAD: "5"         # фактори-тред: алерт должен быть ВИДЕН, см. аудит watchdog
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull Qwen session
+        run: rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+
+      - name: Install Playwright
+        run: |
+          pip install -q requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Touch session (тривиальный запрос)
+        id: touch
+        continue-on-error: true    # не смогли достучаться — всё равно доложим срок
+        run: |
+          python3 qwen/qwen_chat.py "Ответь одним словом: ок" --model "" --timeout 180
+
+      - name: Push refreshed session back to ЯД
+        if: steps.touch.outcome == 'success'
+        run: |
+          # Заливаем только осмысленный файл: qwen_chat.py сам отказывается писать
+          # сессию хуже прежней, но подстрахуемся от пустышки/огрызка.
+          SIZE=$(stat -c%s qwen/qwen_session.json)
+          if [ "$SIZE" -lt 1000 ]; then
+            echo "::warning::сессия подозрительно мала ($SIZE б) — на ЯД НЕ заливаю"
+            exit 0
+          fi
+          rclone copyto qwen/qwen_session.json "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json"
+          echo "сессия залита обратно на ЯД ($SIZE б)"
+
+      - name: Report expiry (и алерт, если срок на исходе)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TOUCH_OUTCOME:      ${{ steps.touch.outcome }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys, base64, urllib.request
+          from datetime import datetime
+
+          state = json.load(open("qwen/qwen_session.json"))
+          exp = 0
+          for o in state.get("origins", []):
+              for kv in o.get("localStorage", []):
+                  if kv.get("name") == "token" and kv.get("value", "").count(".") == 2:
+                      pl = kv["value"].split(".")[1]
+                      pl += "=" * (-len(pl) % 4)
+                      exp = int(json.loads(base64.urlsafe_b64decode(pl)).get("exp", 0))
+
+          left = (exp - datetime.now().timestamp()) / 86400 if exp else -1
+          touch = os.environ.get("TOUCH_OUTCOME", "?")
+          when = datetime.fromtimestamp(exp).strftime("%Y-%m-%d") if exp else "?"
+          print(f"запрос к Qwen: {touch}; JWT до {when} — осталось {left:.1f} дн")
+
+          warn = float(os.environ.get("WARN_DAYS", "10"))
+          if left >= warn and touch == "success":
+              sys.exit(0)                      # всё хорошо — молчим
+
+          msg = (f"🟠 Сессия Qwen (воркер qwen-coder-gh)\n"
+                 f"запрос: {touch}\n"
+                 f"токен до {when} — осталось {left:.1f} дн\n"
+                 f"Переавторизация: python3 Instrument/Qwen/AUTH.py, "
+                 f"затем залить qwen_session.json в ЯД cloud_io/qwen_ci/")
+          base = os.environ.get("CLOUDFLARE_WORKER", "")
+          tok = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+          if not (base and tok):
+              print("::warning::нет CLOUDFLARE_WORKER/TELEGRAM_BOT_TOKEN — алерт не ушёл")
+              sys.exit(0)
+          body = json.dumps({"chat_id": -1003946370426,
+                             "message_thread_id": int(os.environ.get("ALERT_THREAD", "5")),
+                             "text": msg}).encode()
+          req = urllib.request.Request(f"{base}/bot{tok}/sendMessage", data=body,
+                                       headers={"Content-Type": "application/json",
+                                                "User-Agent": "curl/8.0"})
+          with urllib.request.urlopen(req, timeout=60) as r:
+              print("алерт отправлен:", json.load(r).get("ok"))
+          PY
