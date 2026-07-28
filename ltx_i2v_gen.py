@@ -5,6 +5,7 @@ import base64
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -51,6 +52,21 @@ def run(command: list[str], *, cwd: Path | None = None, check: bool = True) -> s
         detail = (result.stderr or result.stdout).strip()
         fail(f"Command failed ({command[0]}), exit {result.returncode}: {detail[-2000:]}")
     return result
+
+
+def sanitize_slug(slug: str) -> str:
+    """Привести слаг к тому виду, в который его всё равно превратит Kaggle.
+
+    Kaggle держит слаги строчными и из [a-z0-9-]. Наш job_id содержит подчёркивания
+    (ltx_smoke_2026-07-28), и на пуше они молча становятся дефисами — а `kernels status`
+    с исходным именем потом отвечает «Permission kernels.get was denied», что выглядит
+    как проблема доступа, хотя это просто НЕ ТОТ слаг. Ловили на смоуке 2026-07-28.
+    """
+    owner, _, name = slug.partition("/")
+    name = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    if not name:
+        fail(f"Kernel slug has an empty name part after sanitising: {slug!r}")
+    return f"{owner.lower()}/{name[:50].rstrip('-')}"
 
 
 def prepare_kaggle_credentials(username: str, key: str) -> None:
@@ -310,7 +326,7 @@ def main() -> None:
     out_name = required_env("OUT_NAME")
     username = required_env("KAGGLE_USERNAME")
     key = required_env("KAGGLE_KEY")
-    slug = os.environ.get("LTX_KERNEL_SLUG") or f"{username}/ltx-scene-gen"
+    slug = sanitize_slug(os.environ.get("LTX_KERNEL_SLUG") or f"{username}/ltx-scene-gen")
 
     if not image_path.is_file():
         fail(f"IMG_LOCAL does not point to an existing file: {image_path}")
