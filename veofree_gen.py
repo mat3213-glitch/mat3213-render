@@ -129,10 +129,32 @@ with sync_playwright() as pw:
           # КЛИК ЧЕРЕЗ JS в ЦИКЛЕ — element.click() игнорирует перехват pointer-events переинжекчёным
           # сплэшем; цикл лечит флак по времени рекламы (сплэш выпадает не сразу). Выходим, как только
           # генерация стартовала (появилось video/сеть-mp4). Лог фейлов 2026-07-11.
-          for _ in range(5):
+          # КЛИК: JS-клик (element.click()) порождает НЕДОВЕРЕННОЕ событие (isTrusted=false).
+          # Диагностика 2026-07-28 показала, что сайт его игнорирует: промпт залит (taLen=785),
+          # страница видна, кнопка 152x40 и enabled — но после 5 JS-кликов её состояние НЕ
+          # изменилось ('GENERATE', disabled=False) и видео не появилось за 420с.
+          # Поэтому сначала пробуем НАСТОЯЩИЕ клики (Playwright шлёт их через CDP, isTrusted=true),
+          # и только последним средством — JS. Оверлеи к этому моменту уже снесены.
+          for attempt in range(5):
               kill_overlays(pg)
-              try: pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b) b.click(); }")
-              except Exception: pass
+              how="-"
+              try:
+                  btn.click(timeout=5000); how="playwright"
+              except Exception:
+                  try:
+                      box=pg.evaluate("""() => { const b=document.querySelector('#generate_it');
+                          if(!b) return null; const r=b.getBoundingClientRect();
+                          return {x:r.left+r.width/2, y:r.top+r.height/2}; }""")
+                      if box:
+                          pg.mouse.click(box["x"], box["y"]); how="mouse"
+                  except Exception:
+                      try:
+                          pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b) b.click(); }")
+                          how="js"
+                      except Exception: pass
+              st=pg.evaluate("""() => { const b=document.querySelector('#generate_it');
+                  return b ? {t:b.innerText.trim().slice(0,24), d:!!b.disabled} : null; }""")
+              log(f"  [click {attempt+1}/5] способ={how} кнопка={st}")
               pg.wait_for_timeout(2500)
               v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
               if seen or (src and src.startswith("http")): break
