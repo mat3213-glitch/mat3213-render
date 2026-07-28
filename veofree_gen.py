@@ -92,31 +92,59 @@ with sync_playwright() as pw:
     dismiss(pg)
     ta=pg.query_selector("textarea#fn__include_textarea") or pg.query_selector("textarea")
     btn=pg.query_selector("#generate_it")
-    if ta and btn:
-        ta.click(); ta.fill(PROMPT)
-        dismiss(pg); kill_overlays(pg)                # снести попапы + рекламный сплэш перед кликом
-        try: btn.scroll_into_view_if_needed(timeout=4000)
-        except: pass
-        # КЛИК ЧЕРЕЗ JS в ЦИКЛЕ — element.click() игнорирует перехват pointer-events переинжекчёным
-        # сплэшем; цикл лечит флак по времени рекламы (сплэш выпадает не сразу). Выходим, как только
-        # генерация стартовала (появилось video/сеть-mp4). Лог фейлов 2026-07-11.
-        for _ in range(5):
-            kill_overlays(pg)
-            try: pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b) b.click(); }")
-            except Exception: pass
-            pg.wait_for_timeout(2500)
-            v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
-            if seen or (src and src.startswith("http")): break
-        for _ in range(40):                            # до 200с (генерация бывает медленной)
-            pg.wait_for_timeout(5000)
-            if paywall(pg): status="paywall"; break
-            v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
-            if (src and src.startswith("http")) or seen:
-                video_url=src if (src and src.startswith("http")) else sorted(seen)[-1]
-                status="ok"; break
-        else: status="timeout"
-    else:
+    try:
+      if ta and btn:
+          # ПОРЯДОК ВАЖЕН (фикс 2026-07-28): раньше сначала кликали в textarea, а сносили рекламу
+          # ПОСЛЕ — и до сноса дело не доходило. Рекламный баннер-iframe 970x250 перехватывал
+          # pointer events, ta.click() падал по таймауту 30с, скрипт умирал НЕОБРАБОТАННЫМ
+          # исключением (ни скриншота, ни диагностики). Чистим страницу ДО первого клика.
+          dismiss(pg); kill_overlays(pg)
+          # Заполняем через JS: клик по элементу принципиально уязвим к перехвату оверлеем,
+          # а установка value + input/change события до реакта долетает и без клика.
+          try:
+              pg.evaluate("""(txt) => {
+                  const t = document.querySelector('textarea#fn__include_textarea')
+                         || document.querySelector('textarea');
+                  if (!t) return false;
+                  const setter = Object.getOwnPropertyDescriptor(
+                      window.HTMLTextAreaElement.prototype, 'value').set;
+                  setter.call(t, txt);
+                  t.dispatchEvent(new Event('input',  {bubbles: true}));
+                  t.dispatchEvent(new Event('change', {bubbles: true}));
+                  return true;
+              }""", PROMPT)
+          except Exception as e:
+              log(f"  [fill] JS не прошёл ({e}) — пробую обычный fill")
+              try: ta.fill(PROMPT)
+              except Exception as e2: log(f"  [fill] и обычный не прошёл: {e2}")
+          kill_overlays(pg)
+          try: btn.scroll_into_view_if_needed(timeout=4000)
+          except: pass
+          # КЛИК ЧЕРЕЗ JS в ЦИКЛЕ — element.click() игнорирует перехват pointer-events переинжекчёным
+          # сплэшем; цикл лечит флак по времени рекламы (сплэш выпадает не сразу). Выходим, как только
+          # генерация стартовала (появилось video/сеть-mp4). Лог фейлов 2026-07-11.
+          for _ in range(5):
+              kill_overlays(pg)
+              try: pg.evaluate("() => { const b=document.querySelector('#generate_it'); if(b) b.click(); }")
+              except Exception: pass
+              pg.wait_for_timeout(2500)
+              v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
+              if seen or (src and src.startswith("http")): break
+          for _ in range(40):                            # до 200с (генерация бывает медленной)
+              pg.wait_for_timeout(5000)
+              if paywall(pg): status="paywall"; break
+              v=pg.query_selector("video"); src=v.get_attribute("src") if v else None
+              if (src and src.startswith("http")) or seen:
+                  video_url=src if (src and src.startswith("http")) else sorted(seen)[-1]
+                  status="ok"; break
+          else: status="timeout"
+      else:
         status="no_ui"
+    except Exception as e:
+        # Любой сбой Playwright (перехваченный клик, таймаут) НЕ должен уносить диагностику:
+        # раньше исключение здесь убивало скрипт до скриншота, и причина терялась.
+        status=f"exception: {type(e).__name__}"
+        log(f"  [exc] {e}")
     if status!="ok":
         # ДИАГНОСТИКА: пустой белый скриншот сам по себе ничего не объясняет. Печатаем,
         # жив ли вообще документ — если body исчез, виноваты МЫ (см. safeRemove выше),
