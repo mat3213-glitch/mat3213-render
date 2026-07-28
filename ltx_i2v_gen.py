@@ -369,6 +369,10 @@ def main() -> None:
         notebook_path.write_text(json.dumps(make_notebook(image_b64, prompt, seed), ensure_ascii=False), encoding="utf-8")
         metadata = {
             "id": slug,
+            # title ОБЯЗАТЕЛЕН для нового ядра. Без него `kaggle kernels push` возвращает
+            # успех и НЕ СОЗДАЁТ ничего — а следом `status` отвечает «Permission kernels.get
+            # was denied», что читается как проблема доступа. Три смоука 2026-07-28 ушли туда.
+            "title": slug.split("/", 1)[1],
             "code_file": notebook_path.name,
             "language": "python",
             "kernel_type": "notebook",
@@ -382,7 +386,10 @@ def main() -> None:
         }
         (workdir / "kernel-metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
-        run(["kaggle", "kernels", "push", "-p", str(workdir)])
+        push = run(["kaggle", "kernels", "push", "-p", str(workdir)])
+        # Печатаем ответ push: в нём URL реально созданного ядра. Без этого расхождение
+        # «просили один слаг — создался другой/никакой» видно только по загадочному 403.
+        print(f"kaggle push: {(push.stdout or push.stderr).strip()[-500:]}")
         wait_until_started(slug)
         status_until_done(slug, workdir)
         pull_output(slug, workdir, required=True)
