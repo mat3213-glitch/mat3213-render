@@ -450,13 +450,68 @@ def _timeline_hardcut(variant="full", bpm=87.0, seed=42):
     return seq, sum(s["dur"] for s in seq)
 
 
-def build_timeline(variant="full", bpm=87.0, seed=42, calm=False, split=False, scenario="collage"):
+def _timeline_stemcut(drum_cues, vocal_cues, variant="full", bpm=87.0, seed=42, audio_start=0.0):
+    """Сценарий 'stemcut': длина плана = ПАУЗА МЕЖДУ АТАКАМИ БАРАБАНОВ (метки demucs),
+    а не доля бита. Акцент на метке вокала. Интро/выдох/аутро те же, что в hardcut —
+    меняется ТОЛЬКО сетка резов в groove, чтобы сравнение A/B было честным."""
+    random.seed(seed + 2002)                      # тот же seed и тот же pool, что в hardcut:
+    b = 60.0 / bpm                                 # материал обязан совпасть, иначе сравниваем не то
+    pool = ["c1", "c2", "c3", "c4", "c1f", "c2f", "c4f", "crowd", "clock",
+            "a1", "a2", "a2f", "a4", "anchor"]
+    random.shuffle(pool)
+    intro = 4 * b
+    seq = [dict(key="anchor", dur=intro, mode="single", theta=random.choice(DIRS),
+                blend="none", tin=None, tdur=0.0, region="intro")]
+
+    # groove длится РОВНО столько же, сколько у hardcut — иначе варианты разной длины
+    n_ref = 12 if variant == "short" else 20
+    target = sum((0.5 if i % 4 == 3 else 1.0) * b for i in range(n_ref))
+
+    flip_for = {"c1": "c1f", "c2": "c2f", "c4": "c4f", "a2": "a2f"}
+    t0 = audio_start + intro                       # метки абсолютные по треку, а сегмент со сдвигом
+    cues = [c for c in drum_cues if c >= t0]
+    filled, i = 0.0, 0
+    while filled < target - 1e-6:
+        if i + 1 < len(cues):
+            d = cues[i + 1] - cues[i]
+            start = cues[i]
+        else:                                       # метки кончились — добираем долей бита
+            d = b
+            start = t0 + filled
+        d = max(0.18, min(2.0, d))
+        d = min(d, target - filled)                 # последний план подрезаем ровно по цели
+        if d < 0.12:                                # огрызок короче кадра-двух не режем
+            break
+        accent = any(abs(start - v) <= 0.12 for v in vocal_cues)
+        base = pool[len(seq) % len(pool)]
+        key = flip_for.get(base, base) if accent else base
+        seq.append(dict(key=key, dur=d, mode="single", theta=random.choice(DIRS),
+                        blend="none", tin="fade", tdur=0.10 if accent else 0.04,
+                        region="groove"))
+        filled += d
+        i += 1
+
+    seq.append(dict(key="anchorp", dur=4 * b, mode="single", theta=random.choice(DIRS),
+                    blend="none", tin=random.choice(["fadeblack", "dissolve"]), tdur=0.25,
+                    region="breath"))
+    seq.append(dict(key="child", dur=(2.3 if variant == "short" else 4.54), mode="single",
+                    theta=random.choice(DIRS), blend="none", tin="fadewhite", tdur=0.4,
+                    region="outro"))
+    return seq, sum(s["dur"] for s in seq)
+
+
+def build_timeline(variant="full", bpm=87.0, seed=42, calm=False, split=False, scenario="collage",
+                   drum_cues=None, vocal_cues=None, audio_start=0.0):
     """Диспетчер сценариев монтажа (ось разнообразия, независима от лука/стиля).
-    collage (дефолт, биполярный коллаж + calm/split) | kenburns | hardcut."""
+    collage (дефолт, биполярный коллаж + calm/split) | kenburns | hardcut | stemcut."""
     if scenario == "kenburns":
         return _timeline_kenburns(variant, bpm, seed)
     if scenario == "hardcut":
         return _timeline_hardcut(variant, bpm, seed)
+    if scenario == "stemcut":
+        if not drum_cues:                       # меток нет — молча вернуться к биту хуже, чем сказать
+            sys.exit("stemcut: нет меток барабанов (job['stems'] не скачался?)")
+        return _timeline_stemcut(drum_cues, vocal_cues or [], variant, bpm, seed, audio_start)
     return _timeline_collage(variant, bpm, seed, calm, split)
 
 
@@ -563,7 +618,22 @@ def main():
             print(f"  grid: анимированная сетка 2×2 (лев↓/прав↑ + дрейф + шум) в hook из {len(grid_srcs)} ассетов")
 
     # timeline → motion-сегменты (двойная экспозиция с движением) → xfade-цепь
-    seq, total = build_timeline(variant, bpm, seed, calm, split, scenario)
+    # сценарий stemcut: метки по стемам (demucs) вместо сетки долей бита.
+    # job["stems"] = путь на ЯД относительно "Content factory/" к <трек>_stems.json.
+    drum_cues, vocal_cues = [], []
+    if scenario == "stemcut":
+        sj = WORK / "stems.json"
+        if not yd_get(job.get("stems", ""), sj):
+            sys.exit("stemcut: не скачался job['stems'] — без меток резать нечем")
+        from stem_analyze import stem_cues
+        sdata = json.loads(sj.read_text())
+        gap = float(job.get("cue_min_gap", 0.6))
+        drum_cues  = stem_cues(sdata, "drums",  min_gap=gap)
+        vocal_cues = stem_cues(sdata, "vocals", min_gap=gap)
+        print(f"  stemcut: метки drums={len(drum_cues)} vocals={len(vocal_cues)} (min_gap={gap})")
+
+    seq, total = build_timeline(variant, bpm, seed, calm, split, scenario,
+                                drum_cues, vocal_cues, audio_start)
     print(f"  variant={variant} bpm={bpm} seed={seed} calm={calm} split={split} scenario={scenario}")
     print(f"  motion: speed={MOTION_SPEED} amp={MOTION_AMP} blend_opacity={BLEND_OPACITY}")
     print(f"  style={style['name']} — {style.get('note','')}")
