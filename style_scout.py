@@ -124,7 +124,14 @@ def analyze_frame(path: Path) -> dict | None:
                 parts.append(f"{ch}{pre}={sv}")
     balance = ":".join(parts) or None
 
-    name = _name(sh, mean_l, saturation, contrast)
+    # Имя считаем по ЭФФЕКТИВНОМУ касту теней — тому, что реально доедет до colorbalance,
+    # а не по сырому замеру. Пороги расходились: `_name` называл кандидата "cool"/"green"
+    # уже при касте >0.01, а в balance сдвиг попадал только при >=0.015 ПОСЛЕ демпфирования
+    # ×0.7. В зазоре рождался кандидат с именем `scout_cool_mid_muted` и БЕЗ единого цветового
+    # сдвига в грейде — имя обещало холод, которого в нём нет. Судья стиля читает имена,
+    # и такие пустые обещания сбивали его вердикт (найдено 2026-07-29).
+    sh_eff = tuple(sv if abs(sv) >= 0.015 else 0.0 for sv in map(s, sh))
+    name = _name(sh_eff, mean_l, saturation, contrast)
     return {"name": name, "note": f"scout: {name.replace('scout_','').replace('_',' ')}",
             "eq": f"contrast={round(contrast,2)}:saturation={round(saturation,2)}:"
                   f"brightness={round(brightness,3)}:gamma={round(gamma,3)}",
@@ -133,6 +140,8 @@ def analyze_frame(path: Path) -> dict | None:
 
 
 def _name(sh, mean_l, sat, contrast) -> str:
+    """sh — ЭФФЕКТИВНЫЙ каст теней (уже демпфированный и с отсечкой), не сырой замер:
+    имя обязано описывать грейд, который получится, иначе оно врёт (см. вызов)."""
     cr, cg, cb = sh
     hue = "cool" if cb > cr and cb > 0.01 else ("warm" if cr > cb and cr > 0.01 else
           ("green" if cg > cr and cg > cb and cg > 0.01 else "neutral"))

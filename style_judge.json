@@ -2,45 +2,57 @@
   "verdicts": [
     {
       "name": "scout_warm_night_soft",
-      "keep": true,
-      "score": 8,
-      "reason": "Цельный тёплый тон, глубина без дешёвого каста"
+      "keep": false,
+      "score": 4.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "Too warm, lacks cold teal tone"
     },
     {
       "name": "scout_warm_night_muted",
-      "keep": true,
-      "score": 7,
-      "reason": "Хорошая мутность, лёгкая перекличка с первым"
+      "keep": false,
+      "score": 5.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "Muted but too warm, not in brand palette"
     },
     {
       "name": "scout_cool_mid_muted",
       "keep": false,
-      "score": 5,
-      "reason": "Холод убивает глубину, выглядит отстранённо"
+      "score": 0,
+      "votes": "0/2",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_warm_night_muted_2",
       "keep": false,
-      "score": 6,
-      "reason": "Дубль muted — добавит лишнее без ценности"
+      "score": 5.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "Closer to teal but still too warm"
     },
     {
       "name": "scout_green_night_soft",
       "keep": false,
-      "score": 4,
-      "reason": "Зелёный каст ощущается дешёвым фильтром"
+      "score": 0,
+      "votes": "0/2",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 5,
-      "reason": "Нейтраль плоская, теряет кинематографичность"
+      "keep": true,
+      "score": 8.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Good cold teal tone, fits brand aesthetic"
     }
   ],
   "recommend_merge": [
-    "scout_warm_night_soft",
-    "scout_warm_night_muted"
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-07-25",
-  "_judge": "mimo-auto"
+  "disputed": [],
+  "_generated": "2026-07-29",
+  "_judge": "gh-vision-ensemble(2/3)"
 }
