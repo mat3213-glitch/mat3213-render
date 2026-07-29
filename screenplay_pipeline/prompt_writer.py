@@ -60,6 +60,37 @@ SCHEMA_RULES = """Ты — оператор-постановщик и prompt-eng
 Верни СТРОГО JSON: {"shots":[{"idx":<int>,"gen_prompt":"<english prompt>"}, ...]} для ВСЕХ шотов."""
 
 
+def _design_context(max_chars: int = 1800) -> str:
+    """Бренд-контекст из корневого DESIGN.md (формат google-labs-code/design.md).
+
+    Зачем: правила бренда жили копиями в SCHEMA_RULES, в судьях пула и в голове.
+    DESIGN.md — единый источник правды: правим один файл, меняются все агенты.
+    Fail-open: нет файла или он битый → работаем как раньше, на вшитых правилах.
+    Берём frontmatter (нормативные токены) + самые операционные секции.
+    """
+    path = Path(__file__).resolve().parents[2] / "DESIGN.md"
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except Exception:
+        return ""
+    parts = []
+    m = re.match(r"^---\n(.*?)\n---\n", raw, re.S)
+    if m:
+        # description — проза для людей, в промпт не нужна и съедает квоту
+        tokens = re.sub(r"^description: >\n(?:  .*\n)+", "", m.group(1).strip() + "\n",
+                        flags=re.M).strip()
+        parts.append("DESIGN TOKENS (нормативные):\n" + tokens[:700])
+    # Каждой секции — своя квота. Общий срез в конце отрезал бы последние секции,
+    # а именно там запреты (моторика, анти-референсы) — проверено 29.07, они терялись.
+    for title in ("## Палитра", "## Моторика", "## Анти-референсы"):
+        i = raw.find(title)
+        if i == -1:
+            continue
+        j = raw.find("\n## ", i + 1)
+        parts.append(raw[i: j if j != -1 else len(raw)].strip()[:420])
+    return "\n\n".join(parts)[:max_chars]
+
+
 def _refs_block(refs):
     if not refs:
         return ""
@@ -93,6 +124,8 @@ def build_freeform_prompt(brief, refs, count, child_count):
     parts = [
         FREEFORM_RULES.format(count=count, child_count=child_count, wild_count=count - child_count),
         "",
+        _design_context(),      # единый источник бренда: корневой DESIGN.md
+        "",
         f"ТРЕК-ВАЙБ: {c.get('core_emotion','')}",
         f"ВИЗУАЛ-МУД (опора, но варьируй): {c.get('visual_mood','')}",
         f"НАРРАТИВ: {c.get('narrative_angle','')}",
@@ -117,6 +150,8 @@ def build_prompt(storyboard, brief, refs):
         })
     parts = [
         SCHEMA_RULES,
+        "",
+        _design_context(),      # единый источник бренда: корневой DESIGN.md
         "",
         f"ТРЕК-ВАЙБ: {c.get('core_emotion','')}",
         f"ВИЗУАЛ-МУД (глобальный грейд/свет для ВСЕХ шотов, держи консистентно): {c.get('visual_mood','')}",

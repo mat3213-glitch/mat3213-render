@@ -1,0 +1,115 @@
+name: Stem Analyze (demucs → метки по инструментам)
+
+# Зачем: монтаж вяжется к общему BPM и потому однообразен. demucs режет трек на
+# стемы, по каждому считаются onset-метки и кривая громкости — дальше монтаж может
+# ставить резы под барабаны, дыхание масштаба под бас, акценты под вокал.
+# Только здесь, не на буке: demucs тянет torch и ест RAM/CPU (Atom 1.8ГБ не потянет).
+# Результат кэшируется на ЯД по хэшу трека — повторный прогон не пересчитывает.
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: 'Путь к треку на ЯД относительно "Content factory/" (напр. music post/track.mp3)'
+        required: true
+        type: string
+      out_name:
+        description: 'Имя выходного JSON (опц., по умолчанию stems.json)'
+        required: false
+        type: string
+      model:
+        description: 'Модель demucs (htdemucs по умолчанию)'
+        required: false
+        type: string
+      no_cache:
+        description: 'Пересчитать, игнорируя кэш'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  stem-analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60      # demucs на CPU: ~5-15 мин на трек, плюс установка torch
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Install Python deps
+        # torch ставим CPU-колесом: обычный пакет тянет CUDA-зависимости на гигабайты,
+        # которые на раннере без GPU бесполезны.
+        run: |
+          pip install --extra-index-url https://download.pytorch.org/whl/cpu torch torchaudio
+          pip install demucs librosa numpy soundfile
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch track
+        env:
+          TRACK: ${{ inputs.track }}
+        run: |
+          set -e
+          rclone copyto "ydrive:Content factory/$TRACK" ./input_track
+          ls -lh ./input_track
+
+      - name: Analyze stems
+        env:
+          OUT_NAME: ${{ inputs.out_name }}
+          MODEL: ${{ inputs.model }}
+          NO_CACHE: ${{ inputs.no_cache }}
+        run: |
+          set -e
+          OUT="${OUT_NAME:-stems.json}"
+          ARGS="./input_track --out $OUT"
+          [ -n "$MODEL" ] && ARGS="$ARGS --model $MODEL"
+          [ "$NO_CACHE" = "true" ] && ARGS="$ARGS --no-cache"
+          python -u stem_analyze.py $ARGS
+          echo "--- сводка ---"
+          python - <<'PY'
+          import json, os
+          d = json.load(open(os.environ.get("OUT_NAME") or "stems.json"))
+          print(f"BPM={d.get('bpm')} длительность={d.get('duration')}")
+          for name, s in (d.get("stems") or {}).items():
+              print(f"  {name}: onsets={len(s.get('onsets', []))} peaks={len(s.get('peaks', []))}")
+          PY
+
+      - name: Upload result to ЯД
+        env:
+          TRACK: ${{ inputs.track }}
+          OUT_NAME: ${{ inputs.out_name }}
+        run: |
+          set -e
+          OUT="${OUT_NAME:-stems.json}"
+          BASE=$(basename "$TRACK")
+          rclone copyto "$OUT" "ydrive:Content factory/cloud_io/stem_cues/${BASE%.*}_${OUT}"
+          echo "залито: cloud_io/stem_cues/${BASE%.*}_${OUT}"
+
+      - name: Upload artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stems-json
+          path: ${{ inputs.out_name || 'stems.json' }}
+          retention-days: 2
+          if-no-files-found: warn
