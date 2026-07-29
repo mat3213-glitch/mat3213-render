@@ -320,6 +320,55 @@ def render_chunks(
     }
 
 
+class SegmentCache:
+    """
+    Кэш готовых сегментов для движков, которые рендерят их СВОИМИ функциями
+    (vzrosly и подобные: там ffmpeg-команда собирается внутри, а склейка идёт
+    через xfade, а не concat — поэтому render_chunks целиком им не подходит,
+    а вот кэш по хэшу параметров подходит полностью).
+
+    Листинг кэша тянется ОДИН раз на прогон (rclone lsf), дальше проверка в памяти.
+    Любая ошибка кэша — не ошибка рендера: промах просто означает «рендерь сам».
+
+        cache = SegmentCache(enabled=True)
+        key = chunk_key({...всё, что влияет на кадр...})
+        if not cache.fetch(key, path):
+            render(...)              # свой рендер
+            cache.store(key, path)
+    """
+
+    def __init__(self, enabled: bool = True, prefix: str = "seg"):
+        self.enabled = enabled
+        self.prefix = prefix
+        self.hits = 0
+        self.misses = 0
+        self._files = _get_cache_files() if enabled else set()
+
+    def _name(self, key: str) -> str:
+        return f"{self.prefix}_{key}.mp4"
+
+    def fetch(self, key: str, local_path) -> bool:
+        """Достать сегмент из кэша. True — файл на месте, рендерить не надо."""
+        if not self.enabled or self._name(key) not in self._files:
+            self.misses += 1
+            return False
+        if _download_from_cache(REMOTE_CACHE + self._name(key), str(local_path)):
+            self.hits += 1
+            return True
+        self.misses += 1
+        return False
+
+    def store(self, key: str, local_path) -> None:
+        """Положить свежий сегмент в кэш. Провал заливки рендер не роняет."""
+        if not self.enabled:
+            return
+        if _upload_to_cache(str(local_path), REMOTE_CACHE + self._name(key)):
+            self._files.add(self._name(key))
+
+    def summary(self) -> str:
+        return f"кэш сегментов: {self.hits} из кэша, {self.misses} рендерилось"
+
+
 def purge_cache(older_than_days: int) -> None:
     """
     Удаляет старые файлы из кэша.

@@ -19,6 +19,12 @@ Env: JOB_ID
 import json, os, subprocess, sys, math
 from pathlib import Path
 
+try:
+    from chunk_render import SegmentCache, chunk_key
+except ImportError:                                  # модуль не приехал — рендерим как раньше
+    SegmentCache = None
+    def chunk_key(_params): return ""
+
 JOB_ID = os.environ.get("JOB_ID", "")
 if not JOB_ID:
     sys.exit("JOB_ID not set")
@@ -236,6 +242,20 @@ def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
     if r.returncode != 0:
         print("make_video_seg:", r.stderr[-300:])
     return r.returncode == 0 and out.exists()
+
+
+def file_sig(p) -> str:
+    """Подпись файла ПО СОДЕРЖИМОМУ (md5) — ключ кэша сегментов не должен зависеть от имени:
+    в разных job-папках лежат разные арты под одним и тем же `cold_01.png`."""
+    import hashlib
+    h = hashlib.md5()
+    try:
+        with open(p, "rb") as f:
+            for blk in iter(lambda: f.read(1 << 20), b""):
+                h.update(blk)
+    except OSError:
+        return f"nofile:{p}"
+    return h.hexdigest()[:16]
 
 
 def probe_dur(p: Path) -> float:
@@ -550,21 +570,42 @@ def main():
     nominal = round(total, 3)
     print(f"  segments={len(seq)} nominal={nominal}s")
     segdir = WORK / "seg"; segdir.mkdir(exist_ok=True)
+    # кэш готовых сегментов по хэшу параметров (chunk_render). Выключается job["cache"]=false.
+    # Смысл: перезапуск джобы после падения на склейке/титрах не перерендеривает всё заново.
+    seg_cache = SegmentCache(enabled=bool(job.get("cache", True))) if SegmentCache else None
     seg_files, durs, trans, tdurs = [], [], [], []
     for i, s in enumerate(seq):
         sp = segdir / f"seg_{i:03d}.mp4"
         # длиннее на величину входящего перехода — xfade «съест» этот overlap, нетто=план
         enc_dur = s["dur"] + s["tdur"]
         vid = WORK / f"{s['key']}.mp4"
-        if s["key"] in video_keys and vid.exists():
-            ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset,
-                                tint=footage_tint)
-        elif grid_srcs and s["region"] in ("intro", "breath"):
-            # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
-            ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
-        else:
-            ok = motion_seg(cover_path[s["key"]], enc_dur, s["mode"], s["theta"],
-                            s["blend"], sp, W, H, crf=seg_crf, preset=seg_preset)
+        use_video = s["key"] in video_keys and vid.exists()
+        use_grid  = bool(grid_srcs) and s["region"] in ("intro", "breath") and not use_video
+        # ключ обязан накрывать ВСЁ, что меняет кадр: сам исходник (по содержимому!),
+        # геометрию, кодек и моторные ручки. Иначе кэш отдаст чужой сегмент.
+        src_for_key = vid if use_video else (grid_srcs[0] if use_grid else cover_path[s["key"]])
+        key = chunk_key({
+            "src": file_sig(src_for_key), "kind": "video" if use_video else ("grid" if use_grid else "motion"),
+            "dur": round(enc_dur, 3), "W": W, "H": H, "crf": seg_crf, "preset": seg_preset,
+            "mode": s["mode"], "theta": s["theta"], "blend": s["blend"],
+            "speed": MOTION_SPEED, "amp": MOTION_AMP, "blend_opacity": BLEND_OPACITY,
+            "tint": footage_tint if use_video else "",
+            "grid": [file_sig(g) for g in grid_srcs] if use_grid else [],
+        }) if seg_cache else ""
+
+        ok = bool(key) and seg_cache.fetch(key, sp)
+        if not ok:
+            if use_video:
+                ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset,
+                                    tint=footage_tint)
+            elif use_grid:
+                # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
+                ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
+            else:
+                ok = motion_seg(cover_path[s["key"]], enc_dur, s["mode"], s["theta"],
+                                s["blend"], sp, W, H, crf=seg_crf, preset=seg_preset)
+            if ok and key:
+                seg_cache.store(key, sp)
         if not ok:
             yd_put_text(f"error: seg {i}", f"{JOB_YD}/status.txt"); sys.exit("seg fail")
         seg_files.append(sp)
@@ -577,6 +618,8 @@ def main():
         yd_put_text("error: body", f"{JOB_YD}/status.txt"); sys.exit("body fail")
     duration = round(probe_dur(body), 3)
     print(f"  body duration={duration}s")
+    if seg_cache:
+        print(f"  {seg_cache.summary()}")
 
     # onset каждого сегмента в финальном xfade-таймлайне (та же математика, что в xfade_chain)
     onsets, running = [0.0], durs[0]
