@@ -34,15 +34,28 @@ import tempfile
 import time
 from typing import Optional
 
-import numpy as np
+# librosa/numpy нужны только для АНАЛИЗА (analyze_stems). Чтению готовых меток
+# (`stem_cues`) они не нужны — а импортировать их на уровне модуля значит требовать
+# torch-стек в каждом воркфлоу, который просто читает stems.json. Поймано 29.07:
+# рендер vzrosly упал на «librosa не установлен», хотя ничего не анализировал.
+np = None
+librosa = None
 
-try:
-    import librosa
-except ImportError:
-    sys.stderr.write(
-        "librosa не установлен. Установите: pip install librosa numpy\n"
-    )
-    sys.exit(1)
+
+def _require_audio_libs() -> None:
+    """Подтянуть тяжёлые библиотеки в момент, когда они реально нужны."""
+    global np, librosa
+    if np is not None and librosa is not None:
+        return
+    try:
+        import numpy as _np
+        import librosa as _lb
+    except ImportError:
+        sys.stderr.write(
+            "Для анализа нужны librosa и numpy. Установите: pip install librosa numpy\n"
+        )
+        sys.exit(1)
+    np, librosa = _np, _lb
 
 
 REMOTE_CACHE_DIR = "ydrive:Content factory/cloud_io/stem_cache"
@@ -189,6 +202,7 @@ def analyze_stems(
     if not os.path.isfile(audio_path):
         raise FileNotFoundError(f"Аудио не найдено: {audio_path}")
 
+    _require_audio_libs()
     _check_demucs()
 
     key = _cache_key(audio_path, model)
