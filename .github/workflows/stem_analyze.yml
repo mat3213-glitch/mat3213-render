@@ -40,7 +40,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+          # без cache: 'pip' — кэш требует requirements.txt/pyproject.toml в корне репо,
+          # их тут нет, и шаг падает ещё до установки. Остальные 73 воркфлоу тоже без него.
 
       - name: Install system deps
         run: |
