@@ -1,80 +1,72 @@
-# Repo Scout — 2026-07-28T11:58:14.617100
+# Repo Scout — 2026-07-29T12:01:18.145230
 
-Всего в шортлисте: 19
+Всего в шортлисте: 17
 
-- **firecrawl/firecrawl** ⭐157304 [misc]
-  - https://github.com/firecrawl/firecrawl
-  - 💡 Автоматизирует поиск, парсинг и взаимодействие с вебом. Может быть полезен для сбора данных о музыкальных треках и артистах.
-  - 📄 The API to search, scrape, and interact with the web at scale. 🔥
-- **affaan-m/ECC** ⭐234425 [orchestration]
+- **affaan-m/ECC** ⭐235231 [orchestration]
   - https://github.com/affaan-m/ECC
-  - 💡 Оптимизирует производительность агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 💡 Автоматизирует оптимизацию производительности агентов. Может быть полезен для проекта в плане оптимизации работы Telegram-бота админки.
   - 📄 The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor 
-- **bradautomates/claude-video** ⭐11605 [misc]
-  - https://github.com/bradautomates/claude-video
-  - 💡 Позволяет агенту Claude смотреть видео. Может быть полезен для анализа музыкальных видеоклипов.
-  - 📄 Give Claude the ability to watch any video. /watch downloads, extracts frames, transcribes, hands it all to Claude.
-- **microsoft/flint-chart** ⭐2369 [orchestration]
-  - https://github.com/microsoft/flint-chart
-  - 💡 Помогает создавать визуализации данных. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 🪄 Flint is a visualization language that lets AI agents reliably create expressive, good-looking charts from simple, human-editable chart specs.
-- **jenkinsci/jenkins** ⭐25973 [misc]
-  - https://github.com/jenkinsci/jenkins
-  - 💡 Автоматизирует процесс сборки и тестирования. Может быть полезен для автоматизации процесса генерации музыкального контента.
-  - 📄 Jenkins automation server
-- **volcengine/OpenViking** ⭐27550 [orchestration]
-  - https://github.com/volcengine/OpenViking
-  - 💡 Помогает создавать базу знаний для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 Self-evolving Context Database for AI Agents. Unify Agent Memory, Knowledge RAG and Skills.
-- **modelcontextprotocol/modelcontextprotocol** ⭐8719 [misc]
-  - https://github.com/modelcontextprotocol/modelcontextprotocol
-  - 💡 Определяет протокол для контекста моделей. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 Specification and documentation for the Model Context Protocol
-- **xbtlin/ai-berkshire** ⭐14548 [orchestration]
-  - https://github.com/xbtlin/ai-berkshire
-  - 💡 Помогает создавать инвестиционные стратегии с помощью ИИ. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 AI 时代的伯克希尔：基于 Claude Code / Codex 的价值投资研究框架。巴菲特·芒格·段永平·李录四大师方法论 + 多Agent并行研究。| AI-era Berkshire: a value investing research framework built for Claude Code / Co
-- **huggingface/speech-to-speech** ⭐6768 [orchestration]
+- **remotion-dev/remotion** ⭐54772 [misc]
+  - https://github.com/remotion-dev/remotion
+  - 💡 Позволяет создавать видео программно с помощью React. Может быть полезен для проекта yaromat в плане автоматизации генерации видеоконтента.
+  - 📄 🎥 Make videos programmatically with React
+- **Crosstalk-Solutions/project-nomad** ⭐35156 [craft]
+  - https://github.com/Crosstalk-Solutions/project-nomad
+  - 💡 Предоставляет офлайн-сервер знаний и образования. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на автоматизацию музыкального контента.
+  - 📄 Project NOMAD is an offline-first knowledge and education server. Wikipedia, thousands of books, courses, maps, and optional local AI, all running on hardware y
+- **calesthio/OpenMontage** ⭐43657 [orchestration]
+  - https://github.com/calesthio/OpenMontage
+  - 💡 Автоматизирует видеопроизводство с помощью AI. Может быть полезен для проекта yaromat в плане создания видеоконтента.
+  - 📄 World's first open-source, agentic video production system. 12 production pipelines, 100+ tools, 700+ agent skill and production-knowledge files. Turn your AI c
+- **sgl-project/sglang** ⭐30916 [misc]
+  - https://github.com/sgl-project/sglang
+  - 💡 Предоставляет высокопроизводительный фреймворк для крупных языковых моделей. Может быть полезен для проекта в плане оптимизации работы AI-видео и фото.
+  - 📄 SGLang is a high-performance serving framework for large language models and multimodal models.
+- **alibaba/open-code-review** ⭐15695 [orchestration]
+  - https://github.com/alibaba/open-code-review
+  - 💡 Автоматизирует проверку кода с помощью LLM Agent. Для проекта вряд ли пригодится, поскольку проект yaromat не ориентирован на разработку крупных кодовых баз.
+  - 📄 Open-source &amp; free — Battle-tested at Alibaba's scale. Hybrid architecture code review tool: deterministic pipelines + LLM Agent, precise line-level comment
+- **linkwarden/linkwarden** ⭐19196 [misc]
+  - https://github.com/linkwarden/linkwarden
+  - 💡 Предоставляет самодостаточную систему управления закладками. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на автоматизацию музыкального контента.
+  - 📄 ⚡️⚡️⚡️ Self-hosted collaborative bookmark manager to collect, read, annotate, and fully preserve what matters, all in one place.
+- **huggingface/speech-to-speech** ⭐7599 [orchestration]
   - https://github.com/huggingface/speech-to-speech
-  - 💡 Позволяет создавать голосовых агентов. Может быть полезен для создания голосовых интерфейсов для музыкальных приложений.
+  - 💡 Позволяет создавать локальных голосовых агентов с помощью открытых моделей. Может быть полезен для проекта yaromat в плане создания голосовых ассистентов.
   - 📄 Build local voice agents with open-source models
-- **humanlayer/12-factor-agents** ⭐24890 [orchestration]
-  - https://github.com/humanlayer/12-factor-agents
-  - 💡 Помогает создавать приложения с агентами. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 What are the principles we can use to build LLM-powered software that is actually good enough to put in the hands of production customers?
-- **HKUDS/OpenSpace** ⭐7127 [orchestration]
-  - https://github.com/HKUDS/OpenSpace
-  - 💡 Помогает создавать слой управления навыками для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 "OpenSpace: The Skill Management Layer for AI Agents" -- https://open-space.cloud/
-- **medusajs/medusa** ⭐35429 [orchestration]
-  - https://github.com/medusajs/medusa
-  - 💡 Помогает создавать платформы электронной коммерции. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 The world's most flexible commerce platform for agents and developers
-- **lightseekorg/tokenspeed** ⭐1713 [orchestration]
-  - https://github.com/lightseekorg/tokenspeed
-  - 💡 Ускоряет работу моделей ИИ. Может быть полезен для ускорения процесса генерации музыкального контента.
-  - 📄 TokenSpeed is a speed-of-light LLM inference engine.
-- **arc53/DocsGPT** ⭐18147 [orchestration]
-  - https://github.com/arc53/DocsGPT
-  - 💡 Помогает создавать платформы для агентов и поиска документов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 Private AI platform for agents, assistants and enterprise search. Built-in Agent Builder, Deep research, Document analysis, Multi-model support, and API connect
-- **NanmiCoder/cc-haha** ⭐13664 [orchestration]
-  - https://github.com/NanmiCoder/cc-haha
-  - 💡 Помогает создавать рабочие столы для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
-  - 📄 本地优先的跨平台 Claude Code / Agent 桌面工作台：多 Agent、Git Worktree、代码 Diff、技能市场、多模型、Computer Use、任务感知桌面宠物，并支持微信、飞书、钉钉、Telegram、WhatsApp 与 H5 访问。
-- **basketikun/infinite-canvas** ⭐4083 [orchestration]
-  - https://github.com/basketikun/infinite-canvas
-  - 💡 Помогает создавать творческие проекты с помощью ИИ. Может быть полезен для генерации музыкальных видеоклипов.
-  - 📄 面向 AI 创作的开源无限画布工作台，集成 AI 生图、参考图编辑、视频生成、Agent 智能助手、画布编排、对话创作、提示词库与素材管理等能力，支持可视化创作流程与多 Agent 协同工作。兼容 OpenAI 接口生态，支持 chatgpt2api、grok2api、flow2api、newapi 等渠道接入。
-- **BuilderIO/agent-native** ⭐4200 [orchestration]
+- **microsoft/flint-chart** ⭐2435 [orchestration]
+  - https://github.com/microsoft/flint-chart
+  - 💡 Предоставляет язык визуализации для создания графиков. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на музыкальный контент.
+  - 📄 🪄 Flint is a visualization language that lets AI agents reliably create expressive, good-looking charts from simple, human-editable chart specs.
+- **kangarooking/cangjie-skill** ⭐5161 [orchestration]
+  - https://github.com/kangarooking/cangjie-skill
+  - 💡 Позволяет создавать исполняемые навыки агентов из высокоценного контента. Может быть полезен для проекта yaromat в плане создания навыков для Telegram-бота админки.
+  - 📄 把书、长视频、播客等高价值内容蒸馏成可执行的 Agent Skills
+- **BuilderIO/agent-native** ⭐4273 [orchestration]
   - https://github.com/BuilderIO/agent-native
-  - 💡 Помогает создавать приложения для агентов. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет фреймворк для построения приложений на основе агентов. Может быть полезен для проекта yaromat в плане создания агент-ориентированных приложений.
   - 📄 A framework for building agent-native applications.
-- **microsoft/agent-governance-toolkit** ⭐4975 [orchestration]
+- **lightseekorg/tokenspeed** ⭐1744 [orchestration]
+  - https://github.com/lightseekorg/tokenspeed
+  - 💡 Предоставляет высокоскоростной движок для вывода LLM. Может быть полезен для проекта yaromat в плане оптимизации работы AI-видео и фото.
+  - 📄 TokenSpeed is a speed-of-light LLM inference engine.
+- **ag-ui-protocol/ag-ui** ⭐15003 [orchestration]
+  - https://github.com/ag-ui-protocol/ag-ui
+  - 💡 Предоставляет протокол взаимодействия агентов и пользователей. Может быть полезен для проекта yaromat в плане создания интерфейсов взаимодействия с Telegram-ботом админки.
+  - 📄 AG-UI: the Agent-User Interaction Protocol. Bring Agents into Frontend Applications.
+- **arc53/DocsGPT** ⭐18177 [orchestration]
+  - https://github.com/arc53/DocsGPT
+  - 💡 Предоставляет платформу для агентов, ассистентов и корпоративного поиска. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на музыкальный контент.
+  - 📄 Private AI platform for agents, assistants and enterprise search. Built-in Agent Builder, Deep research, Document analysis, Multi-model support, and API connect
+- **ComposioHQ/composio** ⭐29434 [orchestration]
+  - https://github.com/ComposioHQ/composio
+  - 💡 Предоставляет инструменты для построения агентов, которые превращают намерения в действия. Может быть полезен для проекта yaromat в плане создания агент-ориентированных приложений.
+  - 📄 Composio powers 1000+ toolkits, tool search, context management, authentication, and a sandboxed workbench to help you build AI agents that turn intent into act
+- **microsoft/agent-governance-toolkit** ⭐5414 [orchestration]
   - https://github.com/microsoft/agent-governance-toolkit
-  - 💡 Помогает создавать инструменты для управления агентами. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет инструменты для управления и обеспечения безопасности автономных агентов. Может быть полезен для проекта yaromat в плане обеспечения безопасности Telegram-бота админки.
   - 📄 AI Agent Governance Toolkit — Policy enforcement, zero-trust identity, execution sandboxing, and reliability engineering for autonomous AI agents. Covers 10/10 
-- **microsoft/azure-devops-mcp** ⭐1914 [orchestration]
+- **microsoft/azure-devops-mcp** ⭐1921 [orchestration]
   - https://github.com/microsoft/azure-devops-mcp
-  - 💡 Помогает создавать серверы для Azure DevOps. Для проекта вряд ли пригодится, поскольку не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет сервер MCP для Azure DevOps. Для проекта вряд ли пригодится, поскольку проект yaromat не ориентирован на разработку крупных кодовых баз и не использует Azure DevOps.
   - 📄 The MCP server for Azure DevOps, bringing the power of Azure DevOps directly to your agents.
