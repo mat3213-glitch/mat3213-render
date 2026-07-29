@@ -24,6 +24,7 @@ GitHub Actions с Linux, без GPU, с ffmpeg/librosa/numpy/rclone на бор�
 from __future__ import annotations
 
 import argparse
+import bisect
 import hashlib
 import json
 import os
@@ -304,15 +305,30 @@ def analyze_stems(
     return data
 
 
-def stem_cues(data: dict, stem: str, min_gap: float = 0.25) -> list[float]:
+def stem_cues(
+    data: dict,
+    stem: str,
+    min_gap: float = 0.25,
+    mode: str = "strongest",
+) -> list[float]:
     """
-    Отфильтровать onsets выбранного стема, выкидывая метки ближе min_gap
-    секунд друг к другу. Для монтажа не нужны сдвоенные резы — эта функция
-    оставляет только «чистые» удары с минимальным интервалом.
+    Прорядить onsets стема до меток монтажа: в каждом окне min_gap остаётся ОДНА.
+
+    ⚠️ ЗАМЕР 2026-07-29 на «взрослый (dnb vers)», из-за которого появился `mode`:
+    у drums 1003 onset'а на 196с, и **86% интервалов между сырыми onset'ами короче
+    0.25с** (пики на 0.16 / 0.09 / 0.07с) — это сплошной поток транзиентов брейка,
+    а не отдельные удары. Прежний режим («первый в окне») в таком потоке выбирает
+    метку ПО ФАЗЕ ЛИНЕЙКИ, а не по музыке: 177 из 488 полученных интервалов легли
+    ровно на пол min_gap, то есть сетка резов оказалась бы артефактом фильтра.
+    Числа при этом выглядели правдоподобно — ровно тот случай, о котором
+    [[feedback_number_lies_look_at_frames]]: судить по ушам/кадрам, не по метрике.
 
     :param data: словарь, возвращённый analyze_stems.
     :param stem: имя стема ('drums', 'bass', 'vocals', 'other').
     :param min_gap: минимальный интервал между метками в секундах.
+    :param mode: 'strongest' — в окне берётся САМЫЙ ГРОМКИЙ onset (по кривой RMS
+                 того же стема): метка садится на акцент, а не на случайный транзиент.
+                 'first' — прежнее поведение (первый в окне), оставлено для сверки.
     :return: отфильтрованный список времён в секундах.
     """
     if stem not in data.get("stems", {}):
@@ -320,14 +336,44 @@ def stem_cues(data: dict, stem: str, min_gap: float = 0.25) -> list[float]:
             f"Стем '{stem}' отсутствует в данных. Доступны: "
             f"{list(data.get('stems', {}).keys())}"
         )
-    onsets = data["stems"][stem]["onsets"]
-    result: list[float] = []
-    last = -float("inf")
-    for t in onsets:
-        if t - last >= min_gap:
-            result.append(float(t))
-            last = t
-    return result
+    if mode not in ("strongest", "first"):
+        raise ValueError(f"mode должен быть 'strongest' или 'first', получено: {mode!r}")
+
+    onsets = [float(t) for t in data["stems"][stem]["onsets"]]
+    if mode == "first":
+        result: list[float] = []
+        last = -float("inf")
+        for t in onsets:
+            if t - last >= min_gap:
+                result.append(t)
+                last = t
+        return result
+
+    # rms — список пар [время, значение]; без него честно падаем в 'first'
+    rms = data["stems"][stem].get("rms") or []
+    if not rms or not isinstance(rms[0], (list, tuple)):
+        return stem_cues(data, stem, min_gap, mode="first")
+    times = [float(p[0]) for p in rms]
+    vals = [float(p[1]) for p in rms]
+
+    def strength(t: float) -> float:
+        i = bisect.bisect_left(times, t)
+        return vals[min(i, len(vals) - 1)]
+
+    # Жадный отбор по силе: идём от самого громкого onset'а к тихому и берём метку,
+    # если она не ближе min_gap к уже взятой. Наивное «самый громкий в окне» тут не
+    # годится — окна нарезаются по началу кластера, и выбранная метка из соседних окон
+    # может встать ближе min_gap (поймано тестом 29.07). Здесь интервал гарантирован
+    # самим правилом отбора, а приоритет остаётся у акцентов.
+    chosen: list[float] = []
+    for t in sorted(onsets, key=strength, reverse=True):
+        i = bisect.bisect_left(chosen, t)
+        if i > 0 and t - chosen[i - 1] < min_gap:
+            continue
+        if i < len(chosen) and chosen[i] - t < min_gap:
+            continue
+        chosen.insert(i, t)
+    return chosen
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -363,6 +409,13 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0.25,
         help="Минимальный интервал между метками в секундах (по умолчанию 0.25).",
     )
+    parser.add_argument(
+        "--cue-mode",
+        choices=("strongest", "first"),
+        default="strongest",
+        help="Какую метку оставлять в окне: strongest — самую громкую (по RMS стема), "
+             "first — первую (прежнее поведение, для сверки).",
+    )
     return parser
 
 
@@ -397,8 +450,11 @@ def main() -> None:
         sys.exit(1)
 
     if args.print_cues and args.stem:
-        cues = stem_cues(data, args.stem, min_gap=args.min_gap)
-        _log(f"Метки стема '{args.stem}' (min_gap={args.min_gap}с): {len(cues)} шт.")
+        cues = stem_cues(data, args.stem, min_gap=args.min_gap, mode=args.cue_mode)
+        _log(
+            f"Метки стема '{args.stem}' (min_gap={args.min_gap}с, "
+            f"режим={args.cue_mode}): {len(cues)} шт."
+        )
         for t in cues:
             sys.stdout.write(f"{t:.3f}\n")
 
