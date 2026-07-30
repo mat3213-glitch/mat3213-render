@@ -19,7 +19,10 @@ art_judge.py — VLM-СУДЬЯ БРЕНД-БРАКА ПО КАРТИНКЕ (г�
   ансамбля — путала поля (совала shot_type в violations) и выдумывала text_in_frame.
   Мажоритарная агрегация (≥2 из 3): один шумный голос не должен браковать годный кадр.
 
-Auth: GITHUB_TOKEN (permissions: models: read). Всё бесплатно, транспорт = GitHub Models.
+Транспорт — ТРИ РАЗНЫХ ПРОВАЙДЕРА (30.07), потому что три модели одного вендора умирают одной
+квотой: `cf:` — наш CF Worker /analyze-frame (Workers AI, ключи CLOUDFLARE_WORKER+WORKER_SECRET),
+`or:` — OpenRouter free (OPENROUTER_API_KEY), `gh:` — GitHub Models (GITHUB_TOKEN, models: read).
+Всё бесплатно. Судья без своего ключа молча выбывает, остальные работают.
 
 Запуск:
   python3 art_judge.py --src "ydrive:.../pool" --out "ydrive:.../result_art_judge"
@@ -41,9 +44,24 @@ import urllib.request
 from collections import Counter
 
 ENDPOINT = "https://models.github.ai/inference/chat/completions"
-# Ансамбль проверен зондом 29.07: эти три отвечают валидным JSON и сходятся между собой.
-# По точности на бренд-рубрике: gpt-4o 11/11, gpt-4o-mini 10/11, gpt-4.1 9/11 (2 ложняка).
-MODELS = ["openai/gpt-4o", "openai/gpt-4.1", "openai/gpt-4o-mini"]
+OR_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
+
+# АНСАМБЛЬ ИЗ ТРЁХ РАЗНЫХ ПРОВАЙДЕРОВ (решение yaromat 30.07). Раньше стояли три модели
+# GitHub Models — и они умерли ОДНОЙ общей квотой: gpt-4o и gpt-4.1 отдавали 429 с
+# Retry-After 40+ мин, вердикт выносил один выживший mini. Пул (90 артов × 2 рубрики =
+# 180 запросов НА МОДЕЛЬ) в суточную квоту GH Models не влезает в принципе.
+# Gemini отклонён (yaromat: «быстро тратятся токены»), Qwen отклонён (2 мин/кадр через браузер).
+# Замеры 30.07 на реальном арте: CF 1.3с, nemotron 3с, gpt-4o-mini ~2с; JSON отдают все.
+JUDGES = [
+    "cf:llama-3.2-11b-vision",                  # наш CF Worker /analyze-frame, без внешних квот
+    "or:nvidia/nemotron-nano-12b-v2-vl:free",   # OpenRouter free, 3с
+    "gh:openai/gpt-4o-mini",                    # GH Models — пока держится суточная квота
+    # Резерв: включается сам, когда кто-то выше выбывает по квоте — иначе на длинном пуле
+    # можно остаться с одним голосом, а бренд судится большинством.
+    "or:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+]
+MODELS = JUDGES        # обратная совместимость: style_judge импортирует MODELS
+PANEL = 3              # сколько судей опрашиваем на кадр (остальные в списке — резерв)
 VALID = {"face", "lone_figure", "text_in_frame", "neon", "vector_cartoon", "glossy_ad"}
 FLAWS = {"proportions", "anatomy", "geometry", "physics", "light", "density"}
 SHOTS = {"wide", "medium", "detail", "texture", "motion", "unclear"}
@@ -142,34 +160,68 @@ def extract_json(txt):
     return None
 
 
-def ask_vision(model, prompt, b64, token):
-    """Один vision-вызов к GitHub Models → распарсенный JSON или (None, причина).
+def _post(url, payload, headers, timeout=90):
+    req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
+                                 headers=headers)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.load(r)
 
-    Вынесено отдельно, чтобы этим же транспортом пользовался `style_judge.py`: у него своя
-    рубрика, но те же модели, тот же ретрай на 429/503 и тот же UA=curl.
-    """
-    body = json.dumps({
+
+def _chat_completions(url, token, model, prompt, b64, timeout=90):
+    """Общий формат OpenAI-совместимых API: и GitHub Models, и OpenRouter говорят одинаково."""
+    payload = {
         "model": model,
         "messages": [{"role": "user", "content": [
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}},
         ]}],
         "temperature": 0.0,
-    }).encode()
-    req = urllib.request.Request(ENDPOINT, data=body, method="POST", headers={
+    }
+    d = _post(url, payload, {
         "Authorization": f"Bearer {token}", "Content-Type": "application/json",
         "Accept": "application/json", "User-Agent": "curl/8.0",
-    })
+    }, timeout)
+    return d["choices"][0]["message"]["content"]
+
+
+def ask_vision(judge, prompt, b64, token=None):
+    """Один vision-вызов → (распарсенный JSON, None) либо (None, причина).
+
+    `judge` — «провайдер:модель»: `cf:` (наш CF Worker /analyze-frame), `or:` (OpenRouter),
+    `gh:` (GitHub Models). Без префикса считаем `gh:` — так старые вызовы (style_judge)
+    продолжают работать. Транспорты разные, контракт один: JSON по рубрике.
+    """
+    prov, _, model = judge.partition(":")
+    if not model:                       # голое имя модели = старый вызов GitHub Models
+        prov, model = "gh", judge
+
     for attempt in range(3):
         try:
-            with urllib.request.urlopen(req, timeout=90) as r:
-                raw = json.load(r)["choices"][0]["message"]["content"]
-            v = extract_json(raw)
+            if prov == "cf":
+                # Наш воркер сам зовёт Workers AI и сам парсит ответ: в `analysis` уже
+                # объект, если модель отдала JSON, иначе строка — обрабатываем оба случая.
+                base = os.environ.get("CLOUDFLARE_WORKER", "").rstrip("/")
+                if not base:
+                    return None, "нет CLOUDFLARE_WORKER"
+                d = _post(f"{base}/analyze-frame", {"image": b64, "prompt": prompt},
+                          {"Content-Type": "application/json", "User-Agent": "curl/8.0",
+                           "X-Worker-Secret": os.environ.get("WORKER_SECRET", "")})
+                a = d.get("analysis")
+                v = a if isinstance(a, dict) else extract_json(a or "")
+            elif prov == "or":
+                key = os.environ.get("OPENROUTER_API_KEY", "")
+                if not key:
+                    return None, "нет OPENROUTER_API_KEY"
+                v = extract_json(_chat_completions(OR_ENDPOINT, key, model, prompt, b64))
+            else:
+                if not token:
+                    return None, "нет GITHUB_TOKEN"
+                v = extract_json(_chat_completions(ENDPOINT, token, model, prompt, b64))
             return (v, None) if v else (None, "битый JSON")
         except urllib.error.HTTPError as e:
             if e.code in (429, 503):
                 wait = min(int(e.headers.get("Retry-After", 8 * (attempt + 1))), 30)
-                print(f"      {model} {e.code}, жду {wait}с")
+                print(f"      {judge} {e.code}, жду {wait}с")
                 time.sleep(wait)
                 continue
             return None, f"HTTP {e.code}"
@@ -273,10 +325,26 @@ def main():
     args = ap.parse_args()
 
     token = os.environ.get("GITHUB_TOKEN")
-    if not token:
-        print("нет GITHUB_TOKEN (нужны permissions: models: read)", file=sys.stderr)
-        return 2
     models = [m.strip() for m in args.models.split(",") if m.strip()] or MODELS
+
+    # Ансамбль мультипровайдерный, поэтому нехватка одного ключа — не повод падать целиком:
+    # выкидываем только тех судей, кому нечем ходить, и говорим об этом вслух.
+    need = {"cf": ("CLOUDFLARE_WORKER", os.environ.get("CLOUDFLARE_WORKER")),
+            "or": ("OPENROUTER_API_KEY", os.environ.get("OPENROUTER_API_KEY")),
+            "gh": ("GITHUB_TOKEN", token)}
+    alive = []
+    for m in models:
+        prov = m.split(":", 1)[0] if ":" in m else "gh"
+        env_name, val = need.get(prov, ("", "1"))
+        if val:
+            alive.append(m)
+        else:
+            print(f"⚠️ судья {m} выбывает: нет {env_name}", file=sys.stderr)
+    if not alive:
+        print("не осталось ни одного судьи — нужен хотя бы один ключ "
+              "(CLOUDFLARE_WORKER / OPENROUTER_API_KEY / GITHUB_TOKEN)", file=sys.stderr)
+        return 2
+    models = alive
 
     work = tempfile.mkdtemp(prefix="art_judge_")
     if args.local:
@@ -302,6 +370,7 @@ def main():
     print(f"судим {len(files)} артов ансамблем: {', '.join(models)}\n")
 
     rows, full = [], []
+    dead = {}          # судья → сколько раз подряд упёрся в исчерпанную квоту
     for i, p in enumerate(files, 1):
         rel = os.path.relpath(p, frames)
         try:
@@ -312,10 +381,31 @@ def main():
                          "n_votes": 0, "verdict": "ERROR", "detail": f"read: {e}"})
             continue
         votes, notes = [], []
-        for m in models:
+        asked = 0
+        for m in list(models):
+            # Спрашиваем ровно PANEL судей: список длиннее панели намеренно — хвост это
+            # резерв, он подключается сам, когда кто-то выбыл по квоте.
+            if asked >= PANEL:
+                break
+            if dead.get(m, 0) >= 2:
+                continue          # судья выбыл по квоте — не тратим на него ожидания
+            asked += 1
             v, err = ask_both(m, b64, token)
-            short = m.split("/")[-1]
+            # Предохранитель: при исчерпанной СУТОЧНОЙ квоте судья отвечает 429 с
+            # Retry-After в десятки минут, и ретраи жгут по полторы минуты на кадр
+            # впустую (замер 30.07: gpt-4o-mini умер на первом же арте). Два подряд —
+            # исключаем до конца прогона, остальные судьи продолжают.
+            if v is None and err and "rate-limit" in err:
+                dead[m] = dead.get(m, 0) + 1
+                if dead[m] >= 2:
+                    print(f"      ⛔ {m} выбывает из прогона: квота исчерпана", flush=True)
+            elif v is not None:
+                dead[m] = 0
+            short = m.split(":", 1)[0] + "/" + m.split("/")[-1].split(":")[0]
             if v:
+                # чей это голос — нужно и для отладки, и чтобы схему агрегации можно было
+                # пересчитать ОФЛАЙН по сохранённым голосам, не гоняя модели заново
+                v["_judge"] = m
                 votes.append(v)
                 notes.append(f"{short}:{'+'.join(v.get('violations') or ['ok'])}"
                              f"~{'+'.join(v.get('flaws') or ['ok'])}/{v.get('shot_type')}")
