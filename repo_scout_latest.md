@@ -1,72 +1,68 @@
-# Repo Scout — 2026-07-29T12:01:18.145230
+# Repo Scout — 2026-07-30T11:51:39.710015
 
-Всего в шортлисте: 17
+Всего в шортлисте: 16
 
-- **affaan-m/ECC** ⭐235231 [orchestration]
+- **affaan-m/ECC** ⭐235976 [orchestration]
   - https://github.com/affaan-m/ECC
-  - 💡 Автоматизирует оптимизацию производительности агентов. Может быть полезен для проекта в плане оптимизации работы Telegram-бота админки.
+  - 💡 Автоматизирует разработку агентов с улучшенной производительностью. Полезен для проекта, так как может помочь в оптимизации работы Telegram-бота и других компонентов.
   - 📄 The agent harness performance optimization system. Skills, instincts, memory, security, and research-first development for Claude Code, Codex, Opencode, Cursor 
-- **remotion-dev/remotion** ⭐54772 [misc]
-  - https://github.com/remotion-dev/remotion
-  - 💡 Позволяет создавать видео программно с помощью React. Может быть полезен для проекта yaromat в плане автоматизации генерации видеоконтента.
-  - 📄 🎥 Make videos programmatically with React
-- **Crosstalk-Solutions/project-nomad** ⭐35156 [craft]
-  - https://github.com/Crosstalk-Solutions/project-nomad
-  - 💡 Предоставляет офлайн-сервер знаний и образования. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на автоматизацию музыкального контента.
-  - 📄 Project NOMAD is an offline-first knowledge and education server. Wikipedia, thousands of books, courses, maps, and optional local AI, all running on hardware y
-- **calesthio/OpenMontage** ⭐43657 [orchestration]
-  - https://github.com/calesthio/OpenMontage
-  - 💡 Автоматизирует видеопроизводство с помощью AI. Может быть полезен для проекта yaromat в плане создания видеоконтента.
-  - 📄 World's first open-source, agentic video production system. 12 production pipelines, 100+ tools, 700+ agent skill and production-knowledge files. Turn your AI c
-- **sgl-project/sglang** ⭐30916 [misc]
-  - https://github.com/sgl-project/sglang
-  - 💡 Предоставляет высокопроизводительный фреймворк для крупных языковых моделей. Может быть полезен для проекта в плане оптимизации работы AI-видео и фото.
-  - 📄 SGLang is a high-performance serving framework for large language models and multimodal models.
-- **alibaba/open-code-review** ⭐15695 [orchestration]
-  - https://github.com/alibaba/open-code-review
-  - 💡 Автоматизирует проверку кода с помощью LLM Agent. Для проекта вряд ли пригодится, поскольку проект yaromat не ориентирован на разработку крупных кодовых баз.
-  - 📄 Open-source &amp; free — Battle-tested at Alibaba's scale. Hybrid architecture code review tool: deterministic pipelines + LLM Agent, precise line-level comment
-- **linkwarden/linkwarden** ⭐19196 [misc]
-  - https://github.com/linkwarden/linkwarden
-  - 💡 Предоставляет самодостаточную систему управления закладками. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на автоматизацию музыкального контента.
-  - 📄 ⚡️⚡️⚡️ Self-hosted collaborative bookmark manager to collect, read, annotate, and fully preserve what matters, all in one place.
-- **huggingface/speech-to-speech** ⭐7599 [orchestration]
+- **jenkinsci/jenkins** ⭐26206 [misc]
+  - https://github.com/jenkinsci/jenkins
+  - 💡 Автоматизирует процесс сборки и тестирования программного обеспечения. Полезен для проекта, так как может помочь в автоматизации процессов сборки и тестирования кода.
+  - 📄 Jenkins automation server
+- **bojieli/ai-agent-book** ⭐27041 [orchestration]
+  - https://github.com/bojieli/ai-agent-book
+  - 💡 Предоставляет ресурсы для разработки агентов ИИ. Вряд ли пригодится для проекта, так как представляет собой книгу и коды для агентов ИИ, не связанных напрямую с музыкальным контентом.
+  - 📄 《深入理解 AI Agent：设计原理与工程实践》（李博杰 著）开源主仓库：全书正文、编译版 PDF 与按章配套代码
+- **ScrapeGraphAI/Scrapegraph-ai** ⭐28790 [misc]
+  - https://github.com/ScrapeGraphAI/Scrapegraph-ai
+  - 💡 Автоматизирует процесс сбора данных из интернета с помощью ИИ. Полезен для проекта, так как может помочь в сборе данных о музыкальном контенте.
+  - 📄 Python scraper based on AI
+- **Panniantong/Agent-Reach** ⭐62690 [orchestration]
+  - https://github.com/Panniantong/Agent-Reach
+  - 💡 Позволяет агентам ИИ собирать данные из различных источников. Полезен для проекта, так как может помочь в сборе данных о музыкальном контенте из различных платформ.
+  - 📄 Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.
+- **modelcontextprotocol/typescript-sdk** ⭐13006 [misc]
+  - https://github.com/modelcontextprotocol/typescript-sdk
+  - 💡 Предоставляет SDK для работы с протоколом Model Context. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией.
+  - 📄 The official TypeScript SDK for Model Context Protocol servers and clients
+- **mvanhorn/last30days-skill** ⭐55216 [orchestration]
+  - https://github.com/mvanhorn/last30days-skill
+  - 💡 Автоматизирует процесс сбора и суммирования информации из различных источников. Полезен для проекта, так как может помочь в сборе и суммировании информации о музыкальном контенте.
+  - 📄 AI agent skill that researches any topic across Reddit, X, YouTube, HN, Polymarket, and the web - then synthesizes a grounded summary
+- **WhiskeySockets/Baileys** ⭐10325 [misc]
+  - https://github.com/WhiskeySockets/Baileys
+  - 💡 Предоставляет API для работы с WhatsApp Web. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией в Telegram.
+  - 📄 Socket-based TS/JavaScript API for WhatsApp Web
+- **huggingface/speech-to-speech** ⭐8210 [orchestration]
   - https://github.com/huggingface/speech-to-speech
-  - 💡 Позволяет создавать локальных голосовых агентов с помощью открытых моделей. Может быть полезен для проекта yaromat в плане создания голосовых ассистентов.
+  - 💡 Позволяет создавать локальных голосовых агентов с помощью открытых моделей. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией.
   - 📄 Build local voice agents with open-source models
-- **microsoft/flint-chart** ⭐2435 [orchestration]
-  - https://github.com/microsoft/flint-chart
-  - 💡 Предоставляет язык визуализации для создания графиков. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на музыкальный контент.
-  - 📄 🪄 Flint is a visualization language that lets AI agents reliably create expressive, good-looking charts from simple, human-editable chart specs.
-- **kangarooking/cangjie-skill** ⭐5161 [orchestration]
-  - https://github.com/kangarooking/cangjie-skill
-  - 💡 Позволяет создавать исполняемые навыки агентов из высокоценного контента. Может быть полезен для проекта yaromat в плане создания навыков для Telegram-бота админки.
-  - 📄 把书、长视频、播客等高价值内容蒸馏成可执行的 Agent Skills
-- **BuilderIO/agent-native** ⭐4273 [orchestration]
-  - https://github.com/BuilderIO/agent-native
-  - 💡 Предоставляет фреймворк для построения приложений на основе агентов. Может быть полезен для проекта yaromat в плане создания агент-ориентированных приложений.
-  - 📄 A framework for building agent-native applications.
-- **lightseekorg/tokenspeed** ⭐1744 [orchestration]
-  - https://github.com/lightseekorg/tokenspeed
-  - 💡 Предоставляет высокоскоростной движок для вывода LLM. Может быть полезен для проекта yaromat в плане оптимизации работы AI-видео и фото.
-  - 📄 TokenSpeed is a speed-of-light LLM inference engine.
-- **ag-ui-protocol/ag-ui** ⭐15003 [orchestration]
-  - https://github.com/ag-ui-protocol/ag-ui
-  - 💡 Предоставляет протокол взаимодействия агентов и пользователей. Может быть полезен для проекта yaromat в плане создания интерфейсов взаимодействия с Telegram-ботом админки.
-  - 📄 AG-UI: the Agent-User Interaction Protocol. Bring Agents into Frontend Applications.
-- **arc53/DocsGPT** ⭐18177 [orchestration]
-  - https://github.com/arc53/DocsGPT
-  - 💡 Предоставляет платформу для агентов, ассистентов и корпоративного поиска. Для проекта вряд ли пригодится, поскольку проект yaromat ориентирован на музыкальный контент.
-  - 📄 Private AI platform for agents, assistants and enterprise search. Built-in Agent Builder, Deep research, Document analysis, Multi-model support, and API connect
-- **ComposioHQ/composio** ⭐29434 [orchestration]
-  - https://github.com/ComposioHQ/composio
-  - 💡 Предоставляет инструменты для построения агентов, которые превращают намерения в действия. Может быть полезен для проекта yaromat в плане создания агент-ориентированных приложений.
-  - 📄 Composio powers 1000+ toolkits, tool search, context management, authentication, and a sandboxed workbench to help you build AI agents that turn intent into act
-- **microsoft/agent-governance-toolkit** ⭐5414 [orchestration]
+- **microsoft/agent-governance-toolkit** ⭐5485 [orchestration]
   - https://github.com/microsoft/agent-governance-toolkit
-  - 💡 Предоставляет инструменты для управления и обеспечения безопасности автономных агентов. Может быть полезен для проекта yaromat в плане обеспечения безопасности Telegram-бота админки.
+  - 💡 Предоставляет инструменты для управления и обеспечения безопасности агентов ИИ. Полезен для проекта, так как может помочь в обеспечении безопасности и управления Telegram-ботом и другими компонентами.
   - 📄 AI Agent Governance Toolkit — Policy enforcement, zero-trust identity, execution sandboxing, and reliability engineering for autonomous AI agents. Covers 10/10 
-- **microsoft/azure-devops-mcp** ⭐1921 [orchestration]
-  - https://github.com/microsoft/azure-devops-mcp
-  - 💡 Предоставляет сервер MCP для Azure DevOps. Для проекта вряд ли пригодится, поскольку проект yaromat не ориентирован на разработку крупных кодовых баз и не использует Azure DevOps.
-  - 📄 The MCP server for Azure DevOps, bringing the power of Azure DevOps directly to your agents.
+- **ChromeDevTools/chrome-devtools-mcp** ⭐47883 [orchestration]
+  - https://github.com/ChromeDevTools/chrome-devtools-mcp
+  - 💡 Предоставляет инструменты для разработки агентов ИИ в Chrome DevTools. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией.
+  - 📄 Chrome DevTools for coding agents
+- **github/awesome-copilot** ⭐37232 [orchestration]
+  - https://github.com/github/awesome-copilot
+  - 💡 Предоставляет ресурсы и инструкции для работы с GitHub Copilot. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией.
+  - 📄 Community-contributed instructions, agents, skills, and configurations to help you make the most of GitHub Copilot.
+- **ansible/ansible** ⭐69749 [orchestration]
+  - https://github.com/ansible/ansible
+  - 💡 Автоматизирует процесс развертывания и управления приложениями и системами. Полезен для проекта, так как может помочь в автоматизации процессов развертывания и управления кодом.
+  - 📄 Ansible is a radically simple IT automation platform that makes your applications and systems easier to deploy and maintain. Automate everything from code deplo
+- **google-labs-code/stitch-skills** ⭐7865 [orchestration]
+  - https://github.com/google-labs-code/stitch-skills
+  - 💡 Предоставляет библиотеку навыков для агентов ИИ. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией.
+  - 📄 A library of Agent Skills designed to work with the Stitch MCP server. Each skill follows the Agent Skills open standard, for compatibility with coding agents s
+- **nrwl/nx** ⭐29157 [orchestration]
+  - https://github.com/nrwl/nx
+  - 💡 Предоставляет платформу для разработки и автоматизации процессов. Полезен для проекта, так как может помочь в автоматизации процессов сборки и тестирования кода.
+  - 📄 The Monorepo Platform that amplifies both developers and AI agents. Nx optimizes your builds, scales your CI, and fixes failed PRs automatically. Ship in half t
+- **styled-components/styled-components** ⭐41126 [misc]
+  - https://github.com/styled-components/styled-components
+  - 💡 Предоставляет инструменты для стилизации компонентов React. Вряд ли пригодится для проекта, так как не связан напрямую с музыкальным контентом или автоматизацией.
+  - 📄 Fast, expressive styling for React. Server components, client components, streaming SSR, React Native—one API.
