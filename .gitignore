@@ -3,5 +3,10 @@ __pycache__/
 
 # session/test artifacts
 screenplay_pipeline/analysis.json
+
+# живые сессии воркеров — качаются на раннер с ЯД, в репо НИКОГДА (репо публичный!)
+kimi_session.json
+.kimi_access.json
+qwen/qwen_session.json
 .agents/
 remotion/.agents/
