@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-07-29",
+  "_generated": "2026-07-30",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
@@ -12,11 +12,11 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "29098889.jpg"
+      "_src": "97034002.jpg"
     },
     {
-      "name": "scout_warm_night_muted",
-      "note": "scout: warm night muted",
+      "name": "scout_neutral_night_muted",
+      "note": "scout: neutral night muted",
       "eq": "contrast=1.01:saturation=0.68:brightness=-0.064:gamma=1.068",
       "balance": "rm=-0.02:rh=0.024:bh=-0.036",
       "grain": [
@@ -24,11 +24,11 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "1128298.jpg"
+      "_src": "43925232.jpg"
     },
     {
-      "name": "scout_cool_mid_muted",
-      "note": "scout: cool mid muted",
+      "name": "scout_neutral_mid_muted",
+      "note": "scout: neutral mid muted",
       "eq": "contrast=0.9:saturation=0.53:brightness=0.023:gamma=0.975",
       "balance": null,
       "grain": [
@@ -36,11 +36,11 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "953703.jpg"
+      "_src": "81142987.jpg"
     },
     {
-      "name": "scout_warm_night_muted_2",
-      "note": "scout: warm night muted",
+      "name": "scout_neutral_night_muted_2",
+      "note": "scout: neutral night muted",
       "eq": "contrast=0.9:saturation=0.69:brightness=-0.052:gamma=1.056",
       "balance": "rm=0.061:bm=-0.068:rh=0.058:bh=-0.072",
       "grain": [
@@ -48,11 +48,11 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "46120151.jpg"
+      "_src": "46399819.jpg"
     },
     {
-      "name": "scout_green_night_soft",
-      "note": "scout: green night soft",
+      "name": "scout_neutral_night_soft",
+      "note": "scout: neutral night soft",
       "eq": "contrast=1.09:saturation=1.0:brightness=-0.1:gamma=1.08",
       "balance": null,
       "grain": [
@@ -60,10 +60,10 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "79320328.jpg"
+      "_src": "84016617.jpg"
     },
     {
-      "name": "scout_neutral_night_soft",
+      "name": "scout_neutral_night_soft_2",
       "note": "scout: neutral night soft",
       "eq": "contrast=1.16:saturation=1.04:brightness=-0.1:gamma=1.08",
       "balance": "bm=-0.02:rh=0.016",
@@ -72,7 +72,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "11538148.jpg"
+      "_src": "29019372.jpg"
     }
   ]
 }
