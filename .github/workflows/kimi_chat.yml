@@ -42,7 +42,7 @@ permissions:
 jobs:
   chat:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35   # 30 мин на саму обработку (решение yaromat 30.07) + запас на apt/rclone/голос
     steps:
       - uses: actions/checkout@v4
 
@@ -122,21 +122,80 @@ jobs:
 
           HIST_TURNS = 6
           HIST_ANS_CHARS = 1200
-          BRIEF_CHARS = 8000
           # Промпт уходит АРГУМЕНТОМ командной строки, а один аргумент в Linux ограничен
           # 128 КБ (MAX_ARG_STRLEN) — упирались в это на зонде. Режем с запасом.
           PROMPT_CAP = 100000
           SB = "ydrive:Content factory/cloud_io/mimo_sandbox"
+          # Живая память проекта (решение yaromat 30.07: «дай ему доступ к памяти вместо брифов»).
+          # Зеркало обновляет Stop-хук Claude КАЖДЫЙ ход (yaromat_music/backup.sh) — то есть бот
+          # видит ровно то, что видит Claude, без ручного PROJECT_BRIEF (тот протух за месяц).
+          # ДОСТУП ТОЛЬКО НА ЧТЕНИЕ: тут единственный rclone copy С ЯД, обратной заливки памяти нет,
+          # а у самой модели инструментов не существует — записать в память она физически не может.
+          MEM = "ydrive:Content factory/mirror/memory"
+          MEM_LOCAL = pathlib.Path("/tmp/projmem")
+          # Бюджет считан по замеру 30.07: core 3.8К + map 16.2К + now 12К + индекс 10К = 42К симв.,
+          # плюс до 3 факт-файлов = ~60К. Держимся под 61К — это проверенный потолок Kimi на длину.
+          NOW_CHARS   = 12000   # NOW.md ~80 КБ и растёт: берём голову — свежее лежит сверху
+          INDEX_CHARS = 10000   # меню-роутер к факт-файлам
+          FACT_CHARS  = 6000    # один факт-файл
+          FACT_LIMIT  = 3       # сколько факт-файлов подтягивать лениво
 
           def yd_read(remote, default=""):
               p = pathlib.Path("/tmp/" + remote.split("/")[-1])
               r = subprocess.run(["rclone", "copyto", remote, str(p)], capture_output=True)
               return p.read_text(encoding="utf-8", errors="replace") if (r.returncode == 0 and p.exists()) else default
 
-          # Срез памяти проекта — полезный контекст (эстетика-табу, инструменты, инфра).
-          # RULES.md намеренно НЕ впрыскиваем: это конституция песочницы с rclone/gh, а у Kimi
-          # НЕТ инструментов (чат по HTTP) — обещать ему права = врать модели.
-          brief  = yd_read(f"{SB}/PROJECT_BRIEF.md", "")[:BRIEF_CHARS]
+          def mem_read(rel, cap=None):
+              f = MEM_LOCAL / rel
+              if not f.exists():
+                  return ""
+              t = f.read_text(encoding="utf-8", errors="replace")
+              return t[:cap] if cap else t
+
+          # Тир-1 (eager): ровно те три файла, что Claude читает целиком на старте сессии, + индекс.
+          subprocess.run(
+              ["rclone", "copy", MEM, str(MEM_LOCAL),
+               "--include", "MEMORY_CORE.md", "--include", "PROJECT_MAP.md",
+               "--include", "NOW.md", "--include", "claude_auto/MEMORY.md"],
+              capture_output=True, timeout=300)
+          core  = mem_read("MEMORY_CORE.md")
+          pmap  = mem_read("PROJECT_MAP.md")
+          now   = mem_read("NOW.md", NOW_CHARS)
+          index = mem_read("claude_auto/MEMORY.md", INDEX_CHARS)
+
+          message = os.environ["MESSAGE"]
+
+          # Тир-2 (lazy): факт-файлы. Явные [[слуги]] в сообщении — приоритет; добор по совпадению
+          # слов с описаниями в индексе (тот же принцип, что у хука памяти на буке).
+          def pick_facts(msg, idx, limit):
+              want = re.findall(r"\[\[([a-z0-9_]+)\]\]", msg.lower())
+              known = set(re.findall(r"\(([a-z0-9_]+)\.md\)", idx))
+              picked = [s for s in want if s in known]
+              words = {w for w in re.findall(r"[а-яёa-z0-9_]{4,}", msg.lower())}
+              scored = []
+              for line in idx.splitlines():
+                  slugs = re.findall(r"\(([a-z0-9_]+)\.md\)", line)
+                  if not slugs:
+                      continue
+                  low = line.lower()
+                  score = sum(1 for w in words if w in low)
+                  if score >= 2:
+                      scored.append((score, slugs[0]))
+              for _, slug in sorted(scored, reverse=True):
+                  if slug not in picked:
+                      picked.append(slug)
+              return picked[:limit]
+
+          facts = []
+          for slug in pick_facts(message, index, FACT_LIMIT):
+              body = yd_read(f"{MEM}/claude_auto/{slug}.md", "")[:FACT_CHARS]
+              if body:
+                  facts.append(f"--- {slug} ---\n{body}")
+          facts_text = "\n\n".join(facts)
+
+          # Фолбэк: память не приехала (ЯД лёг/зеркало пустое) — старый ручной бриф лучше, чем ничего.
+          brief = "" if core else yd_read(f"{SB}/PROJECT_BRIEF.md", "")[:8000]
+
           my_mem = yd_read(f"{SB}/MEMORY/notes.md", "")
           my_mem = "\n".join(my_mem.strip().splitlines()[-60:])   # только хвост, чтоб промпт не пух
 
@@ -148,7 +207,17 @@ jobs:
               "Ты отвечаешь ТЕКСТОМ. Если для задачи нужна команда — напиши её, чтобы человек запустил.\n"
               "Не выдумывай, что якобы что-то выполнил. Если задача неясна — задай уточняющий вопрос.\n"
               "Отвечай на РУССКОМ.\n"
-              "\n=== СРЕЗ ПАМЯТИ ПРОЕКТА ===\n" + brief
+              "\nНиже — ЖИВАЯ ПАМЯТЬ ПРОЕКТА (доступ только на чтение, менять её ты не можешь).\n"
+              "Она обновляется каждый ход работы Claude, так что это состояние на сейчас.\n"
+              "При конфликте источников: PROJECT_MAP > NOW > факт-файлы. Дат не выдумывай — бери из памяти.\n"
+              "Если нужен факт-файл, которого нет ниже, — назови его в ответе как [[слуг]] из индекса,\n"
+              "и в следующем сообщении он приедет.\n"
+              "\n=== ПРАВИЛА-CONSTRAINTS (MEMORY_CORE, нарушать нельзя) ===\n" + core
+              + "\n\n=== УСТРОЙСТВО ПРОЕКТА (PROJECT_MAP, source of truth) ===\n" + pmap
+              + "\n\n=== ЧТО СЕЙЧАС (NOW, голова файла — свежее сверху) ===\n" + now
+              + "\n\n=== ИНДЕКС ФАКТ-ФАЙЛОВ (меню, чем можно догрузиться) ===\n" + index
+              + (("\n\n=== ФАКТ-ФАЙЛЫ ПО ТЕМЕ ЗАДАЧИ ===\n" + facts_text) if facts_text else "")
+              + (("\n\n=== СРЕЗ ПАМЯТИ (фолбэк: живая память недоступна) ===\n" + brief) if brief else "")
               + "\n\n=== ПАМЯТЬ БОТА (mimo_sandbox/MEMORY/notes.md) ===\n" + (my_mem or "(пусто)")
               + "\n\nВ САМОМ КОНЦЕ ответа добавь ОТДЕЛЬНУЮ строку, начинающуюся с '" + SPEAKER + " ' —\n"
               "краткое резюме сути для озвучки голосом: 1-2 простых предложения на русском,\n"
@@ -156,7 +225,6 @@ jobs:
           )
 
           key = os.environ["THREAD_KEY"]
-          message = os.environ["MESSAGE"]
 
           # per-thread история (фикс гонки): читаем только файл этого треда
           def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
@@ -182,7 +250,10 @@ jobs:
               print(f"::warning::промпт обрезан до {PROMPT_CAP} симв.")
 
           pathlib.Path("/tmp/prompt.txt").write_text(prompt, encoding="utf-8")
-          print(f"Промпт: {len(prompt)} симв., история: {len(hist)} шагов, бриф: {len(brief)} симв.")
+          mem_sizes = f"core {len(core)} / map {len(pmap)} / now {len(now)} / индекс {len(index)}"
+          print(f"Промпт: {len(prompt)} симв., история: {len(hist)} шагов, "
+                f"память: {mem_sizes}, факт-файлов: {len(facts)}"
+                + (f", фолбэк-бриф {len(brief)}" if brief else ""))
           PY
 
       - name: Run Kimi
@@ -195,10 +266,10 @@ jobs:
           set +e
           mkdir -p /tmp/kimirun
           START=$(date +%s)
-          timeout 900 python3 "$GITHUB_WORKSPACE/Instrument/CnChat/kimi_chat.py" \
+          timeout 1800 python3 "$GITHUB_WORKSPACE/Instrument/CnChat/kimi_chat.py" \
             "$(cat /tmp/prompt.txt)" \
             --session "$GITHUB_WORKSPACE/Instrument/CnChat/kimi_session.json" \
-            --timeout 300 \
+            --timeout 1740 \
             > /tmp/kimirun/clean.txt 2> /tmp/kimirun/err.txt </dev/null
           RC=$?
           END=$(date +%s)
