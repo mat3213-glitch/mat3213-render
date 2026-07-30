@@ -1,0 +1,87 @@
+name: Qwen Vision Probe (умеет ли Qwen судить картинку)
+
+# Разведка под замену судьи артов: квота GH Models не тянет пул (429, Retry-After 40+ мин).
+# Chromium на буке (Atom, 1.8 ГБ) не идёт — поэтому только раннер.
+
+on:
+  workflow_dispatch:
+    inputs:
+      art:
+        description: "rclone-путь к картинке на ЯД (относительно Content factory/cloud_io/)"
+        required: false
+        default: "render_jobs/2026-07-16/vzrosly_pool/pool/set_1/cf/cold_01.png"
+        type: string
+      prompt:
+        description: "Что спросить у Qwen про картинку"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull Qwen session
+        run: rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+
+      - name: Install playwright
+        run: |
+          pip install -q requests playwright pillow
+          python -m playwright install --with-deps chromium
+
+      - name: Pull art
+        env:
+          ART: ${{ inputs.art }}
+        run: |
+          rclone copyto "ydrive:Content factory/cloud_io/$ART" /tmp/art_src
+          python - <<'PY'
+          from PIL import Image
+          im = Image.open("/tmp/art_src").convert("RGB")
+          im.thumbnail((1024, 1024))          # композер Qwen не любит тяжёлые файлы
+          im.save("/tmp/art.jpg", "JPEG", quality=85)
+          print("арт готов:", im.size)
+          PY
+
+      - name: Ask Qwen about the image
+        env:
+          PROMPT: ${{ inputs.prompt }}
+        run: |
+          set +e   # ответ и скриншоты нужны даже при ненулевом rc
+          if [ -n "$PROMPT" ]; then
+            python3 -u qwen/qwen_vision_probe.py /tmp/art.jpg --prompt "$PROMPT"
+          else
+            python3 -u qwen/qwen_vision_probe.py /tmp/art.jpg
+          fi
+          echo "probe rc=$?"
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qwen-vision-shots
+          path: qwen/outputs/*.png
+          if-no-files-found: ignore
