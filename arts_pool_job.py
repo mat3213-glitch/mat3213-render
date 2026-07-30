@@ -23,12 +23,14 @@ flux-1-schnell = 4.8 нейрона/тайл 512×512 + 9.6/шаг. Наши 102
 
 Ручки: JOB_ID, STEPS (4), NEURON_BUDGET (9500), PROVIDERS (cf,poll), ONLY_SET (пусто = все).
 """
+import hashlib
 import json
 import os
 import subprocess
 import sys
 import time
 from collections import Counter
+from datetime import datetime, timezone
 import urllib.parse
 from pathlib import Path
 
@@ -145,7 +147,13 @@ def main():
         for slot, subj in st["slots"].items():
             seed += 1
             prompt = apply_look(subj, LOOK)   # ЗАМОК ПАЛИТРЫ дописывается тут
-            rec = {"set": n, "act": act, "slot": slot, "seed": seed, "subject": subj}
+            # «Video Receipt» (идея из kinocut, разбор 30.07): в записи манифеста лежит ВСЁ,
+            # чем этот кадр порождён — субъект, применённый лук, полный промпт и его хэш.
+            # Без промпта вердикт судьи некуда приложить, и вопрос «какой ВХОД даёт годное»
+            # остаётся без ответа — а это и есть наше узкое место.
+            rec = {"set": n, "act": act, "slot": slot, "seed": seed, "subject": subj,
+                   "look": LOOK, "prompt": prompt,
+                   "prompt_sha": hashlib.sha1(prompt.encode("utf-8")).hexdigest()[:12]}
             if "cf" in provs:
                 if spent + neurons(STEPS) > BUDGET:
                     print(f"  [set{n}/{slot}] CF: БЮДЖЕТ ИСЧЕРПАН ({spent:.0f}/{BUDGET}) — пропуск")
@@ -193,6 +201,35 @@ def main():
                     print(f"  [set{n}/{slot}] POLL ✗ {err}")
                 time.sleep(2)   # вежливость к бесплатному сервису
             man.append(rec)
+
+    # ── ПАМЯТЬ ПРОМПТОВ (skill-memory, идея из ECC): append-only лента «вход → исход»,
+    # общая для ВСЕХ прогонов. Манифест живёт внутри одной джобы и отвечает на вопрос
+    # «что получилось здесь»; лента отвечает на вопрос «какие субъекты и луки вообще
+    # выживают у судьи» — то самое узкое место, где четыре недели виноват вход.
+    if JUDGE_ON:
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        lines = []
+        for r in man:
+            for prov, jk in (("cf", "cf_judge"), ("poll", "poll_judge")):
+                j = r.get(jk)
+                if not j:
+                    continue
+                lines.append(json.dumps({
+                    "ts": stamp, "job": job, "set": r["set"], "act": r.get("act", ""),
+                    "slot": r["slot"], "subject": r["subject"], "look": r.get("look"),
+                    "prompt_sha": r.get("prompt_sha"), "provider": prov,
+                    "verdict": j.get("verdict"), "violations": j.get("violations") or [],
+                    "flaws": j.get("flaws") or [], "n_votes": j.get("n_votes"),
+                }, ensure_ascii=False))
+        if lines:
+            mem_remote = "cloud_io/prompt_memory/prompt_stats.jsonl"
+            mem_local = WORK / "prompt_stats.jsonl"
+            # докачиваем существующую ленту и дописываем — иначе каждый прогон затирал бы историю
+            yd_get(mem_remote, mem_local)
+            with open(mem_local, "a", encoding="utf-8") as fh:
+                fh.write("\n".join(lines) + "\n")
+            yd_put(mem_local, mem_remote)
+            print(f"память промптов: +{len(lines)} записей → {mem_remote}")
 
     mf = WORK / "manifest.json"
     mf.write_text(json.dumps({
