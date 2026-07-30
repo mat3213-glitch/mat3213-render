@@ -55,6 +55,21 @@ async def ask_image(image: Path, prompt: str, timeout: int) -> str:
 
         cdp.on("Network.requestWillBeSent", on_request)
 
+        # Заливка картинки идёт асинхронно и в разметке имя файла появляется СРАЗУ,
+        # ещё до отправки байтов (на этом первый заход и погорел: Enter ушёл через
+        # секунду, и Qwen ответил «вы не прикрепили картинку»). Поэтому ждём не UI,
+        # а фактический ответ хранилища.
+        uploads = []
+
+        def on_response(params):
+            url = params.get("response", {}).get("url", "")
+            status = params.get("response", {}).get("status", 0)
+            if status < 400 and any(k in url for k in ("aliyuncs", "oss-", "upload", "/sts")):
+                uploads.append(url)
+                print(f"  [upload-net] {status} {url[:90]}", file=sys.stderr)
+
+        cdp.on("Network.responseReceived", on_response)
+
         await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=60000)
         await page.wait_for_timeout(3000)
         await page.keyboard.press("Escape")   # на всякий случай снять попапы
@@ -70,17 +85,19 @@ async def ask_image(image: Path, prompt: str, timeout: int) -> str:
             sys.exit("input[type=file] не найден — UI изменился, смотри скриншот")
         await inputs.first.set_input_files(str(image))
 
-        # 2) ждём, пока файл реально прикрепится: имя файла появляется в композере
-        attached = False
-        for _ in range(60):
+        # 2) ждём ФАКТИЧЕСКУЮ заливку (сетевой ответ хранилища), а не появление имени в UI
+        for _ in range(90):
             await page.wait_for_timeout(1000)
-            body = await page.locator("body").inner_text()
-            if image.name in body or image.stem in body:
-                attached = True
+            if uploads:
                 break
-        print(f"  [upload] прикрепился: {attached}", file=sys.stderr)
-        if not attached:
-            await page.screenshot(path=str(OUTPUTS / "qwen_vision_not_attached.png"))
+        print(f"  [upload] сетевых ответов хранилища: {len(uploads)}", file=sys.stderr)
+        await page.wait_for_timeout(8000)   # дать композеру дорисовать превью после заливки
+        body = await page.locator("body").inner_text()
+        print(f"  [upload] имя файла в разметке: {image.name in body or image.stem in body}",
+              file=sys.stderr)
+        await page.screenshot(path=str(OUTPUTS / "qwen_vision_before_submit.png"), full_page=True)
+        if not uploads:
+            print("  [upload] ⚠️ заливка не подтверждена сетью — отправляю как есть", file=sys.stderr)
 
         # 3) промпт и отправка
         textarea = page.locator("textarea").first
