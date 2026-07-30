@@ -64,6 +64,10 @@ async def ask_image(image: Path, prompt: str, timeout: int) -> str:
         def on_response(params):
             url = params.get("response", {}).get("url", "")
             status = params.get("response", {}).get("status", 0)
+            # cdn.qwenlm.ai/output/... — это демо-ролики главной страницы, не наша заливка:
+            # на них первый заход и попался, приняв их за подтверждение загрузки.
+            if "cdn.qwenlm.ai/output" in url:
+                return
             if status < 400 and any(k in url for k in ("aliyuncs", "oss-", "upload", "/sts")):
                 uploads.append(url)
                 print(f"  [upload-net] {status} {url[:90]}", file=sys.stderr)
@@ -74,16 +78,51 @@ async def ask_image(image: Path, prompt: str, timeout: int) -> str:
         await page.wait_for_timeout(3000)
         await page.keyboard.press("Escape")   # на всякий случай снять попапы
 
-        # 1) кладём картинку. input[type=file] у Qwen скрыт за кнопкой-скрепкой,
-        #    поэтому не кликаем по UI, а пишем прямо в input — Playwright это умеет.
-        inputs = page.locator("input[type=file]")
-        n = await inputs.count()
-        print(f"  [upload] найдено input[type=file]: {n}", file=sys.stderr)
-        if n == 0:
-            await page.screenshot(path=str(OUTPUTS / "qwen_vision_no_input.png"))
-            await browser.close()
-            sys.exit("input[type=file] не найден — UI изменился, смотри скриншот")
-        await inputs.first.set_input_files(str(image))
+        # 1) кладём картинку. Запись напрямую в скрытый input[type=file] НЕ работает:
+        #    React-композер Qwen её не подхватывает (проверено — модель отвечает
+        #    «вы не прикрепили изображение»). Идём человеческим путём: файловый диалог
+        #    по кнопке-скрепке, а если кнопку не нашли — эмулируем drop с DataTransfer.
+        put_ok = False
+        for sel in ("button[aria-label*='upload' i]", "button[aria-label*='attach' i]",
+                    "button[title*='上传' i]", "button:has(svg[class*='paperclip' i])",
+                    "input[type=file]"):
+            try:
+                if sel == "input[type=file]":
+                    raise RuntimeError("оставляем на фолбэк")
+                async with page.expect_file_chooser(timeout=8000) as fc:
+                    await page.locator(sel).first.click(timeout=6000)
+                chooser = await fc.value
+                await chooser.set_files(str(image))
+                print(f"  [upload] файловый диалог через {sel}", file=sys.stderr)
+                put_ok = True
+                break
+            except Exception:
+                continue
+
+        if not put_ok:
+            data_url = "data:image/jpeg;base64," + __import__("base64").b64encode(
+                image.read_bytes()).decode()
+            dropped = await page.evaluate(
+                """async ({dataUrl, name}) => {
+                    const res = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    const file = new File([blob], name, {type: 'image/jpeg'});
+                    const dt = new DataTransfer();
+                    dt.items.add(file);
+                    const target = document.querySelector('textarea')?.closest('div') || document.body;
+                    for (const type of ['dragenter', 'dragover', 'drop']) {
+                        target.dispatchEvent(new DragEvent(type,
+                            {dataTransfer: dt, bubbles: true, cancelable: true}));
+                    }
+                    const inp = document.querySelector('input[type=file]');
+                    if (inp) {
+                        inp.files = dt.files;
+                        inp.dispatchEvent(new Event('change', {bubbles: true}));
+                    }
+                    return true;
+                }""",
+                {"dataUrl": data_url, "name": image.name})
+            print(f"  [upload] фолбэк drop+change: {dropped}", file=sys.stderr)
 
         # 2) ждём ФАКТИЧЕСКУЮ заливку (сетевой ответ хранилища), а не появление имени в UI
         for _ in range(90):
