@@ -324,8 +324,14 @@ def main():
             time.sleep(1.0)
         agg = aggregate(votes)
         # бренд-брак — жёсткий REJECT; пластик — FLAG «посмотреть глазами», не отбраковка
+        # n_votes<2 — НЕ полноценный вердикт: порог бренда = большинство (≥2 из 3), и на одном
+        # голосе он вырождается в «что сказала единственная выжившая модель». Смоук 30.07 на GH
+        # поймал это вживую (два из трёх отвалились по rate-limit) — без явного PARTIAL прогон
+        # выглядел бы как полноценный результат. Пластик при этом остаётся флагом: он и так 1 голос.
         if not votes:
             verdict = "ERROR"
+        elif len(votes) < 2:
+            verdict = "PARTIAL"
         elif agg["violations"]:
             verdict = "REJECT"
         elif agg["flaws"]:
@@ -350,6 +356,7 @@ def main():
     rej = [r for r in rows if r["verdict"] == "REJECT"]
     flg = [r for r in rows if r["verdict"] == "FLAG"]
     err = [r for r in rows if r["verdict"] == "ERROR"]
+    part = [r for r in rows if r["verdict"] == "PARTIAL"]
 
     csv_p = os.path.join(work, "judgement.csv")
     with open(csv_p, "w", newline="", encoding="utf-8") as fh:
@@ -374,6 +381,9 @@ def main():
          f"- Всего артов: **{len(rows)}**",
          f"- ✅ Годных: **{len(ok)}**  ·  🔴 Бренд-брак: **{len(rej)}**  ·  "
          f"🟡 Флаг пластика: **{len(flg)}**  ·  Ошибок: {len(err)}",
+         (f"- ⚠️ **Неполный ансамбль (1 голос из 3): {len(part)}** — вердикт по ним НЕ засчитан, "
+          f"порог бренда требует большинства. Причина обычно одна: rate-limit GH Models."
+          if part else "- Ансамбль отработал полностью на всех артах."),
          f"- Коридорная перспектива: **{corridors}** из {len(rows)}"
          f" ({100*corridors//max(len(rows),1)}%) — в пуле v1 это было 14/26 и выжгло монтаж",
          "", "## Логика кадра — разброс типов плана", "",
