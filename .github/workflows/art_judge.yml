@@ -1,0 +1,94 @@
+name: Art Judge (VLM-судья пула артов)
+
+# Судит арты ПО КАРТИНКЕ ансамблем GH Models (gpt-4o / gpt-4.1 / gpt-4o-mini):
+# бренд-брак (лица, одинокая фигура, текст, неон) + пластик (правдоподобие) + логика кадра.
+# Зачем в CI: прогон 116 артов = ~700 запросов и ~2 ч — на буке (Atom) это держать ноутбук
+# включённым полдня; 29.07 такой локальный прогон убили на полпути и результат потеряли.
+#
+# Пороги разные и это замерено: бренд — большинство (≥2 из 3), пластик — ОДИН голос.
+# Судья ничего не удаляет и не мерджит: чистит пул yaromat.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pools:
+        description: "Какие пулы судить: all | 2026-07-16 | v2 | fill"
+        required: false
+        default: "all"
+        type: string
+      out_date:
+        description: "Папка превью на ЯД: cloud_io/preview/<out_date>/art_pool/"
+        required: false
+        default: ""
+        type: string
+      limit:
+        description: "Ограничить число артов (0 = все) — для смоука"
+        required: false
+        default: "0"
+        type: string
+
+permissions:
+  contents: read
+  models: read        # без этого GITHUB_TOKEN не пускает в models.github.ai
+
+jobs:
+  judge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 1   # последовательно: три job разом упрутся в rate limit GH Models,
+                        # и в отчёте появятся дыры «rate-limit исчерпан» вместо вердиктов
+      matrix:
+        pool:
+          - { name: "2026-07-16_vzrosly_pool",      src: "2026-07-16/vzrosly_pool/pool" }
+          - { name: "2026-07-17_vzrosly_pool_v2",   src: "2026-07-17/vzrosly_pool_v2/pool" }
+          - { name: "2026-07-17_vzrosly_pool_fill", src: "2026-07-17/vzrosly_pool_fill/pool" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+          pip install -q pillow
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Judge pool
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          POOL_NAME: ${{ matrix.pool.name }}
+          POOL_SRC:  ${{ matrix.pool.src }}
+          POOLS:     ${{ inputs.pools }}
+          OUT_DATE:  ${{ inputs.out_date }}
+          LIMIT:     ${{ inputs.limit }}
+        run: |
+          set +e   # без этого ненулевой rc оборвал бы job до шага с итогом (урок kimi_chat.yml)
+          # фильтр по входу: all — все три, иначе судим только совпавший пул
+          case "$POOLS" in
+            all|"") : ;;
+            *) echo "$POOL_NAME" | grep -q "$POOLS" || { echo "пул $POOL_NAME пропущен"; exit 0; } ;;
+          esac
+          DATE="${OUT_DATE:-$(date -u +%F)}"
+          BASE="ydrive:Content factory/cloud_io"
+          python -u art_judge.py \
+            --src "$BASE/render_jobs/$POOL_SRC" \
+            --out "$BASE/preview/$DATE/art_pool/$POOL_NAME" \
+            --limit "${LIMIT:-0}"
+          RC=$?
+          echo "art_judge rc=$RC"
+          exit $RC
