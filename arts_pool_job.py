@@ -28,6 +28,7 @@ import os
 import subprocess
 import sys
 import time
+from collections import Counter
 import urllib.parse
 from pathlib import Path
 
@@ -43,6 +44,32 @@ CF_MODEL = "@cf/black-forest-labs/flux-1-schnell"
 STEPS = int(os.environ.get("STEPS") or 4)
 BUDGET = int(os.environ.get("NEURON_BUDGET") or 9500)
 WORK = Path("/tmp/arts_pool")
+
+# ── СУДЬЯ НА ВХОДЕ В ПУЛ (решение yaromat 30.07: «судья смотрит каждую генерацию,
+# брак не попадает в пул») ──────────────────────────────────────────────────────────
+# Панель по умолчанию БЕЗ cf: — Cloudflare Workers AI в этом же скрипте ГЕНЕРИТ арты из
+# общего суточного бюджета нейронов, и судейство через него отъедало бы бюджет генерации.
+JUDGE_ON = (os.environ.get("JUDGE") or "on").lower() != "off"
+JUDGE_MODELS = [m.strip() for m in (os.environ.get("JUDGE_MODELS") or
+                "or:nvidia/nemotron-nano-12b-v2-vl:free,gh:openai/gpt-4o-mini,"
+                "or:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free").split(",") if m.strip()]
+_judge_dead = {}        # общий на весь прогон: иначе предохранитель квоты обнуляется на каждом арте
+
+
+def judge_art(path):
+    """Вердикт по одному арту. FAIL-OPEN: любой сбой судьи → арт не теряем.
+
+    Генерация дороже судейства (нейроны + время раннера), поэтому ошибка судьи никогда
+    не выбрасывает готовый кадр: при ERROR/PARTIAL арт идёт в пул с пометкой в манифесте.
+    """
+    if not JUDGE_ON:
+        return {"verdict": "OFF", "violations": [], "flaws": [], "n_votes": 0}
+    try:
+        from art_judge import judge_file
+        return judge_file(path, models=JUDGE_MODELS, dead=_judge_dead)
+    except Exception as e:                       # нет ключей, сеть, что угодно
+        print(f"      судья недоступен ({type(e).__name__}) — арт в пул как есть")
+        return {"verdict": "ERROR", "violations": [], "flaws": [], "n_votes": 0}
 
 
 def neurons(steps):
@@ -128,10 +155,20 @@ def main():
                     ok, err = gen_cf(prompt, out)
                     if ok:
                         spent += neurons(STEPS)
-                        yd_put(out, f"{base}/pool/set_{n}/cf/{slot}.png")
-                        rec["cf"] = "ok"
-                        print(f"  [set{n}/{slot}] CF ✓ {out.stat().st_size//1024}КБ "
-                              f"({spent:.0f}/{BUDGET} н)")
+                        v = judge_art(out)
+                        rec["cf_judge"] = {k: v[k] for k in
+                                           ("verdict", "violations", "flaws", "n_votes")}
+                        if v["verdict"] == "REJECT":
+                            # брак в пул не попадает — уезжает в карантин с причиной в имени папки
+                            yd_put(out, f"{base}/pool_rejected/set_{n}/cf/{slot}.png")
+                            rec["cf"] = "rejected: " + ";".join(v["violations"])
+                            print(f"  [set{n}/{slot}] CF 🔴 отбракован: {','.join(v['violations'])}")
+                        else:
+                            yd_put(out, f"{base}/pool/set_{n}/cf/{slot}.png")
+                            rec["cf"] = "ok"
+                            mark = {"FLAG": "🟡", "PARTIAL": "⚠️", "ERROR": "⚠️"}.get(v["verdict"], "✓")
+                            print(f"  [set{n}/{slot}] CF {mark} {out.stat().st_size//1024}КБ "
+                                  f"({spent:.0f}/{BUDGET} н)")
                     else:
                         rec["cf"] = f"fail: {err}"
                         print(f"  [set{n}/{slot}] CF ✗ {err}")
@@ -139,9 +176,18 @@ def main():
                 out = WORK / f"poll_{n}_{slot}.png"
                 ok, err = gen_poll(prompt, out, seed)
                 if ok:
-                    yd_put(out, f"{base}/pool/set_{n}/poll/{slot}.png")
-                    rec["poll"] = "ok"
-                    print(f"  [set{n}/{slot}] POLL ✓ {out.stat().st_size//1024}КБ")
+                    v = judge_art(out)
+                    rec["poll_judge"] = {k: v[k] for k in
+                                         ("verdict", "violations", "flaws", "n_votes")}
+                    if v["verdict"] == "REJECT":
+                        yd_put(out, f"{base}/pool_rejected/set_{n}/poll/{slot}.png")
+                        rec["poll"] = "rejected: " + ";".join(v["violations"])
+                        print(f"  [set{n}/{slot}] POLL 🔴 отбракован: {','.join(v['violations'])}")
+                    else:
+                        yd_put(out, f"{base}/pool/set_{n}/poll/{slot}.png")
+                        rec["poll"] = "ok"
+                        mark = {"FLAG": "🟡", "PARTIAL": "⚠️", "ERROR": "⚠️"}.get(v["verdict"], "✓")
+                        print(f"  [set{n}/{slot}] POLL {mark} {out.stat().st_size//1024}КБ")
                 else:
                     rec["poll"] = f"fail: {err}"
                     print(f"  [set{n}/{slot}] POLL ✗ {err}")
@@ -154,6 +200,19 @@ def main():
         "neurons_spent": round(spent), "neurons_budget": BUDGET,
         "cf_ok": sum(1 for r in man if r.get("cf") == "ok"),
         "poll_ok": sum(1 for r in man if r.get("poll") == "ok"),
+        "judge": {
+            "on": JUDGE_ON,
+            "panel": JUDGE_MODELS,
+            "rejected": sum(1 for r in man for k in ("cf", "poll")
+                            if str(r.get(k, "")).startswith("rejected")),
+            "by_violation": dict(Counter(
+                v for r in man for k in ("cf_judge", "poll_judge")
+                for v in (r.get(k) or {}).get("violations", []))),
+            "flagged": sum(1 for r in man for k in ("cf_judge", "poll_judge")
+                           if (r.get(k) or {}).get("verdict") == "FLAG"),
+            "unjudged": sum(1 for r in man for k in ("cf_judge", "poll_judge")
+                            if (r.get(k) or {}).get("verdict") in ("ERROR", "PARTIAL")),
+        },
         "items": man}, ensure_ascii=False, indent=1), encoding="utf-8")
     yd_put(mf, f"{base}/pool/manifest.json")
     print(f"\nИТОГ: CF {sum(1 for r in man if r.get('cf')=='ok')}/{total}, "

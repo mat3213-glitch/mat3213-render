@@ -273,6 +273,74 @@ def to_jpeg_b64(path):
     return base64.b64encode(open(path, "rb").read()).decode()
 
 
+def judge_file(path, models=None, token=None, dead=None, b64=None):
+    """Судейство ОДНОГО кадра ансамблем → вердикт и детали.
+
+    Вынесено из main, чтобы тем же судьёй пользовался генератор пула (`arts_pool_job.py`):
+    решение yaromat 30.07 — «судья должен смотреть каждую генерацию, брак не попадает в пул».
+    `dead` — общий на прогон словарь выбывших по квоте судей: создаётся ОДИН раз снаружи,
+    иначе предохранитель обнуляется на каждом кадре и снова жжёт ожидания.
+    """
+    models = models or MODELS
+    token = token if token is not None else os.environ.get("GITHUB_TOKEN")
+    dead = dead if dead is not None else {}
+    if b64 is None:
+        b64 = to_jpeg_b64(path)
+
+    votes, notes, asked = [], [], 0
+    for m in list(models):
+        # Спрашиваем ровно PANEL ЖИВЫХ судей: список длиннее панели намеренно — хвост это
+        # резерв, он подключается сам, когда кто-то выбыл по квоте. Поэтому отсев мёртвых
+        # идёт ДО счётчика, а не срезом models[:PANEL] (иначе резерв недостижим).
+        if asked >= PANEL:
+            break
+        if dead.get(m, 0) >= 2:
+            continue
+        asked += 1
+        v, err = ask_both(m, b64, token)
+        # Предохранитель: при исчерпанной СУТОЧНОЙ квоте судья отвечает 429 с Retry-After
+        # в десятки минут, и ретраи жгут по полторы минуты на кадр впустую (замер 30.07:
+        # gpt-4o-mini умер на первом же арте). Два подряд — исключаем до конца прогона.
+        if v is None and err and "rate-limit" in err:
+            dead[m] = dead.get(m, 0) + 1
+            if dead[m] >= 2:
+                print(f"      ⛔ {m} выбывает из прогона: квота исчерпана", flush=True)
+        elif v is not None:
+            dead[m] = 0
+        short = m.split(":", 1)[0] + "/" + m.split("/")[-1].split(":")[0]
+        if v:
+            # чей это голос — нужно и для отладки, и чтобы схему агрегации можно было
+            # пересчитать ОФЛАЙН по сохранённым голосам, не гоняя модели заново
+            v["_judge"] = m
+            votes.append(v)
+            notes.append(f"{short}:{'+'.join(v.get('violations') or ['ok'])}"
+                         f"~{'+'.join(v.get('flaws') or ['ok'])}/{v.get('shot_type')}")
+        else:
+            notes.append(f"{short}:✗{err}")
+        time.sleep(1.0)
+
+    agg = aggregate(votes)
+    # бренд-брак — жёсткий REJECT; пластик — FLAG «посмотреть глазами», не отбраковка.
+    # n_votes<2 — НЕ полноценный вердикт: порог бренда = большинство (≥2 из 3), на одном
+    # голосе он вырождается в «что сказала единственная выжившая модель».
+    if not votes:
+        verdict = "ERROR"
+    elif len(votes) < 2:
+        verdict = "PARTIAL"
+    elif agg["violations"]:
+        verdict = "REJECT"
+    elif agg["flaws"]:
+        verdict = "FLAG"
+    else:
+        verdict = "OK"
+    return {
+        "verdict": verdict, "violations": agg["violations"], "flaws": agg["flaws"],
+        "shot_type": agg["shot_type"], "corridor": agg["corridor"],
+        "n_votes": len(votes), "detail": " | ".join(notes),
+        "_votes": votes, "_notes": notes, "_agg": agg,
+    }
+
+
 def aggregate(votes):
     """Ансамбль → один вердикт. ДВА РАЗНЫХ ПОРОГА — это не небрежность, а замер.
 
@@ -381,53 +449,8 @@ def main():
                          "n_votes": 0, "verdict": "ERROR", "detail": f"read: {e}"})
             continue
         votes, notes = [], []
-        asked = 0
-        for m in list(models):
-            # Спрашиваем ровно PANEL судей: список длиннее панели намеренно — хвост это
-            # резерв, он подключается сам, когда кто-то выбыл по квоте.
-            if asked >= PANEL:
-                break
-            if dead.get(m, 0) >= 2:
-                continue          # судья выбыл по квоте — не тратим на него ожидания
-            asked += 1
-            v, err = ask_both(m, b64, token)
-            # Предохранитель: при исчерпанной СУТОЧНОЙ квоте судья отвечает 429 с
-            # Retry-After в десятки минут, и ретраи жгут по полторы минуты на кадр
-            # впустую (замер 30.07: gpt-4o-mini умер на первом же арте). Два подряд —
-            # исключаем до конца прогона, остальные судьи продолжают.
-            if v is None and err and "rate-limit" in err:
-                dead[m] = dead.get(m, 0) + 1
-                if dead[m] >= 2:
-                    print(f"      ⛔ {m} выбывает из прогона: квота исчерпана", flush=True)
-            elif v is not None:
-                dead[m] = 0
-            short = m.split(":", 1)[0] + "/" + m.split("/")[-1].split(":")[0]
-            if v:
-                # чей это голос — нужно и для отладки, и чтобы схему агрегации можно было
-                # пересчитать ОФЛАЙН по сохранённым голосам, не гоняя модели заново
-                v["_judge"] = m
-                votes.append(v)
-                notes.append(f"{short}:{'+'.join(v.get('violations') or ['ok'])}"
-                             f"~{'+'.join(v.get('flaws') or ['ok'])}/{v.get('shot_type')}")
-            else:
-                notes.append(f"{short}:✗{err}")
-            time.sleep(1.0)
-        agg = aggregate(votes)
-        # бренд-брак — жёсткий REJECT; пластик — FLAG «посмотреть глазами», не отбраковка
-        # n_votes<2 — НЕ полноценный вердикт: порог бренда = большинство (≥2 из 3), и на одном
-        # голосе он вырождается в «что сказала единственная выжившая модель». Смоук 30.07 на GH
-        # поймал это вживую (два из трёх отвалились по rate-limit) — без явного PARTIAL прогон
-        # выглядел бы как полноценный результат. Пластик при этом остаётся флагом: он и так 1 голос.
-        if not votes:
-            verdict = "ERROR"
-        elif len(votes) < 2:
-            verdict = "PARTIAL"
-        elif agg["violations"]:
-            verdict = "REJECT"
-        elif agg["flaws"]:
-            verdict = "FLAG"
-        else:
-            verdict = "OK"
+        res = judge_file(p, models=models, token=token, dead=dead, b64=b64)
+        votes, notes, agg, verdict = res["_votes"], res["_notes"], res["_agg"], res["verdict"]
         rows.append({
             "file": rel, "shot_type": agg["shot_type"], "corridor": agg["corridor"],
             "violations": ";".join(agg["violations"]), "flaws": ";".join(agg["flaws"]),
