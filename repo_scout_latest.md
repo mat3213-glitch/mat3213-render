@@ -1,60 +1,92 @@
-# Repo Scout — 2026-07-31T12:00:04.002410
+# Repo Scout — 2026-08-01T11:16:53.142253
 
-Всего в шортлисте: 14
+Всего в шортлисте: 22
 
-- **NousResearch/hermes-agent** ⭐223190 [orchestration]
+- **NousResearch/hermes-agent** ⭐223626 [orchestration]
   - https://github.com/NousResearch/hermes-agent
-  - 💡 Автоматизирует взаимодействие с пользователями, может быть полезен для создания чат-ботов для управления музыкальным контентом
+  - 💡 Автоматизирует задачи с помощью агента, который растет и развивается вместе с пользователем. Может быть полезен для автоматизации музыкального контента, но требует дополнительной настройки и интеграции.
   - 📄 The agent that grows with you
-- **Panniantong/Agent-Reach** ⭐63190 [orchestration]
-  - https://github.com/Panniantong/Agent-Reach
-  - 💡 Позволяет агентам собирать информацию из различных источников, может быть полезен для сбора информации о музыке и автоматизации контента
-  - 📄 Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.
-- **mvanhorn/last30days-skill** ⭐55860 [orchestration]
+- **iv-org/invidious** ⭐21443 [misc]
+  - https://github.com/iv-org/invidious
+  - 💡 Предоставляет альтернативный интерфейс для YouTube. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не создание альтернативного интерфейса для видеохостинга.
+  - 📄 Invidious is an alternative front-end to YouTube
+- **abus-aikorea/voice-pro** ⭐11540 [audio]
+  - https://github.com/abus-aikorea/voice-pro
+  - 💡 Автоматизирует задачи, связанные с голосовыми технологиями, такими как синтез речи и клонирование голоса. Может быть полезен для создания голосовых сопровождений для музыкального контента или автоматизации задач, связанных с голосом.
+  - 📄 Gradio WebUI for creators and developers, featuring key TTS (Edge-TTS, kokoro) and zero-shot Voice Cloning (E2 &amp; F5-TTS, CosyVoice), with Whisper audio proc
+- **anomalyco/opencode** ⭐191839 [orchestration]
+  - https://github.com/anomalyco/opencode
+  - 💡 Предоставляет открытый код для агента, который может автоматизировать задачи программирования. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не программирование.
+  - 📄 The open source coding agent.
+- **LibreTranslate/LibreTranslate** ⭐15783 [misc]
+  - https://github.com/LibreTranslate/LibreTranslate
+  - 💡 Предоставляет открытый и бесплатный API для машинного перевода. Может быть полезен для перевода текстов или описаний музыкального контента на разных языках.
+  - 📄 Free and Open Source Machine Translation API. Self-hosted, offline capable and easy to setup.
+- **mvanhorn/last30days-skill** ⭐56496 [orchestration]
   - https://github.com/mvanhorn/last30days-skill
-  - 💡 Автоматизирует сбор и анализ информации, может быть полезен для анализа музыкальных трендов и создания рекомендаций
+  - 💡 Автоматизирует задачи, связанные с поиском и анализом информации в интернете. Может быть полезен для поиска и анализа музыкального контента или новостей, связанных с музыкой.
   - 📄 AI agent skill that researches any topic across Reddit, X, YouTube, HN, Polymarket, and the web - then synthesizes a grounded summary
-- **huggingface/speech-to-speech** ⭐9550 [orchestration]
-  - https://github.com/huggingface/speech-to-speech
-  - 💡 Позволяет создавать голосовых агентов, может быть полезен для создания голосовых интерфейсов для музыкальных приложений
-  - 📄 Build local voice agents with open-source models
-- **zhaoxuya520/reverse-skill** ⭐10026 [orchestration]
+- **unslothai/unsloth** ⭐69324 [misc]
+  - https://github.com/unslothai/unsloth
+  - 💡 Предоставляет локальный интерфейс для обучения и запуска моделей машинного обучения. Может быть полезен для создания и обучения моделей, которые могут автоматизировать задачи, связанные с музыкальным контентом.
+  - 📄 Unsloth is a local UI for training and running Kimi K3, Gemma 4, Qwen3.6, DeepSeek-V4, GLM and other models.
+- **zhaoxuya520/reverse-skill** ⭐11321 [orchestration]
   - https://github.com/zhaoxuya520/reverse-skill
-  - 💡 Для проекта вряд ли пригодится, поскольку он ориентирован на безопасность и тестирование
+  - 💡 Автоматизирует задачи, связанные с обратной инженерией и тестированием на проникновение. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не тестирование на проникновение.
   - 📄 Reverse Engineering / Authorized Penetration Testing / Security Research Skill Router Pack AI-powered routing + On-demand toolchain bootstrapping + Self-evolvin
-- **TencentCloud/TencentDB-Agent-Memory** ⭐9763 [orchestration]
-  - https://github.com/TencentCloud/TencentDB-Agent-Memory
-  - 💡 Позволяет хранить и управлять памятью агентов, может быть полезен для хранения информации о музыкальном контенте
-  - 📄 TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into four reusable memory assets (Chat Memory, Skill, LL
-- **kangarooking/cangjie-skill** ⭐5753 [orchestration]
-  - https://github.com/kangarooking/cangjie-skill
-  - 💡 Позволяет создавать агентов, которые могут выполнять задачи, может быть полезен для автоматизации музыкального контента
-  - 📄 把书、长视频、播客等高价值内容蒸馏成可执行的 Agent Skills
-- **google-labs-code/design.md** ⭐26796 [orchestration]
-  - https://github.com/google-labs-code/design.md
-  - 💡 Для проекта вряд ли пригодится, поскольку он ориентирован на описания визуальной идентичности
-  - 📄 A format specification for describing a visual identity to coding agents. DESIGN.md gives agents a persistent, structured understanding of a design system.
-- **langchain-ai/deepagents** ⭐27152 [orchestration]
-  - https://github.com/langchain-ai/deepagents
-  - 💡 Позволяет создавать агентов, которые могут выполнять задачи, может быть полезен для автоматизации музыкального контента
-  - 📄 The batteries-included agent harness.
-- **ChromeDevTools/chrome-devtools-mcp** ⭐48251 [orchestration]
+- **Zipstack/unstract** ⭐7081 [misc]
+  - https://github.com/Zipstack/unstract
+  - 💡 Автоматизирует задачи, связанные с извлечением данных из неструктурированных источников. Может быть полезен для извлечения данных о музыкальном контенте из различных источников.
+  - 📄 LLM-Driven Extraction of Unstructured Data — Built for API Deployments &amp; ETL Pipeline Workflows
+- **huggingface/speech-to-speech** ⭐9982 [orchestration]
+  - https://github.com/huggingface/speech-to-speech
+  - 💡 Предоставляет открытые модели для преобразования речи в речь. Может быть полезен для создания голосовых сопровождений для музыкального контента или автоматизации задач, связанных с голосом.
+  - 📄 Build local voice agents with open-source models
+- **ChromeDevTools/chrome-devtools-mcp** ⭐48301 [orchestration]
   - https://github.com/ChromeDevTools/chrome-devtools-mcp
-  - 💡 Для проекта вряд ли пригодится, поскольку он ориентирован на разработку веб-приложений
+  - 💡 Предоставляет инструменты для разработки и отладки агентов. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не разработка агентов.
   - 📄 Chrome DevTools for coding agents
-- **0x4m4/hexstrike-ai** ⭐10690 [orchestration]
-  - https://github.com/0x4m4/hexstrike-ai
-  - 💡 Для проекта вряд ли пригодится, поскольку он ориентирован на безопасность и тестирование
-  - 📄 HexStrike AI MCP Agents is an advanced MCP server that lets AI agents (Claude, GPT, Copilot, etc.) autonomously run 150+ cybersecurity tools for automated pente
-- **FlowiseAI/Flowise** ⭐55060 [orchestration]
-  - https://github.com/FlowiseAI/Flowise
-  - 💡 Позволяет создавать агентов визуально, может быть полезен для создания музыкальных агентов
-  - 📄 Build AI Agents, Visually
-- **continuedev/continue** ⭐35240 [orchestration]
-  - https://github.com/continuedev/continue
-  - 💡 Позволяет создавать агентов, которые могут выполнять задачи, может быть полезен для автоматизации музыкального контента
-  - 📄 open-source coding agent
-- **github/copilot-sdk** ⭐10067 [orchestration]
+- **bytedance/deer-flow** ⭐78519 [orchestration]
+  - https://github.com/bytedance/deer-flow
+  - 💡 Автоматизирует задачи, связанные с исследованием, кодированием и созданием контента. Может быть полезен для автоматизации задач, связанных с музыкальным контентом, но требует дополнительной настройки и интеграции.
+  - 📄 An open-source long-horizon SuperAgent harness that researches, codes, and creates. With the help of sandboxes, memories, tools, skill, subagents and message ga
+- **karpathy/autoresearch** ⭐92711 [orchestration]
+  - https://github.com/karpathy/autoresearch
+  - 💡 Автоматизирует задачи, связанные с исследованием и обучением моделей машинного обучения. Может быть полезен для создания и обучения моделей, которые могут автоматизировать задачи, связанные с музыкальным контентом.
+  - 📄 AI agents running research on single-GPU nanochat training automatically
+- **TencentCloud/TencentDB-Agent-Memory** ⭐9975 [orchestration]
+  - https://github.com/TencentCloud/TencentDB-Agent-Memory
+  - 💡 Предоставляет инструменты для хранения и управления памятью агентов. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не управление памятью агентов.
+  - 📄 TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into four reusable memory assets (Chat Memory, Skill, LL
+- **kangarooking/cangjie-skill** ⭐5857 [orchestration]
+  - https://github.com/kangarooking/cangjie-skill
+  - 💡 Автоматизирует задачи, связанные с созданием контента из различных источников. Может быть полезен для создания музыкального контента из различных источников, таких как книги или видео.
+  - 📄 把书、长视频、播客等高价值内容蒸馏成可执行的 Agent Skills
+- **rohitg00/agentmemory** ⭐26309 [orchestration]
+  - https://github.com/rohitg00/agentmemory
+  - 💡 Предоставляет инструменты для хранения и управления памятью агентов. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не управление памятью агентов.
+  - 📄 #1 Persistent memory for AI coding agents based on real-world benchmarks
+- **github/copilot-sdk** ⭐10204 [orchestration]
   - https://github.com/github/copilot-sdk
-  - 💡 Позволяет интегрировать GitHub Copilot в приложения, может быть полезен для создания музыкальных приложений с поддержкой AI
+  - 💡 Предоставляет инструменты для интеграции агентов с приложениями и сервисами. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не интеграция с приложениями.
   - 📄 Multi-platform SDK for integrating GitHub Copilot Agent into apps and services
+- **ashishpatel26/500-AI-Agents-Projects** ⭐35537 [orchestration]
+  - https://github.com/ashishpatel26/500-AI-Agents-Projects
+  - 💡 Предоставляет коллекцию проектов, связанных с агентами и искусственным интеллектом. Может быть полезен для поиска идей и вдохновения для автоматизации музыкального контента.
+  - 📄 The 500 AI Agents Projects is a curated collection of AI agent use cases across various industries. It showcases practical applications and provides links to op
+- **gitroomhq/postiz-app** ⭐34071 [orchestration]
+  - https://github.com/gitroomhq/postiz-app
+  - 💡 Предоставляет инструменты для планирования и публикации контента в социальных сетях. Может быть полезен для автоматизации публикации музыкального контента в социальных сетях.
+  - 📄 📨 The ultimate agentic social media scheduling tool 🤖
+- **github/awesome-copilot** ⭐37318 [orchestration]
+  - https://github.com/github/awesome-copilot
+  - 💡 Предоставляет коллекцию ресурсов и инструментов для работы с агентами. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не работа с агентами.
+  - 📄 Community-contributed instructions, agents, skills, and configurations to help you make the most of GitHub Copilot.
+- **Narcooo/inkos** ⭐8574 [orchestration]
+  - https://github.com/Narcooo/inkos
+  - 💡 Автоматизирует задачи, связанные с созданием контента, такого как истории или сценарии. Может быть полезен для создания музыкального контента, такого как тексты песен или описания альбомов.
+  - 📄 Story Creation AI Agent for novel, scripts, translation, interactive games, and IP content
+- **ansible/ansible** ⭐70019 [orchestration]
+  - https://github.com/ansible/ansible
+  - 💡 Предоставляет инструменты для автоматизации задач, связанных с развертыванием и управлением приложениями и системами. Для проекта вряд ли пригодится, поскольку основная задача - автоматизация музыкального контента, а не управление приложениями и системами.
+  - 📄 Ansible is a radically simple IT automation platform that makes your applications and systems easier to deploy and maintain. Automate everything from code deplo
