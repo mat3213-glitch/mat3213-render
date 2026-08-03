@@ -47,7 +47,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing rclone curl
-          pip install -q requests
+          # rapidocr — OCR-гейт надписей на входе в пул (модели внутри пакета)
+          pip install -q requests pillow rapidocr-onnxruntime
 
       - name: Configure rclone ydrive
         env:

@@ -284,6 +284,28 @@ def judge_file(path, models=None, token=None, dead=None, b64=None):
     models = models or MODELS
     token = token if token is not None else os.environ.get("GITHUB_TOKEN")
     dead = dead if dead is not None else {}
+
+    # ── OCR-гейт ДО моделей ────────────────────────────────────────────────────────
+    # Надпись в кадре — факт, а не вкус, и ансамбль её ПРОПУСКАЛ (child.png прошёл
+    # голосование чистым 29.07). Детектор регионов ловит её детерминированно, поэтому
+    # он идёт первым: пойманный кадр не тратит три вызова моделей.
+    # Правило (замер на листе A, run 30811081122): ДВА мелких региона; 1/1 пойманного,
+    # 0/10 ложных, устойчиво по всей полосе порогов. Выключатель: OCR=off.
+    if os.environ.get("OCR", "on").lower() != "off":
+        try:
+            from ocr_gate import find_text_regions
+            ocr = find_text_regions(path)
+            if ocr.get("available") and ocr.get("has_text"):
+                return {
+                    "verdict": "REJECT", "violations": ["text_in_frame"], "flaws": [],
+                    "shot_type": None, "corridor": None, "n_votes": 0,
+                    "detail": f"ocr:{ocr['reason']}", "_votes": [], "_notes": [],
+                    "_agg": {}, "_ocr": ocr,
+                }
+        except Exception as exc:
+            # fail-open: гейт не обязан ронять судейство (та же логика, что у судьи в пуле)
+            print(f"      ⚠️ ocr-гейт пропущен: {exc}", flush=True)
+
     if b64 is None:
         b64 = to_jpeg_b64(path)
 
