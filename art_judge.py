@@ -300,7 +300,12 @@ def judge_file(path, models=None, token=None, dead=None, b64=None):
                     "verdict": "REJECT", "violations": ["text_in_frame"], "flaws": [],
                     "shot_type": None, "corridor": None, "n_votes": 0,
                     "detail": f"ocr:{ocr['reason']}", "_votes": [], "_notes": [],
-                    "_agg": {}, "_ocr": ocr,
+                    # `_agg` обязан иметь ТУ ЖЕ форму, что у aggregate(): сводка в main()
+                    # читает из него shot_type/corridor напрямую и падала на пустом словаре
+                    "_agg": {"violations": ["text_in_frame"], "flaws": [],
+                             "shot_type": None, "corridor": None,
+                             "votes_raw": [], "worst": None},
+                    "_ocr": ocr,
                 }
         except Exception as exc:
             # fail-open: гейт не обязан ронять судейство (та же логика, что у судьи в пуле)
