@@ -119,6 +119,9 @@ def _rapidocr_engine(factory: Any) -> Any:
 def find_text_regions(
     path: str,
     *,
+    min_small: int = 2,
+    small_h_lo: float = 0.008,
+    small_h_hi: float = 0.05,
     min_boxes: int = 2,
     big_box_ratio: float = 0.025,
     min_area_ratio: float = 0.00015,
@@ -187,15 +190,23 @@ def find_text_regions(
         boxes.append({"h_ratio": h_ratio, "w_ratio": w_ratio, "area_ratio": area_ratio,
                       "score": score, "text": texts[i] if i < len(texts) else None})
 
+    # 🔑 ЧТО ПОКАЗАЛ ЗАМЕР НА ЛИСТЕ A (run 30810539477) — решает РАЗМЕР, а не количество:
+    #   child.png (надпись)      2 региона, ОБА мелкие h=0.034
+    #   anchor/cold_02/crowd     по одному региону h=0.56 / 0.34 / 0.23 — это куски кадра
+    #   cold_03                  один регион h=0.105 — тоже не надпись
+    #   art1                     один мелкий h=0.047 — РЕАЛЬНЫЙ номер машины вдали,
+    #                            который yaromat разрешил; одного мелкого мало для REJECT
+    # Отсюда правило: считаем ТОЛЬКО мелкие регионы и требуем ДВА.
+    small = [b for b in boxes if small_h_lo <= b["h_ratio"] <= small_h_hi]
     big = [b for b in boxes if b["h_ratio"] > big_box_ratio]
-    if len(boxes) >= min_boxes:
-        reason = f"{len(boxes)} text regions"
-    elif big:
-        reason = f"big region h={big[0]['h_ratio']:.3f}"
+    has_text = len(small) >= min_small
+    if has_text:
+        hs = "/".join(f"{b['h_ratio']:.3f}" for b in small[:3])
+        reason = f"{len(small)} мелких регионов h={hs}"
     else:
-        reason = "clean"
-    return {"has_text": bool(boxes and (len(boxes) >= min_boxes or big)),
-            "boxes": boxes, "reason": reason, "available": True}
+        reason = f"clean (мелких {len(small)}, всего {len(boxes)})"
+    return {"has_text": has_text, "boxes": boxes, "small": small, "big": big,
+            "reason": reason, "available": True}
 
 
 ENGINES = {"tesseract": find_text, "rapidocr": find_text_regions}
@@ -206,9 +217,9 @@ GRIDS = {
         for c in (40, 50, 60, 70) for w in (1, 2, 3) for r in (0.02, 0.025, 0.03)
     ],
     "rapidocr": [
-        {"min_boxes": b, "big_box_ratio": r, "min_area_ratio": a}
-        for b in (1, 2, 3) for r in (0.02, 0.025, 0.03)
-        for a in (0.00008, 0.00015, 0.0003)
+        {"min_small": n, "small_h_lo": lo, "small_h_hi": hi}
+        for n in (1, 2, 3) for lo in (0.005, 0.008, 0.012)
+        for hi in (0.04, 0.05, 0.06)
     ],
 }
 
