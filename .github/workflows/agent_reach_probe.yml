@@ -1,0 +1,90 @@
+name: Agent-Reach Probe (бесключевые каналы с US-IP)
+
+# Разведка под RHR: Agent-Reach = ТРАНСПОРТ (YouTube/веб/RSS/GitHub) для воронки RHR.
+# С бука бесполезен — гео-блок: r.jina.ai отдаёт 451, youtube.com не отвечает вовсе.
+# Проверяем ровно то, что работает БЕЗ куков и ключей: YouTube (yt-dlp), веб (Jina Reader),
+# RSS, GitHub (gh). Twitter/Reddit/XHS тут НЕ трогаем — они на куках владельца.
+
+on:
+  workflow_dispatch:
+    inputs:
+      yt_url:
+        description: "YouTube-видео для проверки субтитров"
+        required: false
+        default: "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+        type: string
+      web_url:
+        description: "Страница для проверки веб-читалки"
+        required: false
+        default: "https://github.com/Panniantong/Agent-Reach"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Agent-Reach
+        run: |
+          # на PyPI висит заглушка 0.1.0, живой код только в git (1.5.0 на 2026-08-03)
+          pip install --quiet "git+https://github.com/Panniantong/Agent-Reach.git@main"
+          agent-reach --version
+
+      - name: Doctor (какие каналы видны с US-IP)
+        run: agent-reach doctor || true
+
+      - name: YouTube — субтитры без ключа (yt-dlp)
+        run: |
+          mkdir -p ~/.config/yt-dlp
+          printf '%s\n' '--js-runtimes node' >> ~/.config/yt-dlp/config
+          set +e
+          yt-dlp --skip-download --write-auto-sub --sub-lang en --sub-format vtt \
+                 -o "yt.%(ext)s" "${{ inputs.yt_url }}"
+          echo "yt-dlp rc=$?"
+          ls -la yt.* 2>/dev/null && head -20 yt.en.vtt 2>/dev/null
+          set -e
+
+      - name: YouTube — поиск без ключа (yt-dlp ytsearch)
+        run: |
+          set +e
+          yt-dlp --flat-playlist --print "%(title)s | %(url)s" "ytsearch5:downtempo music video" 2>&1 | head -10
+          echo "search rc=$?"
+          set -e
+
+      - name: Веб-читалка — Jina Reader
+        run: |
+          code=$(curl -s -o web.md -w "%{http_code}" --max-time 60 "https://r.jina.ai/${{ inputs.web_url }}")
+          echo "jina http=$code  bytes=$(wc -c < web.md)"
+          head -25 web.md
+
+      - name: RSS — типовой источник RHR
+        run: |
+          python3 - <<'PY'
+          import feedparser, urllib.request
+          url = "https://old.reddit.com/r/SaaS/new/.rss"
+          req = urllib.request.Request(url, headers={"User-Agent": "curl/8.0"})
+          try:
+              raw = urllib.request.urlopen(req, timeout=30).read()
+              d = feedparser.parse(raw)
+              print(f"rss entries={len(d.entries)}")
+              for e in d.entries[:5]:
+                  print(" -", e.get("title", "")[:90])
+          except Exception as e:
+              print("rss FAIL:", e)
+          PY
+
+      - name: GitHub — публичный поиск через gh
+        env:
+          GH_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+        run: |
+          set +e
+          gh search repos "video generation physics" --limit 5 --json fullName,stargazersCount 2>&1 | head -20
+          echo "gh rc=$?"
+          set -e
