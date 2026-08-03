@@ -294,18 +294,21 @@ def main() -> int:
         # СНАЧАЛА ДАННЫЕ, ПОТОМ ПОРОГ. Сетка 03.08 показала одинаковый результат во всех
         # 27 комбинациях — верный признак, что ручки крутятся вне разделяющей зоны.
         # Здесь печатаются сырые числа по каждому кадру, чтобы увидеть, есть ли граница.
-        print(f"{'кадр':38} {'позитив':7} {'регионов':>8} {'max_h':>6} {'сум.площадь':>11} "
-              f"{'max_score':>9}  топ-тексты")
+        # 🔴 with_rec=True в прошлом прогоне дал НОЛЬ регионов на всех кадрах: RapidOCR
+        # режет выдачу внутренним text_score, и распознать псевдотекст он не может по
+        # определению. Поэтому дамп идёт по чистой детекции.
+        print(f"{'кадр':38} {'позитив':7} {'всего':>5} {'мелких':>6} {'max_h':>6} "
+              f"{'мед_h':>6} {'сум.площадь':>11}")
         for path, label in sorted(labeled, key=lambda t: not t[1]):
-            res = find_text_regions(path, min_area_ratio=0.0, with_rec=True)
+            res = find_text_regions(path, min_area_ratio=0.0)
             bs = res.get("boxes") or []
-            max_h = max((b["h_ratio"] for b in bs), default=0.0)
-            area = sum(b["area_ratio"] for b in bs)
-            sc = [b["score"] for b in bs if b.get("score") is not None]
-            top = sorted(bs, key=lambda b: -(b.get("score") or 0))[:3]
-            txt = " | ".join(f"{(b.get('text') or '')[:12]}:{(b.get('score') or 0):.2f}" for b in top)
-            print(f"{Path(path).name:38} {'ДА' if label else '—':7} {len(bs):>8} "
-                  f"{max_h:>6.3f} {area:>11.5f} {max(sc, default=0.0):>9.2f}  {txt}")
+            hs = sorted(b["h_ratio"] for b in bs)
+            # «мелкие» = похожие на настоящую надпись на предмете: бирка, лейбл, ценник.
+            small = [h for h in hs if 0.008 <= h <= 0.05]
+            med = hs[len(hs) // 2] if hs else 0.0
+            print(f"{Path(path).name:38} {'ДА' if label else '—':7} {len(bs):>5} "
+                  f"{len(small):>6} {max(hs, default=0.0):>6.3f} {med:>6.3f} "
+                  f"{sum(b['area_ratio'] for b in bs):>11.5f}")
     else:
         reject = clean = 0
         for path, _ in labeled:
