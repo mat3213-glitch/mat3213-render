@@ -1,0 +1,71 @@
+name: OCR Calibrate (пороги гейта надписей на листе A)
+
+# Гейт «нет текста в кадре» — хвост, который голосование VLM не закрывает: на листе A
+# 29.07 надпись в `child.png` прошла ансамбль как чистый кадр.
+# Здесь НЕ внедрение, а ЗАМЕР: перебор порогов на РАЗМЕЧЕННОМ листе (11 артов, из них
+# один позитив — `reject/text_in_frame__child.png`) с печатью ДВУХ чисел: пойманное и ложное.
+# Порог, пойманный «на глаз» по одному кадру, уже подводил (схемы голосования 30.07).
+#
+# tesseract ставится apt'ом на раннере: на буке (Atom, 1.8 ГБ) ни apt без sudo, ни лишняя
+# нагрузка не нужны, а боевой гейт всё равно будет жить здесь же, внутри art_judge.
+
+on:
+  workflow_dispatch:
+    inputs:
+      sheet:
+        description: "Папка листа на ЯД (относительно Content factory/cloud_io/)"
+        required: false
+        default: "preview/2026-07-29/art_gate"
+        type: string
+      positive:
+        description: "Подстрока в имени файла = кадр С НАДПИСЬЮ (позитив)"
+        required: false
+        default: "text_in_frame"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tesseract + deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-rus rclone
+          tesseract --version | head -2
+          pip install --quiet pytesseract pillow
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Pull labeled sheet
+        run: |
+          mkdir -p sheet
+          # CONTACT_SHEET.jpg — сам по себе подписанная простыня из кадров; в выборке он
+          # дал бы гарантированный ложный позитив и испортил бы замер.
+          rclone copy "ydrive:Content factory/cloud_io/${{ inputs.sheet }}" sheet \
+            --include "*.png" --include "*.jpg" --exclude "CONTACT_SHEET*" -v
+          find sheet -type f | sort
+
+      - name: Per-file verdict at default thresholds
+        run: python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}"
+
+      - name: Grid sweep — пойманное против ложного
+        run: python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --grid
