@@ -67,6 +67,10 @@ jobs:
           # был проигнорирован — лист приехал и попал в выборку как 12-й файл).
           rclone copy "ydrive:Content factory/cloud_io/${{ inputs.sheet }}" sheet \
             --exclude "CONTACT_SHEET*" --include "*.png" --include "*.jpg" -v
+          # 🔴 Фильтр rclone лист НЕ отсёк ни до, ни после перестановки правил (проверено
+          # в 30807960774 и 30808998513 — «CONTACT_SHEET.jpg: Copied»). Спорить с фильтром
+          # дороже, чем удалить файл: выборка обязана быть чистой, иначе замер врёт.
+          rm -f sheet/CONTACT_SHEET*
           find sheet -type f | sort
 
       - name: tesseract — по файлам и сеткой
@@ -74,6 +78,9 @@ jobs:
           python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine tesseract
           echo "──────────"
           python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine tesseract --grid
+
+      - name: rapidocr — СЫРЫЕ ЧИСЛА по кадрам (есть ли вообще граница)
+        run: python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --dump
 
       - name: rapidocr (детектор регионов) — по файлам и сеткой
         run: |

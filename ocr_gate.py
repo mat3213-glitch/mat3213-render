@@ -105,13 +105,26 @@ def find_text(
     return {"has_text": False, "words": words, "reason": "clean", "available": True}
 
 
+_RAPIDOCR_ENGINE: Any = None
+
+
+def _rapidocr_engine(factory: Any) -> Any:
+    """Один экземпляр RapidOCR на процесс (ленивый синглтон)."""
+    global _RAPIDOCR_ENGINE
+    if _RAPIDOCR_ENGINE is None:
+        _RAPIDOCR_ENGINE = factory()
+    return _RAPIDOCR_ENGINE
+
+
 def find_text_regions(
     path: str,
     *,
     min_boxes: int = 2,
     big_box_ratio: float = 0.025,
     min_area_ratio: float = 0.00015,
+    min_score: float = 0.0,
     max_side: int = 1600,
+    with_rec: bool = False,
 ) -> dict[str, Any]:
     """Детектор текстовых РЕГИОНОВ (RapidOCR/DB), без распознавания.
 
@@ -141,22 +154,38 @@ def find_text_regions(
                 "available": False}
 
     try:
-        engine = RapidOCR()
-        result, _ = engine(arr, use_det=True, use_cls=False, use_rec=False)
+        # ONNX-сессия поднимается ~секунду; на калибровке (27 порогов × 11 кадров) это
+        # 297 загрузок одной и той же модели. Держим единственный экземпляр на процесс.
+        engine = _rapidocr_engine(RapidOCR)
+        if with_rec:
+            # с распознаванием: у каждого бокса появляется score — на псевдотексте он
+            # заметно выше, чем на текстуре, и это шанс развести их порогом
+            raw, _ = engine(arr, use_det=True, use_cls=False, use_rec=True)
+            result = [r[0] for r in (raw or [])]
+            scores = [float(r[2]) for r in (raw or [])]
+            texts = [str(r[1]) for r in (raw or [])]
+        else:
+            result, _ = engine(arr, use_det=True, use_cls=False, use_rec=False)
+            scores, texts = [], []
     except Exception as exc:
         return {"has_text": False, "boxes": [], "reason": f"detect error: {exc}",
                 "available": False}
 
     boxes: list[dict[str, Any]] = []
-    for box in result or []:
+    for i, box in enumerate(result or []):
         pts = box.tolist() if hasattr(box, "tolist") else list(box)
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
         w_ratio = (max(xs) - min(xs)) / w
         h_ratio = (max(ys) - min(ys)) / h
         area_ratio = w_ratio * h_ratio
-        if area_ratio >= min_area_ratio:
-            boxes.append({"h_ratio": h_ratio, "w_ratio": w_ratio, "area_ratio": area_ratio})
+        score = scores[i] if i < len(scores) else None
+        if area_ratio < min_area_ratio:
+            continue
+        if score is not None and score < min_score:
+            continue
+        boxes.append({"h_ratio": h_ratio, "w_ratio": w_ratio, "area_ratio": area_ratio,
+                      "score": score, "text": texts[i] if i < len(texts) else None})
 
     big = [b for b in boxes if b["h_ratio"] > big_box_ratio]
     if len(boxes) >= min_boxes:
@@ -223,7 +252,8 @@ def main() -> int:
     parser.add_argument("--dir", help="Directory to scan recursively")
     parser.add_argument("--file", help="Single image (smoke check)")
     parser.add_argument("--positive", default="text_in_frame", help="Substring indicating positive sample")
-    parser.add_argument("--grid", action="store_true", help="Run parameter grid search")
+    parser.add_argument("--grid", action="store_true", help="Перебор порогов по сетке")
+    parser.add_argument("--dump", action="store_true", help="Сырые числа по кадрам (без вердикта)")
     parser.add_argument("--engine", default="tesseract", choices=sorted(ENGINES),
                         help="tesseract = распознаватель, rapidocr = детектор регионов")
     args = parser.parse_args()
@@ -260,10 +290,26 @@ def main() -> int:
             f"caught={best['tp']}/{best['tp'] + best['fn']} "
             f"false={best['fp']}/{best['fp'] + best['tn']}"
         )
+    elif args.dump:
+        # СНАЧАЛА ДАННЫЕ, ПОТОМ ПОРОГ. Сетка 03.08 показала одинаковый результат во всех
+        # 27 комбинациях — верный признак, что ручки крутятся вне разделяющей зоны.
+        # Здесь печатаются сырые числа по каждому кадру, чтобы увидеть, есть ли граница.
+        print(f"{'кадр':38} {'позитив':7} {'регионов':>8} {'max_h':>6} {'сум.площадь':>11} "
+              f"{'max_score':>9}  топ-тексты")
+        for path, label in sorted(labeled, key=lambda t: not t[1]):
+            res = find_text_regions(path, min_area_ratio=0.0, with_rec=True)
+            bs = res.get("boxes") or []
+            max_h = max((b["h_ratio"] for b in bs), default=0.0)
+            area = sum(b["area_ratio"] for b in bs)
+            sc = [b["score"] for b in bs if b.get("score") is not None]
+            top = sorted(bs, key=lambda b: -(b.get("score") or 0))[:3]
+            txt = " | ".join(f"{(b.get('text') or '')[:12]}:{(b.get('score') or 0):.2f}" for b in top)
+            print(f"{Path(path).name:38} {'ДА' if label else '—':7} {len(bs):>8} "
+                  f"{max_h:>6.3f} {area:>11.5f} {max(sc, default=0.0):>9.2f}  {txt}")
     else:
         reject = clean = 0
         for path, _ in labeled:
-            res = find_text(path)
+            res = detect(path)
             name = Path(path).name
             if res["has_text"]:
                 print(f"REJECT  {name}  {res['reason']}")
