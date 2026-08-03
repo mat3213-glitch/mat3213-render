@@ -1,7 +1,19 @@
 {
-  "_generated": "2026-08-02",
+  "_generated": "2026-08-03",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
+    {
+      "name": "scout_warm_night_soft",
+      "note": "scout: warm night soft",
+      "eq": "contrast=0.9:saturation=0.71:brightness=-0.086:gamma=1.08",
+      "balance": "rs=0.019:bs=-0.024:rm=0.034:bm=-0.039:rh=0.017:bh=-0.028",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "5438275.jpg"
+    },
     {
       "name": "scout_neutral_night_muted",
       "note": "scout: neutral night muted",
@@ -12,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "89058136.jpg"
+      "_src": "85388834.jpg"
     },
     {
       "name": "scout_neutral_mid_muted",
@@ -24,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "2657194.jpg"
+      "_src": "41394266.jpg"
     },
     {
       "name": "scout_neutral_night_muted_2",
@@ -36,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "99739716.jpg"
+      "_src": "85530542.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +60,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "89674906.jpg"
+      "_src": "17670310.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,19 +72,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "26290555.jpg"
-    },
-    {
-      "name": "scout_cool_mid_soft",
-      "note": "scout: cool mid soft",
-      "eq": "contrast=0.91:saturation=0.89:brightness=-0.038:gamma=1.041",
-      "balance": "rs=-0.039:bs=0.051:rm=-0.061:gm=0.016:bm=0.045:rh=-0.079:gh=0.061:bh=0.018",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "95292387.jpg"
+      "_src": "81075376.jpg"
     }
   ]
 }
