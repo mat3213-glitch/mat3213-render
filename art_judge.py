@@ -489,7 +489,9 @@ def main():
         tail = ",".join(agg["violations"]) or ("~" + ",".join(agg["flaws"]) if agg["flaws"] else "—")
         # flush обязателен: при выводе в файл прогресс копится в буфере, и на длинном прогоне
         # (116 артов ≈ 2ч) не отличить работу от зависания
-        print(f"[{i}/{len(files)}] {mark} {rel:34} {agg['shot_type']:8} "
+        # shot_type может быть None (кадр отбракован OCR-гейтом до опроса моделей —
+        # тип плана тогда никто не называл), а формат `:8` на None падает
+        print(f"[{i}/{len(files)}] {mark} {rel:34} {str(agg['shot_type'] or '—'):8} "
               f"{'коридор ' if agg['corridor'] else ''}{tail}", flush=True)
 
     ok = [r for r in rows if r["verdict"] == "OK"]
@@ -541,7 +543,7 @@ def main():
     if rej:
         L += ["", "### 🔴 Бренд-брак (порог: большинство голосов)", "",
               "| файл | тип плана | нарушения |", "|---|---|---|"]
-        L += [f"| {r['file']} | {r['shot_type']} | {r['violations']} |" for r in rej]
+        L += [f"| {r['file']} | {r['shot_type'] or '—'} | {r['violations']} |" for r in rej]
     L += ["", "## Пластик — флаг на просмотр, не отбраковка", ""]
     if flaw_cnt:
         L += ["| дефект | срабатываний |", "|---|---|"]
