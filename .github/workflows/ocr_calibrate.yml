@@ -42,7 +42,9 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-rus rclone
           tesseract --version | head -2
-          pip install --quiet pytesseract pillow
+          # rapidocr-onnxruntime (Apache-2.0) везёт модели детектора в самом пакете —
+          # ни apt, ни выкачивания весов на раннере не требуется.
+          pip install --quiet pytesseract pillow rapidocr-onnxruntime
 
       - name: Configure rclone ydrive
         env:
@@ -59,13 +61,22 @@ jobs:
         run: |
           mkdir -p sheet
           # CONTACT_SHEET.jpg — сам по себе подписанная простыня из кадров; в выборке он
-          # дал бы гарантированный ложный позитив и испортил бы замер.
+          # даёт гарантированный ложный позитив и портит замер.
+          # 🔴 Порядок фильтров важен: rclone берёт ПЕРВОЕ совпавшее правило, поэтому
+          # --exclude обязан стоять ДО --include (в прогоне 30807960774 он стоял после и
+          # был проигнорирован — лист приехал и попал в выборку как 12-й файл).
           rclone copy "ydrive:Content factory/cloud_io/${{ inputs.sheet }}" sheet \
-            --include "*.png" --include "*.jpg" --exclude "CONTACT_SHEET*" -v
+            --exclude "CONTACT_SHEET*" --include "*.png" --include "*.jpg" -v
           find sheet -type f | sort
 
-      - name: Per-file verdict at default thresholds
-        run: python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}"
+      - name: tesseract — по файлам и сеткой
+        run: |
+          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine tesseract
+          echo "──────────"
+          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine tesseract --grid
 
-      - name: Grid sweep — пойманное против ложного
-        run: python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --grid
+      - name: rapidocr (детектор регионов) — по файлам и сеткой
+        run: |
+          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine rapidocr
+          echo "──────────"
+          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine rapidocr --grid

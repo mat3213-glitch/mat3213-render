@@ -105,15 +105,96 @@ def find_text(
     return {"has_text": False, "words": words, "reason": "clean", "available": True}
 
 
+def find_text_regions(
+    path: str,
+    *,
+    min_boxes: int = 2,
+    big_box_ratio: float = 0.025,
+    min_area_ratio: float = 0.00015,
+    max_side: int = 1600,
+) -> dict[str, Any]:
+    """Детектор текстовых РЕГИОНОВ (RapidOCR/DB), без распознавания.
+
+    Зачем второй движок: замер 03.08 на листе A показал, что tesseract не берёт наш брак
+    вообще (0/1 при всех 36 порогах). Причина видна глазами — на кадре `child.png` не текст,
+    а AI-ПСЕВДОТЕКСТ: мелкие нечитаемые закорючки на бирке рюкзака. Распознаватель не
+    прочтёт то, что буквами не является; детектор регионов отвечает на другой вопрос —
+    «есть ли в кадре нечто текстоподобное», и именно он тут уместен.
+    """
+    try:
+        from rapidocr_onnxruntime import RapidOCR
+        import numpy as np
+    except Exception as exc:
+        return {"has_text": False, "boxes": [], "reason": f"import error: {exc}",
+                "available": False}
+
+    try:
+        img = Image.open(path).convert("RGB")
+        w, h = img.size
+        if max(w, h) > max_side:
+            s = max_side / max(w, h)
+            img = img.resize((int(w * s), int(h * s)), Image.LANCZOS)
+            w, h = img.size
+        arr = np.array(img)
+    except Exception as exc:
+        return {"has_text": False, "boxes": [], "reason": f"open error: {exc}",
+                "available": False}
+
+    try:
+        engine = RapidOCR()
+        result, _ = engine(arr, use_det=True, use_cls=False, use_rec=False)
+    except Exception as exc:
+        return {"has_text": False, "boxes": [], "reason": f"detect error: {exc}",
+                "available": False}
+
+    boxes: list[dict[str, Any]] = []
+    for box in result or []:
+        pts = box.tolist() if hasattr(box, "tolist") else list(box)
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        w_ratio = (max(xs) - min(xs)) / w
+        h_ratio = (max(ys) - min(ys)) / h
+        area_ratio = w_ratio * h_ratio
+        if area_ratio >= min_area_ratio:
+            boxes.append({"h_ratio": h_ratio, "w_ratio": w_ratio, "area_ratio": area_ratio})
+
+    big = [b for b in boxes if b["h_ratio"] > big_box_ratio]
+    if len(boxes) >= min_boxes:
+        reason = f"{len(boxes)} text regions"
+    elif big:
+        reason = f"big region h={big[0]['h_ratio']:.3f}"
+    else:
+        reason = "clean"
+    return {"has_text": bool(boxes and (len(boxes) >= min_boxes or big)),
+            "boxes": boxes, "reason": reason, "available": True}
+
+
+ENGINES = {"tesseract": find_text, "rapidocr": find_text_regions}
+
+GRIDS = {
+    "tesseract": [
+        {"min_conf": c, "min_words": w, "big_word_ratio": r}
+        for c in (40, 50, 60, 70) for w in (1, 2, 3) for r in (0.02, 0.025, 0.03)
+    ],
+    "rapidocr": [
+        {"min_boxes": b, "big_box_ratio": r, "min_area_ratio": a}
+        for b in (1, 2, 3) for r in (0.02, 0.025, 0.03)
+        for a in (0.00008, 0.00015, 0.0003)
+    ],
+}
+
+
 def calibrate(
     paths_labeled: list[tuple[str, bool]],
     grid: list[dict[str, Any]],
+    engine: str = "tesseract",
 ) -> list[dict[str, Any]]:
+    detect = ENGINES[engine]
     results: list[dict[str, Any]] = []
     for params in grid:
         tp = fn = fp = tn = 0
         for path, label in paths_labeled:
-            res = find_text(path, **params)
+            res = detect(path, **params)
             if label and res["has_text"]:
                 tp += 1
             elif label and not res["has_text"]:
@@ -143,17 +224,22 @@ def main() -> int:
     parser.add_argument("--file", help="Single image (smoke check)")
     parser.add_argument("--positive", default="text_in_frame", help="Substring indicating positive sample")
     parser.add_argument("--grid", action="store_true", help="Run parameter grid search")
+    parser.add_argument("--engine", default="tesseract", choices=sorted(ENGINES),
+                        help="tesseract = распознаватель, rapidocr = детектор регионов")
     args = parser.parse_args()
 
     if not args.dir and not args.file:
         parser.error("нужен --dir или --file")
+    detect = ENGINES[args.engine]
 
     if args.file:
-        res = find_text(args.file)
-        print(f"{'REJECT' if res['has_text'] else 'clean'}  {Path(args.file).name}  "
-              f"{res['reason']}  available={res['available']}")
-        for w in res["words"][:10]:
+        res = detect(args.file)
+        print(f"[{args.engine}] {'REJECT' if res['has_text'] else 'clean'}  "
+              f"{Path(args.file).name}  {res['reason']}  available={res['available']}")
+        for w in (res.get("words") or [])[:10]:
             print(f"    '{w['text']}' conf={w['conf']:.0f} h={w['h_ratio']:.3f}")
+        for b in (res.get("boxes") or [])[:10]:
+            print(f"    region h={b['h_ratio']:.3f} w={b['w_ratio']:.3f} area={b['area_ratio']:.5f}")
         return 0
 
     paths = scan_dir(args.dir)
@@ -161,17 +247,12 @@ def main() -> int:
     print(f"файлов: {len(paths)} (позитивов по «{args.positive}»: {sum(l for _, l in labeled)})")
 
     if args.grid:
-        grid = [
-            {"min_conf": c, "min_words": w, "big_word_ratio": r}
-            for c in (40, 50, 60, 70)
-            for w in (1, 2, 3)
-            for r in (0.02, 0.025, 0.03)
-        ]
-        results = calibrate(labeled, grid)
-        print("conf/words/ratio | пойманное tp/(tp+fn) | ЛОЖНОЕ fp/(fp+tn)")
+        results = calibrate(labeled, GRIDS[args.engine], engine=args.engine)
+        keys = list(GRIDS[args.engine][0].keys())
+        print(f"[{args.engine}] {'/'.join(keys)} | пойманное tp/(tp+fn) | ЛОЖНОЕ fp/(fp+tn)")
         for r in results:
             p = r["params"]
-            print(f"{p['min_conf']:>3}/{p['min_words']}/{p['big_word_ratio']:<5} | "
+            print(f"{'/'.join(str(p[k]) for k in keys):<24} | "
                   f"{r['tp']}/{r['tp'] + r['fn']} | {r['fp']}/{r['fp'] + r['tn']}")
         best = results[0]
         print(
