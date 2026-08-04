@@ -294,6 +294,8 @@ def main() -> int:
     parser.add_argument("--positive", default="text_in_frame", help="Substring indicating positive sample")
     parser.add_argument("--grid", action="store_true", help="Перебор порогов по сетке")
     parser.add_argument("--dump", action="store_true", help="Сырые числа по кадрам (без вердикта)")
+    parser.add_argument("--rec", action="store_true",
+                        help="дамп С РАСПОЗНАВАНИЕМ: что именно прочиталось в регионе")
     parser.add_argument("--engine", default="tesseract", choices=sorted(ENGINES),
                         help="tesseract = распознаватель, rapidocr = детектор регионов")
     args = parser.parse_args()
@@ -330,6 +332,19 @@ def main() -> int:
             f"caught={best['tp']}/{best['tp'] + best['fn']} "
             f"false={best['fp']}/{best['fp'] + best['tn']}"
         )
+    elif args.rec:
+        # 🔑 ЗАЧЕМ ОТДЕЛЬНЫЙ РЕЖИМ: на АРТАХ распознавание дало ноль регионов, и это
+        # логично — псевдотекст не читается по определению. Но на СТОКЕ надпись
+        # настоящая («MIND THE GAP», «USE LOWER GEARS»), и распознавание обязано её
+        # брать — включая КРУПНУЮ, которую правило «двух мелких» пропускает.
+        # Здесь печатается, что именно прочиталось, чтобы порог ставить по словам.
+        print(f"{'кадр':38} {'регионов':>8}  прочитанное (score)")
+        for path, _ in sorted(labeled):
+            res = find_text_regions(path, min_area_ratio=0.0, with_rec=True)
+            bs = res.get("boxes") or []
+            got = [f"{(b.get('text') or '').strip()!r}({b['score']:.2f},h={b['h_ratio']:.3f})"
+                   for b in bs if (b.get("text") or "").strip()]
+            print(f"{Path(path).name:38} {len(bs):>8}  {'; '.join(got[:6]) or '—'}")
     elif args.dump:
         # СНАЧАЛА ДАННЫЕ, ПОТОМ ПОРОГ. Сетка 03.08 показала одинаковый результат во всех
         # 27 комбинациях — верный признак, что ручки крутятся вне разделяющей зоны.
