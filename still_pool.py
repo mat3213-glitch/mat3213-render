@@ -113,8 +113,18 @@ def fetch_openverse(queries: list[tuple[str, str]], per: int, work: Path) -> lis
     return got
 
 
-def pull_from_yd(remote: str, work: Path) -> list[dict]:
-    """Забрать уже скачанное (пул Pexels лежит на ЯД подпапками-запросами)."""
+def _norm(s: str) -> str:
+    """`sunlight-on-wall` и `sunlight_on_wall` — одно и то же имя запроса."""
+    return "".join(c for c in s.lower() if c.isalnum())
+
+
+def pull_from_yd(remote: str, work: Path, shot_map: dict[str, str] | None = None) -> list[dict]:
+    """Забрать уже скачанное (пул Pexels лежит на ЯД подпапками-запросами).
+
+    🔑 Тип плана в имени папки Pexels НЕ хранится (`sunlight-on-wall`), поэтому он
+    восстанавливается по карте запросов: иначе половина пула уехала бы в `unclear` и
+    сводка логики кадра — главный выход этого инструмента — стала бы бессмысленной.
+    """
     dst = work / "_yd"
     dst.mkdir(parents=True, exist_ok=True)
     r = subprocess.run(["rclone", "copy", f"ydrive:{remote}", str(dst),
@@ -126,9 +136,10 @@ def pull_from_yd(remote: str, work: Path) -> list[dict]:
     for p in sorted(dst.rglob("*")):
         if p.suffix.lower() not in (".jpg", ".jpeg", ".png"):
             continue
-        # имя подпапки = slug запроса; тип плана берём из префикса, если он там есть
+        # имя подпапки = slug запроса: сперва карта запросов, потом префикс типа
         q = p.parent.name
-        shot = next((s for s in SHOT_TYPES if q.startswith(s)), "unclear")
+        shot = (shot_map or {}).get(_norm(q)) \
+            or next((s for s in SHOT_TYPES if q.startswith(s)), "unclear")
         got.append({"path": p, "shot_type": shot, "query": q, "src": "pexels",
                     "title": p.name, "license": "Pexels", "creator": ""})
     return got
@@ -182,11 +193,14 @@ def main() -> int:
     (work / "ok").mkdir(parents=True, exist_ok=True)
     (work / "rejected").mkdir(parents=True, exist_ok=True)
 
+    parsed = parse_queries(args.queries) if args.queries else []
     rows: list[dict] = []
-    if args.queries:
-        rows += fetch_openverse(parse_queries(args.queries), args.per, work)
+    # Запросы нужны обоим источникам: Openverse по ним качает, а для готового пула
+    # Pexels они восстанавливают тип плана по имени папки.
+    if args.queries and not args.from_yd:
+        rows += fetch_openverse(parsed, args.per, work)
     if args.from_yd:
-        rows += pull_from_yd(args.from_yd, work)
+        rows += pull_from_yd(args.from_yd, work, {_norm(q): shot for shot, q in parsed})
     if not rows:
         print("[still_pool] кандидатов нет", file=sys.stderr)
         return 1
