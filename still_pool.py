@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""
+still_pool.py — сборка ПУЛА СТИЛЛОВ под трек из стока (Openverse + Pexels) с гейтами.
+
+Зачем отдельный инструмент: `fetch_still.py` берёт ОДИН кадр под одну сцену, а пул — это
+десятки кандидатов, которые надо ещё и просеять до того, как тратить GPU. LTX-оживление
+стоит ~10 минут Kaggle на шот, поэтому брак обязан отваливаться ЗДЕСЬ, а не после.
+
+СОГЛАСОВАННОСТЬ ПУЛА = ЕДИНАЯ ЛОГИКА КАДРА (решение yaromat 2026-08-04). Поэтому запрос
+несёт тип плана: `texture:sunlight on wall`. Тип едет в имя файла и в манифест, и на
+контактном листе сразу видно, держится схема или пул перекосило в один тип — ровно та
+болезнь, что выжгла монтаж пула v1 (14 коридоров из 26).
+
+Гейты (те же, что в проде, не свои):
+  • `ocr_gate.gate(profile="still")` — надпись в кадре;
+  • `source_qc.judge_source()` — лицо крупным планом.
+Оба fail-open, но «не проверено» пишется в манифест отдельно от «чисто»: молчаливый
+пропуск гейта выглядит как пройденный гейт, и это дороже громкой ошибки.
+
+Режимы:
+  --queries "texture:sunlight on wall;detail:piano keys"   добыть с Openverse
+  --from-yd "<путь на ЯД>"                                 просеять уже скачанное (Pexels)
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "screenplay_pipeline"))
+
+SHOT_TYPES = ("texture", "detail", "medium", "wide")
+
+
+def _slug(s: str, n: int = 26) -> str:
+    out = "".join(c if c.isalnum() else "_" for c in s.lower()).strip("_")
+    return out[:n] or "q"
+
+
+def parse_queries(raw: str) -> list[tuple[str, str]]:
+    """`texture:sunlight on wall` → ('texture', 'sunlight on wall'). Без префикса → unclear."""
+    out = []
+    for chunk in raw.split(";"):
+        chunk = chunk.strip()
+        if not chunk:
+            continue
+        shot, _, q = chunk.partition(":")
+        if q and shot.strip() in SHOT_TYPES:
+            out.append((shot.strip(), q.strip()))
+        else:
+            out.append(("unclear", chunk))
+    return out
+
+
+def judge(path: str) -> dict:
+    """Оба гейта по одному кадру. Возвращает вердикт + причину брака."""
+    verdict = {"ok": True, "reason": None, "ocr_skipped": False, "qc_skipped": False}
+    try:
+        from ocr_gate import gate
+        ocr = gate(path, profile="still")
+        if not ocr.get("available"):
+            verdict["ocr_skipped"] = True
+        elif ocr.get("has_text"):
+            verdict.update(ok=False, reason=f"text__{ocr.get('reason', '')[:40]}")
+            return verdict
+    except Exception as exc:
+        verdict["ocr_skipped"] = True
+        print(f"    ⚠️ ocr-гейт: {exc}")
+
+    try:
+        import source_qc
+        sq = source_qc.judge_source(path)
+        verdict["qc_skipped"] = bool(sq.get("qc_skipped"))
+        if not sq["ok"]:
+            verdict.update(ok=False, reason=f"qc__{(sq.get('reject_reason') or '')[:40]}")
+    except Exception as exc:
+        verdict["qc_skipped"] = True
+        print(f"    ⚠️ source_qc: {exc}")
+    return verdict
+
+
+def fetch_openverse(queries: list[tuple[str, str]], per: int, work: Path) -> list[dict]:
+    import fetch_still
+    cid = os.environ.get("OPENVERSE_CLIENT_ID", "")
+    sec = os.environ.get("OPENVERSE_CLIENT_SECRET", "")
+    if not (cid and sec):
+        print("[still_pool] нет ключей Openverse — источник пропущен", file=sys.stderr)
+        return []
+    token = fetch_still.get_token(cid, sec)
+    got = []
+    for shot, q in queries:
+        try:
+            items = fetch_still.search_images(q, token)
+        except Exception as exc:
+            print(f"  [openverse] «{q}»: поиск упал ({exc})", file=sys.stderr)
+            continue
+        if not items:
+            print(f"  [openverse] «{q}»: пусто")
+            continue
+        for i, item in enumerate(items[:per]):
+            url = item.get("url")
+            dst = work / f"{shot}__ov_{_slug(q)}_{i}.jpg"
+            if url and fetch_still.download(url, str(dst)):
+                got.append({"path": dst, "shot_type": shot, "query": q, "src": "openverse",
+                            "title": (item.get("title") or "")[:80],
+                            "license": item.get("license", ""),
+                            "creator": (item.get("creator") or "")[:40]})
+    return got
+
+
+def pull_from_yd(remote: str, work: Path) -> list[dict]:
+    """Забрать уже скачанное (пул Pexels лежит на ЯД подпапками-запросами)."""
+    dst = work / "_yd"
+    dst.mkdir(parents=True, exist_ok=True)
+    r = subprocess.run(["rclone", "copy", f"ydrive:{remote}", str(dst),
+                        "--include", "*.jpg", "--include", "*.jpeg", "--include", "*.png", "-v"],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"[still_pool] ЯД: {r.stderr[:200]}", file=sys.stderr)
+    got = []
+    for p in sorted(dst.rglob("*")):
+        if p.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+            continue
+        # имя подпапки = slug запроса; тип плана берём из префикса, если он там есть
+        q = p.parent.name
+        shot = next((s for s in SHOT_TYPES if q.startswith(s)), "unclear")
+        got.append({"path": p, "shot_type": shot, "query": q, "src": "pexels",
+                    "title": p.name, "license": "Pexels", "creator": ""})
+    return got
+
+
+def contact_sheet(rows: list[dict], out: Path, cols: int = 4, tile: int = 360) -> bool:
+    """Плитка из кадров пула с подписью «тип плана · источник». Логика кадра видна глазом."""
+    if not rows:
+        return False
+    work = out.parent / "_tiles"
+    work.mkdir(parents=True, exist_ok=True)
+    font = next((f for f in ("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                             "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf")
+                 if os.path.exists(f)), None)
+    tiles = []
+    for i, r in enumerate(rows):
+        label = f"{r['shot_type']} · {r['src']}"
+        draw = ""
+        if font:
+            draw = (f",drawtext=fontfile={font}:text='{label}':x=8:y=H-30:fontsize=20:"
+                    f"fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=5")
+        tp = work / f"t{i:03d}.png"
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(r["path"]),
+                        "-vf", f"scale={tile}:{tile}:force_original_aspect_ratio=increase,"
+                               f"crop={tile}:{tile}{draw}", str(tp)], check=False)
+        if tp.exists():
+            tiles.append(tp)
+    if not tiles:
+        return False
+    cols = min(cols, len(tiles))
+    inputs = []
+    for t in tiles:
+        inputs += ["-i", str(t)]
+    layout = "|".join(f"{(i % cols) * tile}_{(i // cols) * tile}" for i in range(len(tiles)))
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", *inputs, "-filter_complex",
+                    f"xstack=inputs={len(tiles)}:layout={layout}:fill=black",
+                    "-q:v", "3", str(out)], capture_output=True, text=True)
+    return out.exists()
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Пул стиллов под трек: сток + гейты + лист")
+    ap.add_argument("--queries", default="", help="'texture:sunlight on wall;detail:piano keys'")
+    ap.add_argument("--per", type=int, default=3, help="кандидатов на запрос (Openverse)")
+    ap.add_argument("--from-yd", default="", help="просеять уже скачанное (папка на ЯД)")
+    ap.add_argument("--out-yd", required=True, help="куда положить пул (папка на ЯД)")
+    ap.add_argument("--work", default="pool_work")
+    args = ap.parse_args()
+
+    work = Path(args.work)
+    (work / "ok").mkdir(parents=True, exist_ok=True)
+    (work / "rejected").mkdir(parents=True, exist_ok=True)
+
+    rows: list[dict] = []
+    if args.queries:
+        rows += fetch_openverse(parse_queries(args.queries), args.per, work)
+    if args.from_yd:
+        rows += pull_from_yd(args.from_yd, work)
+    if not rows:
+        print("[still_pool] кандидатов нет", file=sys.stderr)
+        return 1
+
+    print(f"\nкандидатов: {len(rows)} — прогон через гейты (надпись + лицо)\n", flush=True)
+    kept, manifest = [], []
+    for i, r in enumerate(rows, 1):
+        v = judge(str(r["path"]))
+        name = Path(r["path"]).name
+        rec = {**{k: r[k] for k in ("shot_type", "query", "src", "title", "license", "creator")},
+               "file": name, "ok": v["ok"], "reject_reason": v["reason"],
+               "ocr_skipped": v["ocr_skipped"], "qc_skipped": v["qc_skipped"]}
+        if v["ok"]:
+            dst = work / "ok" / name
+            Path(r["path"]).replace(dst)
+            r["path"] = dst
+            kept.append(r)
+            print(f"[{i}/{len(rows)}] ✅ {r['shot_type']:8} {name}", flush=True)
+        else:
+            dst = work / "rejected" / f"{v['reason']}__{name}"
+            Path(r["path"]).replace(dst)
+            print(f"[{i}/{len(rows)}] 🔴 {r['shot_type']:8} {name} — {v['reason']}", flush=True)
+        rec["path"] = str(dst.relative_to(work))
+        manifest.append(rec)
+
+    # Сводка по логике кадра — главный выход: перекос в один тип = монотонный монтаж
+    dist: dict[str, int] = {}
+    for r in kept:
+        dist[r["shot_type"]] = dist.get(r["shot_type"], 0) + 1
+    total = max(1, len(kept))
+    print(f"\nгодных {len(kept)} из {len(rows)}. ЛОГИКА КАДРА:")
+    for s in SHOT_TYPES + ("unclear",):
+        if dist.get(s):
+            print(f"  {s:8} {dist[s]:3}  {dist[s] * 100 // total:3}%")
+
+    (work / "MANIFEST.json").write_text(
+        json.dumps({"track": os.environ.get("TRACK", ""), "kept": len(kept),
+                    "total": len(rows), "shot_types": dist, "items": manifest},
+                   ensure_ascii=False, indent=2), encoding="utf-8")
+    sheet = work / "CONTACT_SHEET.jpg"
+    if contact_sheet(kept, sheet):
+        print(f"контактный лист: {sheet}")
+
+    dest = f"ydrive:{args.out_yd}"
+    for sub in ("ok", "rejected"):
+        subprocess.run(["rclone", "copy", str(work / sub), f"{dest}/{sub}"], check=False)
+    for f in ("MANIFEST.json", "CONTACT_SHEET.jpg"):
+        if (work / f).exists():
+            subprocess.run(["rclone", "copyto", str(work / f), f"{dest}/{f}"], check=False)
+    print(f"\n✓ пул → {args.out_yd}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

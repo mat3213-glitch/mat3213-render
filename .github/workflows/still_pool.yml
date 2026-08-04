@@ -1,0 +1,85 @@
+name: "Still Pool — пул стиллов под трек (сток + гейты + контактный лист)"
+
+# Первый этап сборки пула под трек: НАБРАТЬ и ПРОСЕЯТЬ исходники, до всякого GPU.
+# LTX-оживление стоит ~10 мин Kaggle на шот, поэтому брак (надпись, лицо крупным планом)
+# обязан отваливаться здесь. Полный рендер/оживление — только после OK на контактном листе
+# ([[feedback_preview_first_gate]]).
+#
+# Согласованность пула = ЕДИНАЯ ЛОГИКА КАДРА (решение yaromat 04.08): запрос несёт тип плана
+# (`texture:`/`detail:`/`medium:`/`wide:`), сводка показывает распределение. Перекос в один
+# тип = монотонный монтаж, чем ни крой (пул v1: 14 коридоров из 26).
+
+on:
+  workflow_dispatch:
+    inputs:
+      queries:
+        description: "Запросы Openverse через ';' с типом плана: 'texture:sunlight on wall;detail:piano keys'"
+        required: false
+        default: ""
+        type: string
+      per:
+        description: "Кандидатов на запрос (Openverse)"
+        required: false
+        default: "3"
+        type: string
+      from_yd:
+        description: "(опц.) Просеять уже скачанное — папка на ЯД (пул Pexels)"
+        required: false
+        default: ""
+        type: string
+      out_yd:
+        description: "Куда положить пул (папка на ЯД)"
+        required: true
+        type: string
+      track:
+        description: "Имя трека (в манифест)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  pool:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends rclone ffmpeg
+          # rapidocr — гейт надписей; ultralytics/supervision — гейт лиц (source_qc).
+          # Без них гейты уходят в fail-open и брак уезжает в пул молча.
+          pip install -q requests pillow numpy rapidocr-onnxruntime \
+                         supervision ultralytics huggingface_hub opencv-python-headless
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Build pool
+        env:
+          OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
+          OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
+          TRACK: ${{ inputs.track }}
+        run: |
+          set +e   # гейт может вернуть ненулевой rc; итог всё равно должен напечататься
+          python3 -u still_pool.py \
+            --queries "${{ inputs.queries }}" \
+            --per "${{ inputs.per }}" \
+            --from-yd "${{ inputs.from_yd }}" \
+            --out-yd "${{ inputs.out_yd }}"
+          echo "still_pool rc=$?"
