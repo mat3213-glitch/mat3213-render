@@ -75,6 +75,15 @@ jobs:
           # смоук 30.07 показал «rate-limit исчерпан» у gpt-4o и gpt-4.1 на ПЕРВОМ же арте,
           # вердикт выносил один gpt-4o-mini, т.е. ансамбля фактически не было.
           GITHUB_TOKEN: ${{ secrets.GH_MODELS_TOKEN || secrets.GITHUB_TOKEN }}
+          # 🔴 БЕЗ ЭТИХ ТРЁХ АНСАМБЛЬ ВЫРОЖДАЕТСЯ В ОДИН ГОЛОС. Судьи `cf:` и `or:`
+          # выбывают молча («нет CLOUDFLARE_WORKER» / «нет OPENROUTER_API_KEY»), и весь
+          # прогон выносит один gpt-4o-mini — при этом job зелёный (смоук 30812037881:
+          # 3 ошибки из 3 артов, вердикты «unclear»). Ансамбль на трёх провайдерах
+          # собран 30.07, но в облаке НИ РАЗУ не был трёхголосым: калибровка шла с бука,
+          # где ключи берутся из .env. Класс «зелёное ≠ работает».
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           POOL_NAME: ${{ matrix.pool.name }}
           POOL_SRC:  ${{ matrix.pool.src }}
           POOLS:     ${{ inputs.pools }}
