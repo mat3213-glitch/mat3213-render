@@ -42,6 +42,16 @@ def _slug(s: str, n: int = 26) -> str:
     return out[:n] or "q"
 
 
+def _safe_name(s: str, n: int = 46) -> str:
+    """Причина брака едет в ИМЯ файла, а в ней бывают слэши: `h=0.040/0.025/0.038`.
+    Без чистки os.replace уводит файл в несуществующий подкаталог и роняет весь прогон
+    (поймано боем, run 30914202230: 34 кадра из 35 остались непросеянными)."""
+    out = "".join(c if (c.isalnum() or c in "-.=") else "_" for c in s)
+    while "__" in out:
+        out = out.replace("__", "_")
+    return out.strip("_")[:n] or "reject"
+
+
 def parse_queries(raw: str) -> list[tuple[str, str]]:
     """`texture:sunlight on wall` → ('texture', 'sunlight on wall'). Без префикса → unclear."""
     out = []
@@ -215,14 +225,18 @@ def main() -> int:
                "ocr_skipped": v["ocr_skipped"], "qc_skipped": v["qc_skipped"]}
         if v["ok"]:
             dst = work / "ok" / name
-            Path(r["path"]).replace(dst)
-            r["path"] = dst
             kept.append(r)
             print(f"[{i}/{len(rows)}] ✅ {r['shot_type']:8} {name}", flush=True)
         else:
-            dst = work / "rejected" / f"{v['reason']}__{name}"
-            Path(r["path"]).replace(dst)
+            dst = work / "rejected" / f"{_safe_name(v['reason'])}__{name}"
             print(f"[{i}/{len(rows)}] 🔴 {r['shot_type']:8} {name} — {v['reason']}", flush=True)
+        # Один неудачный файл не должен ронять прогон: сбор пула — пакетная работа,
+        # а падение на 2-м из 35 оставляет остальные 33 непросеянными.
+        try:
+            Path(r["path"]).replace(dst)
+            r["path"] = dst
+        except OSError as exc:
+            print(f"      ⚠️ не перемещён: {exc}", flush=True)
         rec["path"] = str(dst.relative_to(work))
         manifest.append(rec)
 
