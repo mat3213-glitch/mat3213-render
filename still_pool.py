@@ -67,6 +67,30 @@ def parse_queries(raw: str) -> list[tuple[str, str]]:
     return out
 
 
+_brand_dead: dict[str, int] = {}   # общий на прогон: иначе предохранитель квоты обнуляется
+
+
+def judge_brand(path: str) -> dict:
+    """VLM-судья бренда (`art_judge`) — ТРЕТИЙ слой, и он обязателен.
+
+    🔴 Замер 04.08 на пуле `conversation inside` показал, чего НЕ ловят первые два:
+    портрет маслом с лицом крупным планом прошёл `source_qc` (YOLOv8-face обучен на
+    фотолицах и живопись не берёт), а одинокая фигура на ночной улице не является
+    ни надписью, ни лицом — но это прямое нарушение вайба.
+    Детерминированные гейты ловят ФАКТ (буквы, лицо), бренд-брак ловит только VLM.
+    """
+    try:
+        from art_judge import judge_file
+        r = judge_file(path, dead=_brand_dead)
+    except Exception as exc:
+        return {"ok": True, "skipped": True, "reason": f"судья недоступен: {exc}"}
+    viol = r.get("violations") or []
+    flaws = r.get("flaws") or []
+    return {"ok": r.get("verdict") != "REJECT", "skipped": r.get("verdict") == "PARTIAL",
+            "reason": ",".join(viol) or None, "flaws": ",".join(flaws) or None,
+            "shot_type_vlm": r.get("shot_type"), "n_votes": r.get("n_votes", 0)}
+
+
 def judge(path: str) -> dict:
     """Оба гейта по одному кадру. Возвращает вердикт + причину брака."""
     verdict = {"ok": True, "reason": None, "ocr_skipped": False, "qc_skipped": False}
@@ -146,12 +170,27 @@ def pull_from_yd(remote: str, work: Path, shot_map: dict[str, str] | None = None
     for p in sorted(dst.rglob("*")):
         if p.suffix.lower() not in (".jpg", ".jpeg", ".png"):
             continue
-        # имя подпапки = slug запроса: сперва карта запросов, потом префикс типа
         q = p.parent.name
-        shot = (shot_map or {}).get(_norm(q)) \
+        # Тип плана ищем по убыванию надёжности: префикс ИМЕНИ ФАЙЛА (его кладём сами
+        # при заливке, поэтому он переживает переливку между папками) → карта запросов
+        # по имени подпапки (пул Pexels) → префикс подпапки.
+        head = p.name.split("__", 1)[0]
+        shot = (head if head in SHOT_TYPES else None) \
+            or (shot_map or {}).get(_norm(q)) \
             or next((s for s in SHOT_TYPES if q.startswith(s)), "unclear")
-        got.append({"path": p, "shot_type": shot, "query": q, "src": "pexels",
-                    "title": p.name, "license": "Pexels", "creator": ""})
+        src = "openverse" if "_ov_" in p.name else "pexels"
+        # Имя внутри пула всегда несёт тип плана: без этого повторный прогон по
+        # объединённой папке потерял бы логику кадра — единственное, чем мы меряем
+        # согласованность пула.
+        target = p if p.name.startswith(f"{shot}__") else p.with_name(f"{shot}__{src}_{p.name}")
+        if target != p:
+            try:
+                p = p.replace(target)
+            except OSError:
+                pass
+        got.append({"path": p, "shot_type": shot, "query": q, "src": src,
+                    "title": p.name, "license": "Pexels" if src == "pexels" else "CC",
+                    "creator": ""})
     return got
 
 
@@ -196,6 +235,9 @@ def main() -> int:
     ap.add_argument("--per", type=int, default=3, help="кандидатов на запрос (Openverse)")
     ap.add_argument("--from-yd", default="", help="просеять уже скачанное (папка на ЯД)")
     ap.add_argument("--out-yd", required=True, help="куда положить пул (папка на ЯД)")
+    ap.add_argument("--no-brand", action="store_true",
+                    help="без VLM-судьи бренда (быстро, но лицо на живописи и одинокая "
+                         "фигура пройдут — их не ловят детерминированные гейты)")
     ap.add_argument("--work", default="pool_work")
     args = ap.parse_args()
 
@@ -223,6 +265,16 @@ def main() -> int:
         rec = {**{k: r[k] for k in ("shot_type", "query", "src", "title", "license", "creator")},
                "file": name, "ok": v["ok"], "reject_reason": v["reason"],
                "ocr_skipped": v["ocr_skipped"], "qc_skipped": v["qc_skipped"]}
+        # Бренд-судья зовётся ТОЛЬКО на переживших дешёвые гейты: он платный по времени
+        # (три модели на кадр), и тратить его на кадр с очевидной надписью незачем.
+        if v["ok"] and not args.no_brand:
+            b = judge_brand(str(r["path"]))
+            rec.update(brand_ok=b["ok"], brand_reason=b.get("reason"),
+                       brand_flaws=b.get("flaws"), brand_votes=b.get("n_votes"),
+                       brand_partial=b.get("skipped"), shot_type_vlm=b.get("shot_type_vlm"))
+            if not b["ok"]:
+                v = {**v, "ok": False, "reason": f"brand__{b['reason']}"}
+                rec.update(ok=False, reject_reason=v["reason"])
         if v["ok"]:
             dst = work / "ok" / name
             kept.append(r)

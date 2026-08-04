@@ -36,6 +36,11 @@ on:
         required: false
         default: ""
         type: string
+      no_brand:
+        description: "Без VLM-судьи бренда (быстрее, но пропустит лицо на живописи и одинокую фигуру)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -75,11 +80,19 @@ jobs:
           OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
           OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
           TRACK: ${{ inputs.track }}
+          # Ключи бренд-судьи. Без них ансамбль вырождается в один голос и вердикт
+          # становится PARTIAL — брак поедет в пул (та же дыра, что чинили 04.08
+          # в art_judge.yml/arts_pool.yml: секреты есть, а в env их не клали).
+          GITHUB_TOKEN:       ${{ secrets.GH_MODELS_TOKEN || secrets.GITHUB_TOKEN }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           set +e   # гейт может вернуть ненулевой rc; итог всё равно должен напечататься
           python3 -u still_pool.py \
             --queries "${{ inputs.queries }}" \
             --per "${{ inputs.per }}" \
             --from-yd "${{ inputs.from_yd }}" \
-            --out-yd "${{ inputs.out_yd }}"
+            --out-yd "${{ inputs.out_yd }}" \
+            ${{ inputs.no_brand && '--no-brand' || '' }}
           echo "still_pool rc=$?"
