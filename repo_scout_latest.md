@@ -1,92 +1,68 @@
-# Repo Scout — 2026-08-03T12:55:26.370014
+# Repo Scout — 2026-08-04T12:02:35.731802
 
-Всего в шортлисте: 22
+Всего в шортлисте: 16
 
-- **zhaoxuya520/reverse-skill** ⭐14950 [orchestration]
+- **zhaoxuya520/reverse-skill** ⭐17092 [orchestration]
   - https://github.com/zhaoxuya520/reverse-skill
-  - 💡 Автоматизирует процесс обратного инжиниринга и тестирования на проникновение, но для проекта вряд ли пригодится, поскольку он ориентирован на музыкальный контент.
+  - 💡 Автоматизирует процесс обратного инжиниринга и тестирования безопасности. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на безопасность и тестирование.
   - 📄 Reverse Engineering / Authorized Penetration Testing / Security Research Skill Router Pack AI-powered routing + On-demand toolchain bootstrapping + Self-evolvin
-- **Graphify-Labs/graphify** ⭐101519 [misc]
-  - https://github.com/Graphify-Labs/graphify
-  - 💡 Позволяет создавать графы знаний из кода и документации, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
-  - 📄 Turn any codebase, with its docs, SQL schemas, configs, and PDFs, into a queryable knowledge graph. A /graphify skill for Claude Code, Cursor, Codex, and Gemini
-- **sherlock-project/sherlock** ⭐88128 [publishing]
-  - https://github.com/sherlock-project/sherlock
-  - 💡 Автоматизирует поиск аккаунтов в социальных сетях, может быть полезен для продвижения музыкального контента в социальных сетях.
-  - 📄 Hunt down social media accounts by username across social networks
-- **abus-aikorea/voice-pro** ⭐12003 [audio]
-  - https://github.com/abus-aikorea/voice-pro
-  - 💡 Позволяет создавать голосовые ассистенты и обрабатывать аудио, может быть полезен для создания голосовых интерфейсов для музыкального контента.
-  - 📄 Gradio WebUI for creators and developers, featuring key TTS (Edge-TTS, kokoro) and zero-shot Voice Cloning (E2 &amp; F5-TTS, CosyVoice), with Whisper audio proc
-- **invoke-ai/InvokeAI** ⭐27732 [craft]
-  - https://github.com/invoke-ai/InvokeAI
-  - 💡 Автоматизирует создание визуального контента с помощью AI, может быть полезен для создания артов и видео для музыкального контента.
-  - 📄 Invoke is a leading creative engine for Stable Diffusion models, empowering professionals, artists, and enthusiasts to generate and create visual media using th
-- **Panniantong/Agent-Reach** ⭐65352 [orchestration]
-  - https://github.com/Panniantong/Agent-Reach
-  - 💡 Позволяет создавать агентов, которые могут искать и читать информацию в интернете, может быть полезен для поиска и агрегации музыкального контента.
-  - 📄 Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.
-- **iv-org/invidious** ⭐22146 [misc]
-  - https://github.com/iv-org/invidious
-  - 💡 Предоставляет альтернативный интерфейс для YouTube, может быть полезен для хостинга и распространения музыкального видеоконтента.
-  - 📄 Invidious is an alternative front-end to YouTube
-- **NousResearch/hermes-agent** ⭐224671 [orchestration]
+- **RVC-Project/Retrieval-based-Voice-Conversion-WebUI** ⭐37065 [misc]
+  - https://github.com/RVC-Project/Retrieval-based-Voice-Conversion-WebUI
+  - 💡 Позволяет легко обучать модели голосового преобразования. Этот репозиторий может быть полезен для нашего проекта, если мы хотим добавить функцию голосового преобразования в наши видеоролики.
+  - 📄 Easily train a good VC model with voice data &lt;= 10 mins!
+- **uber/ADR** ⭐512 [vision]
+  - https://github.com/uber/ADR
+  - 💡 Предоставляет инструменты для обеспечения безопасности и наблюдаемости ИИ-агентов. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на крупномасштабные предприятия и безопасность.
+  - 📄 ADR secures enterprise AI agents through observability, security benchmarking, and threat detection. Deployed at Uber.
+- **NousResearch/hermes-agent** ⭐225212 [orchestration]
   - https://github.com/NousResearch/hermes-agent
-  - 💡 Позволяет создавать агентов, которые могут расти и развиваться, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет агент, который может расти и развиваться вместе с пользователем. Этот репозиторий может быть полезен для нашего проекта, если мы хотим создать более сложные и адаптивные ИИ-агенты.
   - 📄 The agent that grows with you
-- **shiyu-coder/Kronos** ⭐35720 [misc]
-  - https://github.com/shiyu-coder/Kronos
-  - 💡 Позволяет создавать агентов, которые могут анализировать финансовые рынки, но для проекта вряд ли пригодится, поскольку он ориентирован на музыкальный контент.
-  - 📄 Kronos: A Foundation Model for the Language of Financial Markets
-- **lyogavin/airllm** ⭐26308 [orchestration]
+- **Panniantong/Agent-Reach** ⭐66248 [orchestration]
+  - https://github.com/Panniantong/Agent-Reach
+  - 💡 Позволяет ИИ-агентам получить доступ к интернету и искать информацию. Этот репозиторий может быть полезен для нашего проекта, если мы хотим добавить функцию поиска информации в наши видеоролики.
+  - 📄 Give your AI agent eyes to see the entire internet. Read &amp; search Twitter, Reddit, YouTube, GitHub, Bilibili, XiaoHongShu — one CLI, zero API fees.
+- **lyogavin/airllm** ⭐27944 [orchestration]
   - https://github.com/lyogavin/airllm
-  - 💡 Позволяет создавать агентов, которые могут работать с языковыми моделями, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет возможность запускать крупномасштабные ИИ-модели на одной видеокарте. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он требует мощной видеокарты.
   - 📄 AirLLM 70B inference with single 4GB GPU
-- **actualbudget/actual** ⭐27913 [misc]
-  - https://github.com/actualbudget/actual
-  - 💡 Позволяет создавать личные финансовые приложения, но для проекта вряд ли пригодится, поскольку он ориентирован на музыкальный контент.
-  - 📄 A local-first personal finance app
-- **esengine/DeepSeek-Reasonix** ⭐29606 [orchestration]
+- **esengine/DeepSeek-Reasonix** ⭐30474 [orchestration]
   - https://github.com/esengine/DeepSeek-Reasonix
-  - 💡 Позволяет создавать агентов, которые могут работать с кодом и документацией, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет агент для кодирования и разработки. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на разработку и кодирование.
   - 📄 DeepSeek-native AI coding agent for your terminal. Engineered around prefix-cache stability — leave it running.
-- **TencentCloud/TencentDB-Agent-Memory** ⭐11685 [orchestration]
+- **Shubhamsaboo/awesome-llm-apps** ⭐130397 [orchestration]
+  - https://github.com/Shubhamsaboo/awesome-llm-apps
+  - 💡 Предоставляет коллекцию приложений и агентов для ИИ-моделей. Этот репозиторий может быть полезен для нашего проекта, если мы хотим найти новые идеи и приложения для наших видеороликов.
+  - 📄 100+ AI Agents, Agent Skills and RAG Apps - Free and Open Source.
+- **TencentCloud/TencentDB-Agent-Memory** ⭐12759 [orchestration]
   - https://github.com/TencentCloud/TencentDB-Agent-Memory
-  - 💡 Позволяет создавать агентов, которые могут работать с памятью и знаниями, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
+  - 💡 Предоставляет инструмент для управления памятью и знаниями ИИ-агентов. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на крупномасштабные предприятия и управление знаниями.
   - 📄 TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into four reusable memory assets (Chat Memory, Skill, LL
-- **bytedance/deer-flow** ⭐79097 [orchestration]
-  - https://github.com/bytedance/deer-flow
-  - 💡 Позволяет создавать агентов, которые могут работать с задачами и процессами, может быть полезен для автоматизации музыкального контента.
-  - 📄 An open-source long-horizon SuperAgent harness that researches, codes, and creates. With the help of sandboxes, memories, tools, skill, subagents and message ga
-- **antirez/ds4** ⭐20219 [orchestration]
-  - https://github.com/antirez/ds4
-  - 💡 Позволяет создавать агентов, которые могут работать с кодом и документацией, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
-  - 📄 DeepSeek 4 Flash and PRO local inference engine for Metal, CUDA and ROCm
-- **can1357/oh-my-pi** ⭐21472 [orchestration]
-  - https://github.com/can1357/oh-my-pi
-  - 💡 Позволяет создавать агентов, которые могут работать с кодом и документацией, но для проекта вряд ли пригодится, поскольку он не связан напрямую с музыкой или видео.
-  - 📄 ⌥ AI Coding agent for the terminal — hash-anchored edits, optimized tool harness, LSP, Python, browser, subagents, and more
-- **K-Dense-AI/scientific-agent-skills** ⭐32481 [orchestration]
+- **huangruiteng/loopx** ⭐1412 [orchestration]
+  - https://github.com/huangruiteng/loopx
+  - 💡 Предоставляет инструмент для управления и оптимизации циклов ИИ-агентов. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на разработку и оптимизацию.
+  - 📄 Lightweight loop engineering state kernel for long-running AI agent teams. Agent-loop agnostic across Codex, Claude Code, and other coding agents, with durable 
+- **browser-use/video-use** ⭐18961 [orchestration]
+  - https://github.com/browser-use/video-use
+  - 💡 Позволяет редактировать видео с помощью ИИ-агентов. Этот репозиторий может быть полезен для нашего проекта, если мы хотим добавить функцию редактирования видео в наши видеоролики.
+  - 📄 Edit videos with coding agents
+- **K-Dense-AI/scientific-agent-skills** ⭐32599 [orchestration]
   - https://github.com/K-Dense-AI/scientific-agent-skills
-  - 💡 Позволяет создавать агентов, которые могут работать с научными задачами, но для проекта вряд ли пригодится, поскольку он ориентирован на музыкальный контент.
+  - 💡 Предоставляет инструменты и навыки для научных ИИ-агентов. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на научные исследования и разработку.
   - 📄 Turn any AI agent into an AI Scientist. The #1 Agent Skills library for science, used by 170,000+ scientists worldwide. 158 ready-to-use skills plus 100+ scient
-- **livekit/agents** ⭐11798 [orchestration]
+- **facebook/astryx** ⭐11532 [orchestration]
+  - https://github.com/facebook/astryx
+  - 💡 Предоставляет открытую систему дизайна для ИИ-агентов. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на дизайн и разработку.
+  - 📄 An open source design system that's fully customizable and agent ready
+- **livekit/agents** ⭐12218 [orchestration]
   - https://github.com/livekit/agents
-  - 💡 Позволяет создавать агентов, которые могут работать с голосовыми интерфейсами, может быть полезен для создания голосовых интерфейсов для музыкального контента.
+  - 💡 Предоставляет фреймворк для построения реальных ИИ-агентов для голосовых приложений. Этот репозиторий может быть полезен для нашего проекта, если мы хотим добавить функцию голосовых приложений в наши видеоролики.
   - 📄 A framework for building realtime voice AI agents 🤖🎙️📹
-- **gitroomhq/postiz-app** ⭐34205 [orchestration]
-  - https://github.com/gitroomhq/postiz-app
-  - 💡 Позволяет создавать агентов, которые могут работать с социальными сетями, может быть полезен для продвижения музыкального контента в социальных сетях.
-  - 📄 📨 The ultimate agentic social media scheduling tool 🤖
-- **simstudioai/sim** ⭐29311 [orchestration]
-  - https://github.com/simstudioai/sim
-  - 💡 Позволяет создавать агентов, которые могут работать с AI-задачами, может быть полезен для автоматизации музыкального контента.
-  - 📄 Build, deploy, and orchestrate AI agents. Sim is the central intelligence layer for your AI workforce.
-- **comet-ml/opik** ⭐21085 [orchestration]
-  - https://github.com/comet-ml/opik
-  - 💡 Позволяет создавать агентов, которые могут работать с AI-задачами, может быть полезен для автоматизации музыкального контента.
-  - 📄 Debug, evaluate, and monitor your LLM applications, RAG systems, and agentic workflows with comprehensive tracing, automated evaluations, and production-ready d
-- **PostHog/posthog** ⭐37465 [orchestration]
-  - https://github.com/PostHog/posthog
-  - 💡 Позволяет создавать агентов, которые могут работать с данными и аналитикой, может быть полезен для анализа и оптимизации музыкального контента.
-  - 📄 🦔 PostHog is the leading platform for building self-driving products. Our developer tools – AI observability, analytics, session replay, flags, experiments, err
+- **alirezarezvani/claude-skills** ⭐23779 [orchestration]
+  - https://github.com/alirezarezvani/claude-skills
+  - 💡 Предоставляет коллекцию навыков и плагинов для ИИ-агентов. Этот репозиторий может быть полезен для нашего проекта, если мы хотим найти новые идеи и приложения для наших видеороликов.
+  - 📄 345 Claude Code skills &amp; agent skills &amp; plugins (30+ Agents, 70+ custom commands, 330+ skills, customizable references, scripts)for Claude Code, Codex, 
+- **nrwl/nx** ⭐29191 [orchestration]
+  - https://github.com/nrwl/nx
+  - 💡 Предоставляет платформу для монорепозиториев и разработки. Этот репозиторий вряд ли пригодится для нашего проекта, поскольку он ориентирован на разработку и управление репозиториями.
+  - 📄 The Monorepo Platform that amplifies both developers and AI agents. Nx optimizes your builds, scales your CI, and fixes failed PRs automatically. Ship in half t
