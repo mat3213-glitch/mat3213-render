@@ -218,14 +218,45 @@ ENGINES = {"tesseract": find_text, "rapidocr": find_text_regions}
 # дорожный знак «USE LOWER GEARS» на стилле 29.07 прошёл бы правило «мелких» насквозь.
 # Поэтому профиль выбирается точкой встройки, а не угадывается на месте вызова.
 PROFILES: dict[str, dict[str, Any]] = {
-    # арт из пула: замер на листе A (run 30811081122) — 1/1 пойманного, 0/10 ложных
+    # арт из пула: замер на листе A (run 30811081122) — 1/1 пойманного, 0/10 ложных.
+    # Слово НЕ проверяем: псевдотекст не читается, распознавание там даёт ноль регионов.
     "art": {"min_small": 2, "small_h_lo": 0.008, "small_h_hi": 0.05},
-    # ⚠️ сток/стилл: ПОКА КОПИЯ «art» — на стоковом материале замера ещё НЕ БЫЛО.
-    # Держим заведомо консервативно (ловит меньше, чем нужно), но честно: выдуманный
-    # порог хуже отсутствующего, потому что выглядит как работающий гейт.
-    # Замеряется воркфлоу `ocr_still_calibrate.yml` → профиль правится по числам.
-    "still": {"min_small": 2, "small_h_lo": 0.008, "small_h_hi": 0.05},
+    # сток/стилл: замер на 24 кадрах Openverse (run 30911422434). Правило «двух мелких»
+    # ловит знаки и таблички, но КРУПНУЮ надпись теряет — «MIND THE GAP» во весь кадр
+    # (h=0.318) прошло чистым. Добавлено второе условие ПО СЛОВУ: на стоке текст
+    # настоящий и читается (score 0.94–0.98), в отличие от псевдотекста на артах.
+    "still": {"min_small": 2, "small_h_lo": 0.008, "small_h_hi": 0.05,
+              "min_word_len": 3, "min_word_score": 0.8},
 }
+
+# Порог по слову вынесен в константы, чтобы не расползался по коду
+WORD_LEN_DEFAULT = 3
+WORD_SCORE_DEFAULT = 0.8
+
+
+def find_words(path: str, *, min_word_len: int = WORD_LEN_DEFAULT,
+               min_word_score: float = WORD_SCORE_DEFAULT, **kw: Any) -> dict[str, Any]:
+    """Прочитанные СЛОВА в кадре (распознавание). Отдельным проходом — намеренно.
+
+    RapidOCR с `use_rec=True` режет выдачу внутренним text_score, и набор боксов
+    получается ДРУГОЙ: на `wet_asphalt_night__2` детекция без распознавания дала
+    5 регионов, с распознаванием — ноль. Поэтому правило «мелких регионов» и правило
+    «прочитанного слова» нельзя считать за один проход: они смотрят разное.
+    """
+    res = find_text_regions(path, with_rec=True, min_area_ratio=0.0, **kw)
+    if not res.get("available"):
+        return {"available": False, "words": [], "reason": res.get("reason")}
+    words = []
+    for b in res.get("boxes") or []:
+        text = (b.get("text") or "").strip()
+        score = b.get("score") or 0.0
+        letters = "".join(ch for ch in text if ch.isalnum())
+        # Одиночный символ — шум текстуры, а не надпись: на абстрактном мазке
+        # прочиталось 'S'(0.82), на манускрипте '9'(0.74). Слово начинается с трёх.
+        if len(letters) >= min_word_len and score >= min_word_score:
+            words.append({"text": text, "score": score, "h_ratio": b["h_ratio"]})
+    return {"available": True, "words": words,
+            "reason": "; ".join(f"{w['text']!r}({w['score']:.2f})" for w in words[:3])}
 
 
 def gate(path: str, *, profile: str = "art", **overrides: Any) -> dict[str, Any]:
@@ -236,8 +267,20 @@ def gate(path: str, *, profile: str = "art", **overrides: Any) -> dict[str, Any]
     """
     params = dict(PROFILES.get(profile, PROFILES["art"]))
     params.update(overrides)
+    word_len = params.pop("min_word_len", None)
+    word_score = params.pop("min_word_score", None)
+
     res = find_text_regions(path, **params)
     res["profile"] = profile
+    if res.get("has_text") or word_len is None or not res.get("available"):
+        return res
+
+    # Регионы чисты — но крупная читаемая надпись сюда и не попадает. Второй проход.
+    w = find_words(path, min_word_len=word_len, min_word_score=word_score)
+    res["words"] = w.get("words") or []
+    if w.get("available") and res["words"]:
+        res["has_text"] = True
+        res["reason"] = f"прочитано: {w['reason']}"
     return res
 
 GRIDS = {
