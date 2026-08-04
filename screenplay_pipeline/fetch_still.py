@@ -19,7 +19,26 @@ from urllib.parse import urlencode
 
 import requests
 
+# ocr_gate.py лежит в корне github_actions_clips, на уровень выше пайплайна
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 API_BASE = "https://api.openverse.org/v1"
+
+
+def has_text_in_frame(path: str) -> dict:
+    """Гейт надписей на СКАЧАННОМ кандидате (`ocr_gate`, профиль `still`).
+
+    Зачем прямо здесь, а не только в source_qc: сток отдаёт кадры с настоящим текстом
+    (знаки, вывески, вотермарки), и дешевле отбросить кандидата на месте — в выдаче
+    Openverse есть ещё четыре. 29.07 по запросу «rain fog street» приехало шоссе со
+    знаками «USE LOWER GEARS»/«NEXT 2 MILES», и это увидели только глазами.
+    Fail-open: недоступный гейт не должен рвать добычу стилла.
+    """
+    try:
+        from ocr_gate import gate
+        return gate(path, profile="still")
+    except Exception as exc:
+        return {"available": False, "has_text": False, "reason": f"ocr недоступен: {exc}"}
 
 
 def get_token(client_id: str, client_secret: str) -> str:
@@ -63,6 +82,8 @@ def main():
     ap.add_argument("--client-id", default=None, help="или env OPENVERSE_CLIENT_ID")
     ap.add_argument("--client-secret", default=None, help="или env OPENVERSE_CLIENT_SECRET")
     ap.add_argument("--license", default="cc0")
+    ap.add_argument("--no-ocr", action="store_true",
+                    help="не проверять кандидатов гейтом надписей (по умолчанию проверяем)")
     args = ap.parse_args()
 
     import os
@@ -95,14 +116,33 @@ def main():
         print(f"[error] Openverse: ничего не найдено (пробовал: {tried})", file=sys.stderr)
         sys.exit(1)
 
+    rejected = 0
     for item in items:
         img_url = item.get("url")
-        if img_url and download(img_url, args.out):
-            print(f"[ok] {args.out} ← {item.get('title', '')} ({item.get('license', '')})")
-            return
-        print(f"[fetch_still] пропуск (не скачалось): {img_url}", file=sys.stderr)
+        if not (img_url and download(img_url, args.out)):
+            print(f"[fetch_still] пропуск (не скачалось): {img_url}", file=sys.stderr)
+            continue
 
-    print(f"[error] ни один из {len(items)} результатов не скачался", file=sys.stderr)
+        if not args.no_ocr:
+            ocr = has_text_in_frame(args.out)
+            if not ocr.get("available"):
+                # Не «чисто», а «не проверено» — разница важная: молчаливый пропуск
+                # выглядел бы как пройденный гейт (урок mimo_chat.yml, где обрыв job
+                # читался пользователем как тишина, а не как ошибка).
+                print(f"[fetch_still] ⚠️ гейт надписей не отработал: {ocr.get('reason')}",
+                      file=sys.stderr)
+            elif ocr.get("has_text"):
+                rejected += 1
+                print(f"[fetch_still] REJECT надпись в кадре ({ocr.get('reason')}): "
+                      f"{item.get('title', '')} — беру следующего кандидата")
+                Path(args.out).unlink(missing_ok=True)
+                continue
+
+        print(f"[ok] {args.out} ← {item.get('title', '')} ({item.get('license', '')})")
+        return
+
+    print(f"[error] ни один из {len(items)} результатов не подошёл "
+          f"(отбраковано по надписи: {rejected})", file=sys.stderr)
     sys.exit(1)
 
 

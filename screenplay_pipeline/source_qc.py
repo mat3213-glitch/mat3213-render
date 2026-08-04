@@ -5,6 +5,7 @@ source_qc.py — детерминированный Source-QC пре-гейт (s
 Слой L4 архитектуры v4: дешёвый детерминированный фильтр ПЕРЕД дорогим VLM
 (plastic_gate_core). Ловит то, в чём обученный детектор объективнее догадок VLM:
   • ЛИЦО КРУПНЫМ ПЛАНОМ — брак ([[feedback_no_faces_in_clips]]); фигура/силуэт — ок;
+  • НАДПИСЬ В КАДРЕ — брак ([[feedback_no_text_on_images]]), гейт `ocr_gate.py`;
   • person/object-теги — объективное обогащение пула.
 
 Двухфакторный детект лица (урок теста 2026-07-10: YOLOv8-face ложнит на круглых
@@ -16,10 +17,15 @@ API: judge_source(path) -> dict. Модели грузятся лениво и �
 поднялся — verdict ok=True с флагом qc_skipped (не блокируем пайплайн из-за среды).
 """
 import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
 
+# ocr_gate.py лежит в корне github_actions_clips, на уровень выше пайплайна
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".webp")
 FACE_CONF = 0.5
 FACE_AREA_CLOSEUP = 0.08          # доля кадра под лицом → «крупный план»
 ROUND_COCO = {"clock", "vase", "sports ball", "donut", "frisbee", "orange", "apple"}
@@ -77,12 +83,65 @@ def _iou_contain(face_box, obj_box) -> float:
     return inter / face_area
 
 
-def judge_source(path: str) -> dict:
-    """Детерминированный вердикт источника. ok=False только при лице крупным планом."""
-    _load()
+def _judge_text(path: str, profile: str = "still") -> dict:
+    """Надпись в кадре через `ocr_gate` (детектор регионов, без распознавания).
+
+    Видео сначала сводится к первому кадру: гейт работает по картинке. Fail-open —
+    недоступный гейт НЕ должен ронять пайплайн, но и не должен молча выглядеть чистым,
+    поэтому невозможность проверки возвращается отдельным флагом `available`.
+    """
+    try:
+        from ocr_gate import gate
+    except Exception as exc:
+        return {"available": False, "has_text": False, "reason": f"import error: {exc}"}
+
+    tmp = None
+    try:
+        if Path(path).suffix.lower() in IMAGE_EXTS:
+            target = path
+        else:
+            import cv2
+            frame = _first_frame(path)
+            if frame is None:
+                return {"available": False, "has_text": False, "reason": "кадр не прочитан"}
+            tmp = Path(path).with_suffix(".ocr.png")
+            cv2.imwrite(str(tmp), frame)
+            target = str(tmp)
+        return gate(target, profile=profile)
+    except Exception as exc:
+        return {"available": False, "has_text": False, "reason": f"ocr error: {exc}"}
+    finally:
+        if tmp is not None:
+            Path(tmp).unlink(missing_ok=True)
+
+
+def judge_source(path: str, *, ocr_profile: str = "still") -> dict:
+    """Детерминированный вердикт источника. ok=False при лице крупным планом или надписи."""
     verdict = {"ok": True, "reject_reason": None, "persons": 0, "objects": [],
                "faces_kept": 0, "max_face_frac": 0.0, "closeup_face": False,
-               "qc_skipped": False}
+               "qc_skipped": False, "text_in_frame": False, "text_reason": None,
+               "ocr_skipped": False}
+
+    # ── НАДПИСЬ — ПЕРВОЙ, ДО ЗАГРУЗКИ ДЕТЕКТОРОВ ────────────────────────────────
+    # Надпись это факт, а не вкус: ни YOLO, ни VLM для неё не нужны. Ставим гейт
+    # раньше `_load()`, чтобы пойманный кадр не тянул две модели впустую — та же
+    # логика, что в `art_judge.judge_file` (OCR до опроса ансамбля).
+    # Кейс, ради которого это сделано: стилл «rain fog street» 29.07 приехал с
+    # дорожными знаками «USE LOWER GEARS», прошёл brand_guard (тот судит ТЕКСТ
+    # промпта, не картинку) и ушёл в i2v.
+    ocr = _judge_text(path, profile=ocr_profile)
+    if not ocr.get("available"):
+        verdict["ocr_skipped"] = True
+        verdict["text_reason"] = ocr.get("reason")
+    elif ocr.get("has_text"):
+        verdict["ok"] = False
+        verdict["text_in_frame"] = True
+        verdict["text_reason"] = ocr.get("reason")
+        verdict["reject_reason"] = (
+            f"надпись в кадре ({ocr.get('reason')}) — правило «без текста на картинках»")
+        return verdict
+
+    _load()
     if _yolo is None and _face is None:
         verdict["qc_skipped"] = True
         return verdict

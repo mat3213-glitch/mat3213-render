@@ -20,7 +20,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq ffmpeg libgl1 libglib2.0-0
-          pip install --quiet supervision ultralytics huggingface_hub numpy
+          # rapidocr-onnxruntime + pillow: source_qc теперь судит и надпись в кадре,
+          # регресс обязан гонять гейт по-настоящему, а не через fail-open
+          pip install --quiet supervision ultralytics huggingface_hub numpy pillow rapidocr-onnxruntime
           curl -fsSL https://rclone.org/install.sh | sudo bash
 
       - name: Configure rclone (ЯД / ydrive)

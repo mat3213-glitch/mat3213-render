@@ -6,7 +6,13 @@ source_qc_validate.py — регресс-проверка двухфакторн
   1) ЧАСЫ (ложняк YOLOv8-face из теста 2026-07-10) — теперь НЕ должны реджектиться
      (круглый COCO-класс подавляет лицо);
   2) силуэты людей — persons>0, лицо крупным планом НЕ ловится (фигуры ок);
+  3) НАДПИСЬ в кадре — должна реджектиться, а разрешённый номер машины вдали — нет
+     (гейт `ocr_gate`, профиль still).
 Печатает вердикты, exit≠0 если регрессия (часы забракованы).
+
+⚠️ Кейс с надписью проверяет не только вердикт, но и что гейт РЕАЛЬНО отработал:
+fail-open (`ocr_skipped`) на позитиве выглядел бы как чистый кадр — это и есть тот
+молчаливый провал, который дороже громкого падения.
 """
 import sys
 import subprocess
@@ -16,10 +22,14 @@ from pathlib import Path
 import source_qc
 
 YD = "ydrive:Content factory"
+SHEET = "cloud_io/preview/2026-07-29/art_gate"
 CASES = [
     # (rel_path, ожидание ok, метка)
     ("cloud_io/qwen_pool/2026-06-18/img_01.png", True, "ЧАСЫ (не должны быть лицом)"),
     ("cloud_io/veofree_pool/2026-07-04/vid_01.mp4", True, "силуэты людей (фигуры ок)"),
+    (f"{SHEET}/reject/text_in_frame__child.png", False, "НАДПИСЬ (псевдотекст на бирке)"),
+    # разрешён владельцем: размытый номер машины вдали — один мелкий регион, не два
+    (f"{SHEET}/ok/texture__art1.png", True, "номер машины вдали (yaromat разрешил)"),
 ]
 
 
@@ -33,12 +43,18 @@ def main() -> int:
         if r.returncode != 0:
             print(f"⚠ {label}: не скачался ({r.stderr[:80]}) — пропуск"); continue
         v = source_qc.judge_source(str(local))
-        status = "OK" if v["ok"] == want_ok else "❌ РЕГРЕССИЯ"
-        if v["ok"] != want_ok:
+        bad = v["ok"] != want_ok
+        # Позитив, пройденный при неотработавшем гейте, — не «зелено», а «не проверено»
+        if not want_ok and v.get("ocr_skipped"):
+            bad = True
+        status = "OK" if not bad else "❌ РЕГРЕССИЯ"
+        if bad:
             fail += 1
         print(f"[{status}] {label}: ok={v['ok']} persons={v['persons']} "
               f"faces_kept={v['faces_kept']} face_frac={v['max_face_frac']:.0%} "
               f"closeup={v['closeup_face']} skip={v['qc_skipped']} "
+              f"text={v.get('text_in_frame')} ocr_skip={v.get('ocr_skipped')} "
+              f"ocr={v.get('text_reason')} "
               f"objects={v['objects']} reason={v['reject_reason']}")
     print("\nИТОГ:", "ВСЁ ЗЕЛЁНОЕ" if fail == 0 else f"{fail} регрессий")
     return 1 if fail else 0

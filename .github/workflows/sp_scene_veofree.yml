@@ -44,7 +44,8 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing rclone
-          pip install -q requests playwright
+          # rapidocr-onnxruntime + pillow — гейт надписей на скачанном стилле (fetch_still)
+          pip install -q requests playwright pillow rapidocr-onnxruntime
           python -m playwright install --with-deps chromium
 
       - name: Configure rclone ydrive

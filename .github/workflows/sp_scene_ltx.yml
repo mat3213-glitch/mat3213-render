@@ -52,7 +52,9 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing rclone
-          pip install -q requests pillow numpy kaggle
+          # rapidocr-onnxruntime — гейт надписей в кадре (модели внутри пакета, без apt).
+          # Без него ocr_gate уходит в fail-open и стилл со знаками едет в i2v (кейс 29.07).
+          pip install -q requests pillow numpy kaggle rapidocr-onnxruntime
 
       - name: Configure rclone ydrive
         env:

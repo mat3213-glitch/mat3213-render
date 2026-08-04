@@ -1,0 +1,122 @@
+name: OCR Still Calibrate (профиль гейта надписей для СТОКА)
+
+# Зачем отдельно от `ocr_calibrate.yml`: тот меряет пороги на AI-АРТАХ, где надпись —
+# псевдотекст (мелкие закорючки на бирке), и оттуда пришло правило «два мелких региона».
+# У стокового кадра брак ДРУГОЙ ПРИРОДЫ: настоящая читаемая надпись, часто крупная —
+# знаки «USE LOWER GEARS»/«NEXT 2 MILES» на стилле 29.07 правило «мелких» пропустит.
+#
+# Здесь НЕ внедрение, а ЗАМЕР на том материале, который реально приезжает в пайплайн:
+# качаем кандидатов Openverse теми же запросами, что строит `build_still_query`
+# (3-4 слова), печатаем сырые числа и КЛАДЁМ КАДРЫ НА ЯД — размечает их глаз, не метрика
+# ([[feedback_number_lies_look_at_frames]]). Профиль `still` в ocr_gate.PROFILES
+# правится ПОСЛЕ этого прогона, по числам и разметке.
+
+on:
+  workflow_dispatch:
+    inputs:
+      queries:
+        description: "Запросы к Openverse через ';' (как их строит build_still_query)"
+        required: false
+        default: "rain fog street;wet asphalt night;abstract atmospheric texture;shop window reflection;train station platform;old book pages"
+        type: string
+      out_date:
+        description: "Папка-дата на ЯД (пусто = сегодня)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  calibrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends rclone
+          pip install --quiet requests pillow rapidocr-onnxruntime
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch stock candidates
+        env:
+          OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
+          OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
+          QUERIES: ${{ inputs.queries }}
+        run: |
+          set +e   # один пустой запрос не должен обрывать сбор листа
+          mkdir -p sheet
+          python3 - <<'PY'
+          import os, sys, re
+          sys.path.insert(0, "screenplay_pipeline")
+          import fetch_still
+
+          cid = os.environ["OPENVERSE_CLIENT_ID"]; sec = os.environ["OPENVERSE_CLIENT_SECRET"]
+          token = fetch_still.get_token(cid, sec)
+          n = 0
+          for q in [q.strip() for q in os.environ["QUERIES"].split(";") if q.strip()]:
+              items = fetch_still.search_images(q, token)
+              slug = re.sub(r"[^a-z0-9]+", "_", q.lower()).strip("_")[:28]
+              # Берём ВСЮ выдачу, а не первый результат: гейт в fetch_still перебирает
+              # кандидатов, значит и мерить надо на тех же кандидатах.
+              for i, item in enumerate(items[:5]):
+                  url = item.get("url")
+                  out = f"sheet/{slug}__{i}.jpg"
+                  if url and fetch_still.download(url, out):
+                      n += 1
+                      print(f"[ok] {out}  ← {item.get('title','')[:60]}")
+                  else:
+                      print(f"[skip] {q} #{i}: не скачалось", file=sys.stderr)
+          print(f"\nвсего кадров: {n}")
+          PY
+          ls -la sheet | head -40
+
+      - name: СЫРЫЕ ЧИСЛА по кадрам (есть ли разделяющая граница)
+        run: |
+          # --positive заведомо не совпадает ни с одним именем: разметки ещё НЕТ,
+          # её делает глаз по кадрам с ЯД. Колонка «позитив» тут пустая намеренно.
+          python3 ocr_gate.py --dir sheet --positive "__НЕТ_РАЗМЕТКИ__" --dump
+
+      - name: Вердикт текущего профиля still (что гейт делает СЕЙЧАС)
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, ".")
+          from ocr_gate import gate, scan_dir, PROFILES
+          from pathlib import Path
+          print(f"профиль still = {PROFILES['still']}\n")
+          rej = 0
+          for p in sorted(scan_dir("sheet")):
+              r = gate(p, profile="still")
+              if r["has_text"]:
+                  rej += 1
+              print(f"{'REJECT' if r['has_text'] else 'clean ':7} {Path(p).name:34} {r['reason']}")
+          print(f"\nотбраковано {rej} из {len(scan_dir('sheet'))}")
+          PY
+
+      - name: Upload sheet to Yandex Disk (разметка глазами)
+        run: |
+          DATE="${{ inputs.out_date }}"
+          [ -z "$DATE" ] && DATE=$(date +%Y-%m-%d)
+          # Правило именования cloud_io: в корне — только дата, тема подпапкой внутри
+          DEST="ydrive:Content factory/cloud_io/preview/${DATE}/ocr_still_sheet"
+          rclone copy sheet "$DEST" -v
+          echo "✓ лист → $DEST"

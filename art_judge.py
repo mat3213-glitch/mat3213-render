@@ -293,8 +293,8 @@ def judge_file(path, models=None, token=None, dead=None, b64=None):
     # 0/10 ложных, устойчиво по всей полосе порогов. Выключатель: OCR=off.
     if os.environ.get("OCR", "on").lower() != "off":
         try:
-            from ocr_gate import find_text_regions
-            ocr = find_text_regions(path)
+            from ocr_gate import gate
+            ocr = gate(path, profile="art")
             if ocr.get("available") and ocr.get("has_text"):
                 return {
                     "verdict": "REJECT", "violations": ["text_in_frame"], "flaws": [],
