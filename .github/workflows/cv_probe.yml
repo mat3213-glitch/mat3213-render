@@ -39,7 +39,10 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
           # CPU-колесо torch: раннеру GPU не нужен, а полное колесо тянет CUDA на 2.5 ГБ
-          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          # torch И torchvision — из одного индекса: open_clip тянет torchvision, а
+          # смесь «cpu-колесо torch + pypi-torchvision» падает на
+          # `operator torchvision::nms does not exist` уже при импорте.
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
           pip install -q open_clip_torch pillow
 
       - name: Configure rclone ydrive
