@@ -368,7 +368,11 @@ def main() -> None:
     prepare_kaggle_credentials(username, key)
     lifted = crop_resize_and_lift(image_path)
 
-    with tempfile.TemporaryDirectory(prefix=f"ltx-i2v-{job_id}-{scene_idx}-") as temp_name:
+    # job_id по правилу каталогов ЯД содержит СЛЭШ («2026-08-05/conv_inside_ltx»), а в
+    # префиксе временной папки он превращается в несуществующий подкаталог → падение на
+    # первой же секунде (run 30983295706). Слаг ядра от этого защищён sanitize_slug.
+    safe_job = re.sub(r"[^A-Za-z0-9._-]+", "-", job_id).strip("-") or "job"
+    with tempfile.TemporaryDirectory(prefix=f"ltx-i2v-{safe_job}-{scene_idx}-") as temp_name:
         workdir = Path(temp_name)
         lifted_path = workdir / "lifted_input.jpg"
         try:
