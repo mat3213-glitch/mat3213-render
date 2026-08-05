@@ -151,7 +151,9 @@ def main() -> int:
     for i, pool in enumerate([p.strip() for p in args.pools.split(";") if p.strip()]):
         dst = work / f"pool{i}"
         dst.mkdir(exist_ok=True)
-        sh(f'rclone copy "{pool}" "{dst}" --include "*.jpg" --include "*.png" --max-depth 2')
+        # Без ограничения глубины: арты пулов лежат в подпапках set_1…set_7, и с
+        # `--max-depth 2` прогон 05.08 забрал только плоские папки (43 из 133 кадров).
+        sh(f'rclone copy "{pool}" "{dst}" --include "*.jpg" --include "*.png"')
         ours += sorted(dst.rglob("*.jpg")) + sorted(dst.rglob("*.png"))
     print(f"\nнаших кадров: {len(ours)}", flush=True)
 
