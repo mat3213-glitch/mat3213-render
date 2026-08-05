@@ -42,6 +42,13 @@ on:
 permissions:
   contents: read
 
+# Kaggle отдаёт свободный GPU по очереди, а ждём мы его 100 минут. Пачка сцен, пущенная
+# разом, встала бы в давку и половина упала бы по таймауту, не начав считать. Очередь на
+# стороне GitHub дешевле: ожидающие раны стоят в queued и не жгут минуты раннера.
+concurrency:
+  group: ltx-kaggle-gpu
+  cancel-in-progress: false
+
 jobs:
   gen:
     runs-on: ubuntu-latest
