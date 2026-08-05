@@ -29,8 +29,13 @@ on:
         required: true
         description: 'Motion prompt для i2v — с НАБЛЮДАЕМЫМ действием (параллакс, рост объектов). Слова вроде "slow/gentle drift" разрешают нулевое движение и дают фриз.'
       still_query:
-        required: true
-        description: 'Короткий (2-3 слова) запрос для стилла на Openverse'
+        required: false
+        default: ''
+        description: 'Короткий (2-3 слова) запрос для стилла на Openverse. Игнорируется, если задан still_yd.'
+      still_yd:
+        required: false
+        default: ''
+        description: 'ГОТОВЫЙ стилл на ЯД (путь внутри "Content factory/", напр. cloud_io/preview/2026-08-04/conv_inside_pool/ok/wide__pexels_2224890.jpg). Задан — Openverse не опрашивается: кадр уже прошёл гейты пула.'
       seed:
         default: '42'
 
@@ -67,15 +72,25 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Fetch stock still (Openverse) + upload to ЯД
+      - name: Fetch still (готовый с ЯД или сток с Openverse) + upload to ЯД
         env:
           INPUT_STILL_QUERY: ${{ inputs.still_query }}
+          INPUT_STILL_YD: ${{ inputs.still_yd }}
           OPENVERSE_CLIENT_ID:     ${{ secrets.OPENVERSE_CLIENT_ID }}
           OPENVERSE_CLIENT_SECRET: ${{ secrets.OPENVERSE_CLIENT_SECRET }}
           JOB_ID: ${{ inputs.job_id }}
           SCENE_IDX: ${{ inputs.scene_idx }}
         run: |
-          python3 screenplay_pipeline/fetch_still.py "$INPUT_STILL_QUERY" --out still.jpg
+          if [ -n "$INPUT_STILL_YD" ]; then
+            # Кадр из собранного пула: гейты (OCR + source_qc + судья) он уже прошёл там,
+            # плюс его отсмотрел владелец. Второй раз сток не дёргаем.
+            rclone copyto "ydrive:Content factory/$INPUT_STILL_YD" still.jpg
+            test -s still.jpg || { echo "пустой стилл: $INPUT_STILL_YD"; exit 1; }
+          elif [ -n "$INPUT_STILL_QUERY" ]; then
+            python3 screenplay_pipeline/fetch_still.py "$INPUT_STILL_QUERY" --out still.jpg
+          else
+            echo "нужен still_yd или still_query"; exit 1
+          fi
           rclone copyto still.jpg "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated/still_${SCENE_IDX}.jpg"
 
       - name: Generate scene (LTX i2v on Kaggle GPU)
