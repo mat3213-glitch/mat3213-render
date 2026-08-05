@@ -54,7 +54,6 @@ jobs:
             > "$HOME/.config/rclone/rclone.conf"
 
       - name: Probe
-        working-directory: github_actions_clips
         env:
           SRC: ${{ inputs.src }}
           OUT: ${{ inputs.out }}
