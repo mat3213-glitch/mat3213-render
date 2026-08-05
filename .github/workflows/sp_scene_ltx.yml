@@ -19,6 +19,15 @@ name: SP Scene Gen — LTX i2v (Kaggle GPU)
 # Роутинг в scene_dispatch.engine_for() сам уводит «человеческие» шоты на veofree.
 
 on:
+  # workflow_call — чтобы пул-воркфлоу гонял эти же шаги матрицей, без копии кода
+  workflow_call:
+    inputs:
+      job_id: {required: true, type: string}
+      scene_idx: {required: true, type: string}
+      prompt: {required: true, type: string}
+      still_query: {required: false, type: string, default: ''}
+      still_yd: {required: false, type: string, default: ''}
+      seed: {required: false, type: string, default: '42'}
   workflow_dispatch:
     inputs:
       job_id:
@@ -41,13 +50,6 @@ on:
 
 permissions:
   contents: read
-
-# Kaggle отдаёт свободный GPU по очереди, а ждём мы его 100 минут. Пачка сцен, пущенная
-# разом, встала бы в давку и половина упала бы по таймауту, не начав считать. Очередь на
-# стороне GitHub дешевле: ожидающие раны стоят в queued и не жгут минуты раннера.
-concurrency:
-  group: ltx-kaggle-gpu
-  cancel-in-progress: false
 
 jobs:
   gen:

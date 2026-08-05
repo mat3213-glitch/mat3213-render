@@ -1,0 +1,43 @@
+name: SP Pool LTX — оживить пул целиком (очередь по одной сцене)
+
+# Одна кнопка на весь пул. Каждая сцена — отдельный job, но идут они СТРОГО ПО ОДНОЙ
+# (`max-parallel: 1`), потому что бесплатный Kaggle отдаёт GPU по очереди, а наш скрипт
+# ждёт его 100 минут: пачка параллельных ранов упёрлась бы в таймаут, не начав считать.
+#
+# 🔴 ПОЧЕМУ НЕ `concurrency` (замер 05.08): группа concurrency держит в ожидании ТОЛЬКО ОДИН
+# ран — каждый следующий вытесняет предыдущий. Из 29 поставленных сцен 26 отменились сразу.
+# Матрица внутри ОДНОГО рана — единственный способ выстроить настоящую очередь.
+#
+# `scenes` — JSON-массив: [{"idx":"9","still":"cloud_io/.../ok/файл.jpg","prompt":"…"}, …]
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        required: true
+        description: 'ГГГГ-ММ-ДД/имя — как каталог на ЯД'
+      scenes:
+        required: true
+        description: 'JSON-массив сцен: idx + still (путь внутри "Content factory/") + prompt'
+      seed:
+        required: false
+        default: '2013'
+
+permissions:
+  contents: read
+
+jobs:
+  scene:
+    strategy:
+      max-parallel: 1          # очередь: свободный GPU у Kaggle один
+      fail-fast: false         # упавшая сцена не должна снимать остальные
+      matrix:
+        item: ${{ fromJSON(inputs.scenes) }}
+    uses: ./.github/workflows/sp_scene_ltx.yml
+    secrets: inherit
+    with:
+      job_id: ${{ inputs.job_id }}
+      scene_idx: ${{ matrix.item.idx }}
+      still_yd: ${{ matrix.item.still }}
+      prompt: ${{ matrix.item.prompt }}
+      seed: ${{ inputs.seed }}
