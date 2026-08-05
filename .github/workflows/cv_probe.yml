@@ -1,0 +1,65 @@
+name: CV Probe — своё зрение (CLIP zero-shot, фаза 0)
+
+# Замер: разделяет ли CLIP-эмбеддинг наши классы БЕЗ обучения и без чужих API.
+# Повод — GitHub Models сворачивают (410 retirement brownout), а панель VLM-судей
+# держалась на трёх чужих free-тирах. Если zero-shot разделяет, дальше линейная голова
+# на наших вердиктах: веса в килобайтах, инференс на CPU раннера, квот нет вообще.
+
+on:
+  workflow_dispatch:
+    inputs:
+      src:
+        required: false
+        default: 'ydrive:Content factory/cloud_io/preview/2026-08-04/conv_inside_pool'
+        description: 'Папка пула на ЯД (внутри ok/ и rejected/)'
+      out:
+        required: false
+        default: 'ydrive:Content factory/cloud_io/preview/2026-08-05/cv_probe'
+      model:
+        required: false
+        default: 'ViT-B-32'
+      pretrained:
+        required: false
+        default: 'laion2b_s34b_b79k'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+          # CPU-колесо torch: раннеру GPU не нужен, а полное колесо тянет CUDA на 2.5 ГБ
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q open_clip_torch pillow
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Probe
+        working-directory: github_actions_clips
+        env:
+          SRC: ${{ inputs.src }}
+          OUT: ${{ inputs.out }}
+          MODEL: ${{ inputs.model }}
+          PRETRAINED: ${{ inputs.pretrained }}
+        run: |
+          python3 cv_probe.py --src "$SRC" --manifest "$SRC/MANIFEST.json" \
+            --out "$OUT" --model "$MODEL" --pretrained "$PRETRAINED"
