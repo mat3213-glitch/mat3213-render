@@ -1,0 +1,60 @@
+name: CV Train — своя голова «лицо на живописи» (CLIP + logreg)
+
+# Фаза 1 собственного зрения. Обучающий лист берём готовый: WikiArt размечен по жанрам
+# искусствоведами, `portrait` против `landscape/still_life/cityscape` — ровно наши классы.
+# Веса на выходе — килобайты, инференс потом на CPU без обращений наружу.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pools:
+        required: false
+        default: 'ydrive:Content factory/cloud_io/preview/2026-08-04/conv_inside_pool/ok;ydrive:Content factory/cloud_io/preview/2026-08-04/conv_inside_pool/rejected;ydrive:Content factory/cloud_io/render_jobs/2026-07-16/vzrosly_pool/pool'
+        description: 'Наши папки на ЯД через ; — чтобы увидеть голову на реальном пуле'
+      per_class:
+        required: false
+        default: '400'
+      out:
+        required: false
+        default: 'ydrive:Content factory/cloud_io/models/cv_face_painting'
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+          # torch и torchvision — из одного cpu-индекса: смесь с pypi даёт
+          # `operator torchvision::nms does not exist` при импорте open_clip
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -q open_clip_torch pillow datasets numpy
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Train
+        env:
+          POOLS: ${{ inputs.pools }}
+          PER_CLASS: ${{ inputs.per_class }}
+          OUT: ${{ inputs.out }}
+          HF_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+        run: |
+          python3 cv_train.py --pools "$POOLS" --per-class "$PER_CLASS" --out "$OUT"
