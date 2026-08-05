@@ -52,13 +52,24 @@ OR_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 # 180 запросов НА МОДЕЛЬ) в суточную квоту GH Models не влезает в принципе.
 # Gemini отклонён (yaromat: «быстро тратятся токены»), Qwen отклонён (2 мин/кадр через браузер).
 # Замеры 30.07 на реальном арте: CF 1.3с, nemotron 3с, gpt-4o-mini ~2с; JSON отдают все.
+# 🔴 ПЕРЕСБОРКА 05.08 — GH Models СВОРАЧИВАЮТ (HTTP 410 `github_models_retirement_brownout`
+# на любой модели и с любым токеном). Третий голос ансамбля умер не по квоте, а вместе с
+# площадкой. Замер кандидатов на 4 размеченных кадрах (портрет маслом / логотип на пианино /
+# лесная тропа / вода с бликами):
+#   gemma-4-26b  — 2/2 пойманных браков, 6–14с. Ложняки были ТОЛЬКО на `text_in_frame`,
+#                  а его теперь судит OCR (см. aggregate) → лучший голос из живых.
+#   cf:llama-3.2 — 2с, но 2 промаха и 1 ложняк; на одном портрете при temperature=0 дал
+#                  разные ответы в двух прогонах. Годится ТОЛЬКО как дополнительный голос.
+#   nemotron-nano— 504 «Upstream idle timeout» на длинной рубрике (на короткой отвечает за 2с).
+#   gemma-4-31b  — 429 на каждом кадре, все ретраи. В панель не берём.
 JUDGES = [
+    "or:google/gemma-4-26b-a4b-it:free",        # OpenRouter free, самый точный из живых
     "cf:llama-3.2-11b-vision",                  # наш CF Worker /analyze-frame, без внешних квот
-    "or:nvidia/nemotron-nano-12b-v2-vl:free",   # OpenRouter free, 3с
-    "gh:openai/gpt-4o-mini",                    # GH Models — пока держится суточная квота
-    # Резерв: включается сам, когда кто-то выше выбывает по квоте — иначе на длинном пуле
+    "or:nvidia/nemotron-nano-12b-v2-vl:free",   # нестабилен по таймауту, но иногда отвечает
+    # Резерв: включается сам, когда кто-то выше выбывает — иначе на длинном пуле
     # можно остаться с одним голосом, а бренд судится большинством.
     "or:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "or:google/gemma-4-31b-it:free",
 ]
 MODELS = JUDGES        # обратная совместимость: style_judge импортирует MODELS
 PANEL = 3              # сколько судей опрашиваем на кадр (остальные в списке — резерв)
@@ -89,13 +100,14 @@ corridor — true, если это коридорная перспектива �
   (уходящая вдаль дорога/коридор/тоннель/ряд по центру кадра). Иначе false.
 
 violations — перечисли ТОЛЬКО то, что реально видишь. Пустой список, если ничего:
-  "face"          — различимы черты лица человека (глаза/нос/рот), даже мелко
+  "face"          — различимы черты лица человека (глаза/нос/рот), даже мелко.
+                    ⚠️ Лицо ЛЮБОЙ природы: фотография, ЖИВОПИСЬ, портрет маслом, рисунок,
+                    скульптура, статуя, кукла, лицо на плакате или на экране внутри кадра.
+                    «Это картина, а не человек» — НЕ повод промолчать: ставь "face".
   "lone_figure"   — одинокая человеческая фигура в пустом пространстве является СМЫСЛОВЫМ ЦЕНТРОМ
                     кадра (стоит/идёт одна, кадр построен вокруг неё).
                     НЕ ставь, если человек — лишь след присутствия (рука, спина крупно, тень)
                     или крошечная точка на дальнем плане, а кадр про среду/фактуру.
-  "text_in_frame" — ЛЮБЫЕ буквы, цифры, надписи, вывески, логотипы, этикетки, вотермарки
-                    внутри кадра — даже мелкие, размытые или нечитаемые.
   "neon"          — неоновые ВЫВЕСКИ и кислотные пурпурно-розовые/электрик-синие свечения,
                     киберпанк-эстетика.
                     ⚠️ ВАЖНО: бирюзово-зелёный (teal) грейд всей картинки — это ФИРМЕННАЯ палитра
@@ -105,6 +117,10 @@ violations — перечисли ТОЛЬКО то, что реально ви�
                     пурпурно-розовый свет.
   "vector_cartoon"— векторная/мультяшная/3D-рендер стилизация вместо снятого кадра
   "glossy_ad"     — глянцевая рекламная/стоковая картинка, «демо возможностей генератора»
+
+⚠️ Надписи, буквы, логотипы и вотермарки НЕ ОЦЕНИВАЙ и в violations НЕ пиши: их ловит
+отдельный детектор по пикселям. Замер 05.08: на чистых кадрах (лесная тропа, вода с бликами)
+модели ставили "text_in_frame" там, где текста нет — это был главный источник ложных тревог.
 
 note — одна короткая фраза по-русски: что в кадре.
 """
@@ -160,6 +176,14 @@ def extract_json(txt):
     return None
 
 
+class _ProviderError(Exception):
+    """Отказ провайдера, приехавший ТЕЛОМ ответа при HTTP 200 (так делает OpenRouter)."""
+
+    def __init__(self, message, retryable=False):
+        super().__init__(message)
+        self.retryable = retryable
+
+
 def _post(url, payload, headers, timeout=90):
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
                                  headers=headers)
@@ -181,7 +205,18 @@ def _chat_completions(url, token, model, prompt, b64, timeout=90):
         "Authorization": f"Bearer {token}", "Content-Type": "application/json",
         "Accept": "application/json", "User-Agent": "curl/8.0",
     }, timeout)
-    return d["choices"][0]["message"]["content"]
+    # 🔴 OpenRouter отдаёт отказ провайдера ТЕЛОМ при HTTP 200 («Upstream error … 502»,
+    # «rate limited»). Раньше код лез прямо в choices и получал KeyError — судья выбывал
+    # молча, а прогон выглядел полноценным (замер 05.08: два голоса из трёх падали так).
+    err = d.get("error")
+    if err:
+        msg = err.get("message") if isinstance(err, dict) else str(err)
+        code = err.get("code") if isinstance(err, dict) else None
+        raise _ProviderError(f"{code or 'error'}: {str(msg)[:120]}", retryable=code in (429, 502, 503))
+    try:
+        return d["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        raise _ProviderError(f"нет choices: {json.dumps(d, ensure_ascii=False)[:120]}")
 
 
 def ask_vision(judge, prompt, b64, token=None):
@@ -224,7 +259,16 @@ def ask_vision(judge, prompt, b64, token=None):
                 print(f"      {judge} {e.code}, жду {wait}с")
                 time.sleep(wait)
                 continue
+            if e.code == 410:
+                # GitHub Models выключают («github_models_retirement_brownout», 05.08).
+                # Ретраить нечего: это не квота, а снятая площадка.
+                return None, "провайдер снят (410)"
             return None, f"HTTP {e.code}"
+        except _ProviderError as e:
+            if e.retryable and attempt < 2:
+                time.sleep(6 * (attempt + 1))
+                continue
+            return None, str(e)
         except Exception as e:
             return None, f"{type(e).__name__}"
     return None, "rate-limit исчерпан"
@@ -385,7 +429,10 @@ def aggregate(votes):
     worst = []
     for v in votes:
         for x in set(v.get("violations") or []):
-            if x in VALID:
+            # `text_in_frame` от VLM игнорируем НАМЕРЕННО: надписи судит детерминированный
+            # OCR-гейт до опроса моделей, а модели ставили его на чистых кадрах (замер 05.08:
+            # gemma навесила текст на лесную тропу и на воду с бликами — 2 ложняка из 2).
+            if x in VALID and x != "text_in_frame":
                 viol[x] += 1
         for x in set(v.get("flaws") or []):
             if x in FLAWS:

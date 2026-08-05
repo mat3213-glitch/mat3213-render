@@ -86,8 +86,20 @@ def judge_brand(path: str) -> dict:
         return {"ok": True, "skipped": True, "reason": f"судья недоступен: {exc}"}
     viol = r.get("violations") or []
     flaws = r.get("flaws") or []
-    return {"ok": r.get("verdict") != "REJECT", "skipped": r.get("verdict") == "PARTIAL",
-            "reason": ",".join(viol) or None, "flaws": ",".join(flaws) or None,
+    partial = r.get("verdict") == "PARTIAL"
+    ok = r.get("verdict") != "REJECT"
+    # 🔴 ЗАМЕР 04–05.08: на 15 кадрах из 43 панель дала ОДИН голос (провайдеры отваливались
+    # молча), и `PARTIAL` уходил в пул как годный — так туда попал портрет маслом, которому
+    # единственный судья поставил `face`. Мажоритарного порога на одном голосе нет, но и
+    # молча пропускать голос за ЖЁСТКОЕ табу нельзя: лицо и надпись у нас абсолютны.
+    # Поэтому третий исход — не в пул и не в брак, а на глаз владельцу.
+    hard = [x for x in viol if x in ("face", "text_in_frame")]
+    if partial and hard:
+        ok = False
+    return {"ok": ok, "skipped": partial, "partial_hard": bool(partial and hard),
+            "reason": (",".join(viol) or None) if not (partial and hard)
+                      else "partial_" + ",".join(hard),
+            "flaws": ",".join(flaws) or None,
             "shot_type_vlm": r.get("shot_type"), "n_votes": r.get("n_votes", 0)}
 
 
