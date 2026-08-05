@@ -406,7 +406,8 @@ def judge_file(path, models=None, token=None, dead=None, b64=None):
         verdict = "OK"
     return {
         "verdict": verdict, "violations": agg["violations"], "flaws": agg["flaws"],
-        "shot_type": agg["shot_type"], "corridor": agg["corridor"],
+        "disputed": agg.get("disputed") or [], "shot_type": agg["shot_type"],
+        "corridor": agg["corridor"],
         "n_votes": len(votes), "detail": " | ".join(notes),
         "_votes": votes, "_notes": notes, "_agg": agg,
     }
@@ -446,8 +447,18 @@ def aggregate(votes):
         if w and w.lower() not in ("нет", "none", "-", "—"):
             worst.append(w)
     need = len(votes) // 2 + 1 if votes else 1
+    # 🔴 СПОРНЫЕ ЖЁСТКИЕ ТАБУ (замер 05.08). Панель усохла: надёжен один судья (gemma),
+    # остальные шумят или отваливаются. При двух голосах большинство = 2 из 2, то есть
+    # МОЛЧАНИЕ шумного судьи гасит верный голос — ровно так портрет маслом уехал в пул.
+    # Автобраковать по одному голосу тоже нельзя: cf выдумал `face` на воде и на клавишах.
+    # Поэтому третий исход: лицо/одинокая фигура, за которые голосовали без большинства,
+    # едут в `disputed` — кадр не в пул и не в мусор, а на глаз владельцу.
+    majority = sorted(x for x, c in viol.items() if c >= need)
+    disputed = sorted(x for x, c in viol.items()
+                      if c < need and x in ("face", "lone_figure"))
     return {
-        "violations": sorted(x for x, c in viol.items() if c >= need),   # большинство
+        "violations": majority,                                          # большинство
+        "disputed": disputed,                                            # голос был, кворума нет
         "flaws": sorted(x for x, c in flaw.items() if c >= 1),           # любой голос
         "worst": worst[0][:120] if worst else "",
         "shot_type": shots.most_common(1)[0][0] if shots else "unclear",

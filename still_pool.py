@@ -94,11 +94,15 @@ def judge_brand(path: str) -> dict:
     # молча пропускать голос за ЖЁСТКОЕ табу нельзя: лицо и надпись у нас абсолютны.
     # Поэтому третий исход — не в пул и не в брак, а на глаз владельцу.
     hard = [x for x in viol if x in ("face", "text_in_frame")]
-    if partial and hard:
+    # `disputed` — за лицо/одинокую фигуру голос БЫЛ, но кворума не набралось. На усохшей
+    # панели (05.08: надёжен один судья) молчание шумного гасит верный голос, поэтому такие
+    # кадры тоже не пускаем в пул молча — они уезжают на глаз владельцу.
+    disputed = [x for x in (r.get("disputed") or []) if x in ("face", "lone_figure")]
+    flagged = hard if (partial and hard) else (disputed if (ok and disputed) else [])
+    if flagged:
         ok = False
-    return {"ok": ok, "skipped": partial, "partial_hard": bool(partial and hard),
-            "reason": (",".join(viol) or None) if not (partial and hard)
-                      else "partial_" + ",".join(hard),
+    return {"ok": ok, "skipped": partial, "partial_hard": bool(flagged),
+            "reason": ("review_" + ",".join(flagged)) if flagged else (",".join(viol) or None),
             "flaws": ",".join(flaws) or None,
             "shot_type_vlm": r.get("shot_type"), "n_votes": r.get("n_votes", 0)}
 
