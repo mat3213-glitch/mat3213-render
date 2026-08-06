@@ -33,6 +33,18 @@ def sh(cmd):
     return subprocess.run(cmd, shell=True, capture_output=True, text=True)
 
 
+def _rss_mb() -> float:
+    """Занятая процессом память. Раннер умирает молча — без этого числа причина не видна."""
+    try:
+        with open("/proc/self/status", encoding="utf-8") as fh:
+            for line in fh:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024.0
+    except OSError:
+        pass
+    return 0.0
+
+
 def embed_folder(model, preprocess, paths, log_every=25):
     """Картинки → матрица нормированных векторов CLIP."""
     import torch
@@ -88,11 +100,24 @@ def main() -> int:
                                                                 pretrained=args.pretrained)
     model.eval()
 
+    import torch
+
+    def embed_one(pil):
+        """Одна картинка → нормированный вектор. PIL наружу не возвращается."""
+        with torch.no_grad():
+            v = model.encode_image(preprocess(pil.convert("RGB")).unsqueeze(0))
+        return (v / v.norm(dim=-1, keepdim=True))[0].numpy()
+
     # ── 1. Обучающий лист из WikiArt (стримингом, без скачивания 5.3 ГБ) ──────────
+    # 🔴 ПОЧЕМУ ЭМБЕДДИМ ПРЯМО В ЦИКЛЕ, А НЕ КОПИМ СПИСОК PIL (замер 05.08, run 30988892454):
+    # накопление 800 декодированных полотен WikiArt (до 4000px) съело память раннера —
+    # «The hosted runner lost communication with the server» на 50-й минуте, лог не сохранился,
+    # на ЯД не легло НИЧЕГО. Вектор весит 2 КБ против десятков МБ у картины: держим только его,
+    # пиковая память = одно полотно.
     print(f"WikiArt: тяну по {args.per_class} на класс (стримингом)…", flush=True)
     ds = load_dataset("huggan/wikiart", split="train", streaming=True)
     genre_names = None
-    pos_imgs, neg_imgs = [], []
+    pos_vecs, neg_vecs = [], []
     seen = 0
     for row in ds:
         seen += 1
@@ -100,33 +125,27 @@ def main() -> int:
             # ClassLabel int → имя жанра; берём схему из самого датасета, не из памяти
             genre_names = ds.features["genre"].names
         g = genre_names[row["genre"]] if isinstance(row["genre"], int) else str(row["genre"])
-        if g in POS_GENRES and len(pos_imgs) < args.per_class:
-            pos_imgs.append(row["image"])
-        elif g in NEG_GENRES and len(neg_imgs) < args.per_class:
-            neg_imgs.append(row["image"])
-        if len(pos_imgs) >= args.per_class and len(neg_imgs) >= args.per_class:
+        try:
+            if g in POS_GENRES and len(pos_vecs) < args.per_class:
+                pos_vecs.append(embed_one(row["image"]))
+            elif g in NEG_GENRES and len(neg_vecs) < args.per_class:
+                neg_vecs.append(embed_one(row["image"]))
+        except Exception as exc:                       # битое полотно не должно ронять прогон
+            print(f"  ⚠️ строка {seen}: {exc}", flush=True)
+        finally:
+            row["image"] = None
+        if len(pos_vecs) >= args.per_class and len(neg_vecs) >= args.per_class:
             break
-        if seen % 2000 == 0:
-            print(f"  просмотрено {seen}: portrait={len(pos_imgs)} прочие={len(neg_imgs)}",
-                  flush=True)
-    print(f"обучающий лист: portrait={len(pos_imgs)} прочие={len(neg_imgs)} "
-          f"(просмотрено строк: {seen})", flush=True)
-    if len(pos_imgs) < 20 or len(neg_imgs) < 20:
+        if seen % 500 == 0:
+            print(f"  просмотрено {seen}: portrait={len(pos_vecs)} прочие={len(neg_vecs)}"
+                  f" | RSS {_rss_mb():.0f} МБ", flush=True)
+    print(f"обучающий лист: portrait={len(pos_vecs)} прочие={len(neg_vecs)} "
+          f"(просмотрено строк: {seen}, RSS {_rss_mb():.0f} МБ)", flush=True)
+    if len(pos_vecs) < 20 or len(neg_vecs) < 20:
         print("слишком мало примеров — обучать нечего", file=sys.stderr)
         return 1
 
-    import torch
-    def embed_pils(pils):
-        out = []
-        for i, im in enumerate(pils, 1):
-            with torch.no_grad():
-                v = model.encode_image(preprocess(im.convert("RGB")).unsqueeze(0))
-            out.append((v / v.norm(dim=-1, keepdim=True))[0].numpy())
-            if i % 100 == 0:
-                print(f"  эмбеддинг {i}/{len(pils)}", flush=True)
-        return np.stack(out)
-
-    Xp, Xn = embed_pils(pos_imgs), embed_pils(neg_imgs)
+    Xp, Xn = np.stack(pos_vecs), np.stack(neg_vecs)
     X = np.concatenate([Xp, Xn]).astype(np.float64)
     y = np.concatenate([np.ones(len(Xp)), np.zeros(len(Xn))])
 
@@ -144,9 +163,33 @@ def main() -> int:
     print(f"\n=== ОТЛОЖЕННАЯ ВЫБОРКА ({len(X) - cut} шт) ===")
     print(f"точность {acc:.3f} | поймано портретов {tp} | ложных {fp} | пропущено {fn}")
 
+    # ── 1b. ПОРОГ ПО ОТЛОЖЕННОЙ, А НЕ ПО ОДНОМУ ПРИМЕРУ ──────────────────────────
+    # На нашем пуле позитив ровно один (портрет маслом, p=0.937) — по одной точке порог
+    # не ставят. Здесь позитивов ~80: печатаем, где реально лежат оба облака, и берём
+    # самый строгий порог, который ещё не теряет ни одного портрета (ноль пропусков
+    # важнее лишней ручной проверки: пропущенное лицо уезжает в клип).
+    yh = y[cut:]
+    p_pos, p_neg = np.sort(pv[yh == 1]), np.sort(pv[yh == 0])
+    def q(a, f):
+        return float(np.quantile(a, f)) if len(a) else float("nan")
+    print(f"портреты  n={len(p_pos)}: мин {p_pos.min():.3f} | 5% {q(p_pos,.05):.3f} | "
+          f"медиана {q(p_pos,.5):.3f}")
+    print(f"не-лица   n={len(p_neg)}: макс {p_neg.max():.3f} | 95% {q(p_neg,.95):.3f} | "
+          f"медиана {q(p_neg,.5):.3f}")
+    grid = np.linspace(0.05, 0.95, 91)
+    clean = [t for t in grid if not np.any(pv[yh == 1] <= t)]      # ни одного пропуска
+    thr = float(max(clean)) if clean else 0.5
+    fp_at_thr = int(np.sum(pv[yh == 0] > thr))
+    print(f"🔑 ПОРОГ {thr:.2f} — портретов пропущено 0, ложных {fp_at_thr} из {len(p_neg)}")
+
     # ── 2. Наши кадры: как голова видит реальный пул ─────────────────────────────
     work = Path("cv_train_work")
     work.mkdir(exist_ok=True)
+    # Веса заливаем СРАЗУ: прогон 05.08 умер на работе с пулами и потерял всё обучение.
+    np.savez(work / "head_face_painting.npz", w=w.astype(np.float32), b=np.float32(b),
+             model=args.model, pretrained=args.pretrained, holdout_acc=acc, threshold=thr)
+    sh(f'rclone copyto "{work / "head_face_painting.npz"}" "{args.out}/head_face_painting.npz"')
+    print(f"веса залиты заранее → {args.out}/head_face_painting.npz", flush=True)
     ours: list[Path] = []
     for i, pool in enumerate([p.strip() for p in args.pools.split(";") if p.strip()]):
         dst = work / f"pool{i}"
@@ -169,13 +212,17 @@ def main() -> int:
         for j in order[-3:]:
             print(f"  {po[j]:.3f}  {Path(kept[j]).name[:60]}")
         report = [{"file": Path(kept[j]).name, "p_face": float(po[j])} for j in order]
+        over = [r for r in report if r["p_face"] > thr]
+        print(f"\nпо порогу {thr:.2f} голова помечает «здесь лицо»: {len(over)} из {len(report)}")
+        for r in over:
+            print(f"  🔴 {r['p_face']:.3f}  {r['file'][:60]}")
         np.savez_compressed(work / "ours_embeddings.npz",
                             X=Xo.astype(np.float32), files=np.array(kept))
 
-    np.savez(work / "head_face_painting.npz", w=w.astype(np.float32), b=np.float32(b),
-             model=args.model, pretrained=args.pretrained, holdout_acc=acc)
     (work / "REPORT.json").write_text(json.dumps(
-        {"holdout": {"n": len(X) - cut, "acc": acc, "tp": tp, "fp": fp, "fn": fn},
+        {"holdout": {"n": len(X) - cut, "acc": acc, "tp": tp, "fp": fp, "fn": fn,
+                     "threshold": thr, "fp_at_threshold": fp_at_thr,
+                     "pos_min": float(p_pos.min()), "neg_max": float(p_neg.max())},
          "train": {"portrait": len(Xp), "other": len(Xn)},
          "ours": report}, ensure_ascii=False, indent=1))
 
