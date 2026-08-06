@@ -4,47 +4,41 @@ Runner-side media fetcher (GitHub Actions, US-IP) — обходит блоки,
 поиск/enumeration делается ЛОКАЛЬНО, на раннер уходят только готовые URL.
 
 Env (GitHub Secrets / inputs):
-  YADISK_LOGIN / YADISK_PASSWORD — WebDAV
+  YDRIVE_CLIENT_ID / YDRIVE_CLIENT_SECRET / YDRIVE_TOKEN — rclone OAuth (настраивает воркфлоу)
   URLS_JSON   — JSON-список [{"url":..., "type":"pexels|pinterest|direct", "name":"file"}]
   DEST_FOLDER — папка на ЯД (напр. "Content factory/cloud_io/runner_fetch/batch1")
 
 type:
   pexels|direct — прямой requests-download (раннер обходит CF-403 Pexels)
   pinterest     — yt-dlp (HLS-пины; работает с US-IP на URL отдельного ПИНА, не доски)
+
+🔴 ЗАЛИВКА ТОЛЬКО rclone (правка 06.08). Прежняя версия лила WebDAV и молча теряла ВСЁ:
+прогон 31068364688 скачал все 5 файлов (по 20 МБ) и не положил ни одного — SSLError ×4,
+затем HTTP 402. Воркфлоу при этом зелёный. WebDAV на ЯД запрещён в MEMORY_CORE — троттл.
 """
 import os, json, subprocess, requests
 from pathlib import Path
-from urllib.parse import quote as urlquote
 
-YADISK_LOGIN = os.environ["YADISK_LOGIN"]
-YADISK_PASS  = os.environ["YADISK_PASSWORD"]
 URLS = json.loads(os.environ.get("URLS_JSON", "[]"))
 DEST = os.environ.get("DEST_FOLDER", "Content factory/cloud_io/runner_fetch/batch")
-WEBDAV = "https://webdav.yandex.ru"
-AUTH = (YADISK_LOGIN, YADISK_PASS)
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 TMP = Path("/tmp/fetch"); TMP.mkdir(exist_ok=True)
 
 def yd_mkcol(path):
-    # создаём дерево папок по сегментам
-    parts, cur = path.split("/"), ""
-    for p in parts:
-        cur = f"{cur}/{p}" if cur else p
-        requests.request("MKCOL", f"{WEBDAV}/{urlquote(cur)}", auth=AUTH, timeout=30)
+    return  # rclone создаёт дерево сам при copyto
 
-def yd_put(local: Path, remote: str, retries: int = 4) -> bool:
-    # ЯД WebDAV рвёт соединение на крупных файлах → ретраи с бэкоффом
+def yd_put(local: Path, remote: str, retries: int = 3) -> bool:
     import time
+    target = f"ydrive:{remote}"
     for attempt in range(retries):
-        try:
-            with open(local, "rb") as f:
-                r = requests.put(f"{WEBDAV}/{urlquote(remote)}", data=f, auth=AUTH, timeout=600)
-            if r.status_code in (200, 201, 204):
-                print(f"  upload ok: {remote}", flush=True)
-                return True
-            print(f"  upload HTTP {r.status_code} (try {attempt+1})", flush=True)
-        except Exception as e:
-            print(f"  upload err {type(e).__name__} (try {attempt+1})", flush=True)
+        r = subprocess.run(["rclone", "copyto", str(local), target,
+                            "--retries", "3", "--low-level-retries", "10"],
+                           capture_output=True, text=True, timeout=900)
+        if r.returncode == 0:
+            print(f"  upload ok: {remote}", flush=True)
+            return True
+        print(f"  rclone rc={r.returncode} (try {attempt+1}): "
+              f"{r.stderr.strip().splitlines()[-1][:160] if r.stderr.strip() else ''}", flush=True)
         time.sleep(3 * (attempt + 1))
     print(f"  upload FAIL after {retries}: {remote}", flush=True)
     return False

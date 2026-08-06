@@ -23,11 +23,21 @@ jobs:
       - name: Install deps
         run: |
           pip install -q requests yt-dlp
-          sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
       - name: Fetch and upload
         env:
-          YADISK_LOGIN:    ${{ secrets.YADISK_LOGIN }}
-          YADISK_PASSWORD: ${{ secrets.YADISK_PASSWORD }}
           URLS_JSON:       ${{ inputs.urls_json }}
           DEST_FOLDER:     ${{ inputs.dest_folder }}
         run: python fetch_runner.py
