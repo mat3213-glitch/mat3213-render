@@ -225,17 +225,25 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
 
 
 def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
-                   crf: str = "22", preset: str = "veryfast", tint: str = "") -> bool:
-    """Сегмент из видео-футажа (Pexels): slice длины dur, cover-crop в WxH, fps.
+                   crf: str = "22", preset: str = "veryfast", tint: str = "",
+                   ss: float = 0.0) -> bool:
+    """Сегмент из видео-футажа (Pexels): slice длины dur ОТ СЕКУНДЫ ss, cover-crop в WxH, fps.
     Короткий футаж зацикливается (-stream_loop). Грейд под стиль — общим density-пассом тела.
     Энкод как у motion_seg (timescale 12800) → совместимо с xfade_chain.
     tint: арты цветные ПО ГЕНЕРАЦИИ (замок палитры), реальный сток — нет. Общий density-пасс
     (eq контраст/сатурация) серый футаж в палитру НЕ приводит → грозовые облака садятся
-    серо-белым пятном посреди нуара. Тинт красит футаж в лук замка ДО сборки."""
+    серо-белым пятном посреди нуара. Тинт красит футаж в лук замка ДО сборки.
+
+    🔴 ss ОБЯЗАТЕЛЕН ПРИ ПОВТОРНЫХ ПОКАЗАХ КЛЮЧА (правка 2026-08-06). Раньше `-ss` не было
+    вовсе: каждое появление ключа откручивало файл С НУЛЯ, и зритель по 5–8 раз за часть видел
+    одно и то же начало одного и того же клипа. Замер на полном клипе: 89 различимых картинок
+    из 210 проб, **58% экранного времени — повтор**, при том что уникального материала было
+    272с на клип в 148с. Вердикт владельца: «режет глаз один и тот же луп»."""
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
           + (f"{tint}," if tint else "")
           + f"fps={FPS},setsar=1,format=yuv420p")
     r = run(["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "-1",
+             *(["-ss", f"{ss:.3f}"] if ss > 0 else []),
              "-t", f"{dur:.4f}", "-i", str(src), "-vf", vf, "-an",
              "-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
              "-video_track_timescale", "12800", str(out)])
@@ -645,12 +653,27 @@ def main():
     # Смысл: перезапуск джобы после падения на склейке/титрах не перерендеривает всё заново.
     seg_cache = SegmentCache(enabled=bool(job.get("cache", True))) if SegmentCache else None
     seg_files, durs, trans, tdurs = [], [], [], []
+    video_cursor, video_rounds, src_len_cache = {}, {}, {}   # окно внутри каждого видео-ключа
     for i, s in enumerate(seq):
         sp = segdir / f"seg_{i:03d}.mp4"
         # длиннее на величину входящего перехода — xfade «съест» этот overlap, нетто=план
         enc_dur = s["dur"] + s["tdur"]
         vid = WORK / f"{s['key']}.mp4"
         use_video = s["key"] in video_keys and vid.exists()
+        # окно внутри файла: каждое следующее появление ключа берёт СЛЕДУЮЩИЙ кусок, а не
+        # начало заново. Кончился файл — идём на второй круг со сдвигом в полплана, чтобы
+        # повтор не лёг кадр в кадр (см. замер 58% повторов в шапке make_video_seg).
+        vid_ss = 0.0
+        if use_video:
+            if s["key"] not in src_len_cache:
+                src_len_cache[s["key"]] = probe_dur(vid)   # ffprobe раз на ключ, не на план
+            src_len = src_len_cache[s["key"]]
+            used = video_cursor.get(s["key"], 0.0)
+            if src_len > enc_dur + 0.2 and used + enc_dur > src_len:
+                used = (video_rounds.get(s["key"], 0) + 1) * enc_dur / 2.0 % max(src_len - enc_dur, 0.1)
+                video_rounds[s["key"]] = video_rounds.get(s["key"], 0) + 1
+            vid_ss = min(used, max(src_len - enc_dur, 0.0))
+            video_cursor[s["key"]] = vid_ss + enc_dur
         use_grid  = bool(grid_srcs) and s["region"] in ("intro", "breath") and not use_video
         # ключ обязан накрывать ВСЁ, что меняет кадр: сам исходник (по содержимому!),
         # геометрию, кодек и моторные ручки. Иначе кэш отдаст чужой сегмент.
@@ -661,6 +684,7 @@ def main():
             "mode": s["mode"], "theta": s["theta"], "blend": s["blend"],
             "speed": MOTION_SPEED, "amp": MOTION_AMP, "blend_opacity": BLEND_OPACITY,
             "tint": footage_tint if use_video else "",
+            "ss": round(vid_ss, 3) if use_video else 0.0,
             "grid": [file_sig(g) for g in grid_srcs] if use_grid else [],
         }) if seg_cache else ""
 
@@ -668,7 +692,7 @@ def main():
         if not ok:
             if use_video:
                 ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset,
-                                    tint=footage_tint)
+                                    tint=footage_tint, ss=vid_ss)
             elif use_grid:
                 # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
                 ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
