@@ -619,7 +619,8 @@ def main():
 
     # timeline → motion-сегменты (двойная экспозиция с движением) → xfade-цепь
     # сценарий stemcut: метки по стемам (demucs) вместо сетки долей бита.
-    # job["stems"] = путь на ЯД относительно "Content factory/" к <трек>_stems.json.
+    # job["stems"] = ПОЛНЫЙ путь на ЯД к <трек>_stems.json, включая префикс "Content factory/"
+    # (yd_get зовёт rclone как есть; прежний комментарий врал и стоил падения рана 31078868209).
     drum_cues, vocal_cues = [], []
     if scenario == "stemcut":
         sj = WORK / "stems.json"
