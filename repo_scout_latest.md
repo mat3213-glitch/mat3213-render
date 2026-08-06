@@ -1,76 +1,104 @@
-# Repo Scout — 2026-08-05T11:59:54.690121
+# Repo Scout — 2026-08-06T12:03:06.808705
 
-Всего в шортлисте: 18
+Всего в шортлисте: 25
 
-- **NousResearch/hermes-agent** ⭐225807 [orchestration]
-  - https://github.com/NousResearch/hermes-agent
-  - 💡 Этот репозиторий содержит агент, который растет вместе с пользователями, автоматизируя различные задачи. Для нашего проекта он может быть полезен в плане автоматизации музыкального контента, но требует более детального изучения.
-  - 📄 The agent that grows with you
-- **Comfy-Org/ComfyUI** ⭐123771 [aigen]
-  - https://github.com/Comfy-Org/ComfyUI
-  - 💡 Этот репозиторий предоставляет мощный и модульный интерфейс для диффузионных моделей, который может быть полезен для генерации артов и видео в нашем проекте.
-  - 📄 The most powerful and modular diffusion model GUI, api and backend with a graph/nodes interface.
-- **BerriAI/litellm** ⭐55605 [misc]
-  - https://github.com/BerriAI/litellm
-  - 💡 Этот репозиторий содержит быстрый и легкий AI-шлюз, который может быть полезен для интеграции с различными LLM-API. Для нашего проекта он может быть полезен в плане автоматизации музыкального контента и взаимодействия с другими AI-сервисами.
-  - 📄 The fastest, litest AI Gateway. Rust core with Python SDK. Call 100+ LLM APIs in OpenAI (or native) format with cost tracking, guardrails, load balancing, and l
-- **anandprtp/Antra** ⭐1744 [audio]
-  - https://github.com/anandprtp/Antra
-  - 💡 Этот репозиторий содержит инструмент для построения музыкальной библиотеки, который может быть полезен для нашего проекта в плане организации и тегирования музыкальных файлов.
-  - 📄 A desktop music library builder that turns Spotify, Youtube Music Apple Music, Amazon Music, Tidal, Qobuz, and Deezer links into fully tagged local library in F
-- **uber/ADR** ⭐865 [vision]
+- **mattpocock/skills** ⭐205977 [orchestration]
+  - https://github.com/mattpocock/skills
+  - 💡 Этот репозиторий содержит набор навыков для реальных инженеров. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Skills for Real Engineers. Straight from my .agents directory.
+- **unclecode/crawl4ai** ⭐76754 [misc]
+  - https://github.com/unclecode/crawl4ai
+  - 💡 Этот репозиторий представляет собой веб-краулер и скрепер для AI. Может быть полезен для сбора данных, но для проекта вряд ли пригодится напрямую, поскольку не имеет отношения к музыкальному контенту.
+  - 📄 🚀🤖 Crawl4AI: Open-source LLM Friendly Web Crawler &amp; Scraper. Don't be shy, join here: https://discord.gg/jP8KfhDhyN
+- **uber/ADR** ⭐1184 [vision]
   - https://github.com/uber/ADR
-  - 💡 Этот репозиторий содержит инструмент для обеспечения безопасности AI-агентов, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой собственных AI-агентов.
+  - 💡 Этот репозиторий обеспечивает безопасность AI-агентов через наблюдаемость, безопасность и обнаружение угроз. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
   - 📄 ADR secures enterprise AI agents through observability, security benchmarking, and threat detection. Deployed at Uber.
-- **lyogavin/airllm** ⭐28769 [orchestration]
-  - https://github.com/lyogavin/airllm
-  - 💡 Этот репозиторий содержит реализацию AirLLM, которая может быть полезна для нашего проекта в плане генерации музыкального контента, но требует более детального изучения.
-  - 📄 AirLLM 70B inference with single 4GB GPU
-- **Comfy-Org/workflow_templates** ⭐710 [aigen]
+- **Comfy-Org/workflow_templates** ⭐727 [aigen]
   - https://github.com/Comfy-Org/workflow_templates
-  - 💡 Этот репозиторий содержит шаблоны для ComfyUI, которые могут быть полезны для нашего проекта в плане автоматизации задач и генерации контента.
+  - 💡 Этот репозиторий содержит шаблоны рабочих процессов для ComfyUI. Может быть полезен для автоматизации задач, но для проекта вряд ли пригодится напрямую, поскольку не имеет отношения к музыкальному контенту.
   - 📄 ComfyUI template workflows
-- **NVIDIA-NeMo/Speech** ⭐17889 [misc]
-  - https://github.com/NVIDIA-NeMo/Speech
-  - 💡 Этот репозиторий содержит фреймворк для речевых AI-моделей, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой речевых моделей.
-  - 📄 A scalable generative AI framework built for researchers and developers working on Large Language Models, Multimodal, and Speech AI (Automatic Speech Recognitio
-- **esengine/DeepSeek-Reasonix** ⭐31204 [orchestration]
-  - https://github.com/esengine/DeepSeek-Reasonix
-  - 💡 Этот репозиторий содержит агент для кодирования, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой кода.
-  - 📄 DeepSeek-native AI coding agent for your terminal. Engineered around prefix-cache stability — leave it running.
-- **TencentCloud/TencentDB-Agent-Memory** ⭐14633 [orchestration]
-  - https://github.com/TencentCloud/TencentDB-Agent-Memory
-  - 💡 Этот репозиторий содержит инструмент для управления памятью AI-агентов, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой собственных AI-агентов.
-  - 📄 TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into four reusable memory assets (Chat Memory, Skill, LL
-- **huangruiteng/loopx** ⭐1735 [orchestration]
-  - https://github.com/huangruiteng/loopx
-  - 💡 Этот репозиторий содержит инструмент для управления циклами AI-агентов, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой собственных AI-агентов.
-  - 📄 Lightweight loop engineering state kernel for long-running AI agent teams. Agent-loop agnostic across Codex, Claude Code, and other coding agents, with durable 
-- **blader/humanizer** ⭐33610 [orchestration]
-  - https://github.com/blader/humanizer
-  - 💡 Этот репозиторий содержит инструмент для удаления признаков AI-генерации текста, который может быть полезен для нашего проекта в плане генерации музыкального контента.
-  - 📄 Agent skill that removes signs of AI-generated writing from text
-- **addyosmani/agent-skills** ⭐81757 [orchestration]
+- **NousResearch/hermes-agent** ⭐226372 [orchestration]
+  - https://github.com/NousResearch/hermes-agent
+  - 💡 Этот репозиторий представляет собой AI-агент, который может расти и развиваться. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 The agent that grows with you
+- **tirth8205/code-review-graph** ⭐28810 [misc]
+  - https://github.com/tirth8205/code-review-graph
+  - 💡 Этот репозиторий создает граф интеллекта кода для MCP и CLI. Может быть полезен для анализа кода, но для проекта вряд ли пригодится напрямую, поскольку не имеет отношения к музыкальному контенту.
+  - 📄 Local-first code intelligence graph for MCP and CLI. Builds a persistent map of your codebase so AI coding tools read only what matters, with benchmarked contex
+- **anomalyco/opencode** ⭐194112 [orchestration]
+  - https://github.com/anomalyco/opencode
+  - 💡 Этот репозиторий представляет собой открытый AI-кодировщик. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 The open source coding agent.
+- **addyosmani/agent-skills** ⭐82324 [orchestration]
   - https://github.com/addyosmani/agent-skills
-  - 💡 Этот репозиторий содержит навыки для AI-агентов, которые вряд ли будут полезны для нашего проекта, поскольку мы не занимаемся разработкой собственных AI-агентов.
+  - 💡 Этот репозиторий содержит навыки для AI-агентов. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
   - 📄 Production-grade engineering skills for AI coding agents.
-- **can1357/oh-my-pi** ⭐22075 [orchestration]
-  - https://github.com/can1357/oh-my-pi
-  - 💡 Этот репозиторий содержит инструмент для кодирования с помощью AI-агентов, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой кода.
-  - 📄 ⌥ AI Coding agent for the terminal — hash-anchored edits, optimized tool harness, LSP, Python, browser, subagents, and more
-- **browser-use/video-use** ⭐19624 [orchestration]
+- **esengine/DeepSeek-Reasonix** ⭐32078 [orchestration]
+  - https://github.com/esengine/DeepSeek-Reasonix
+  - 💡 Этот репозиторий представляет собой AI-кодировщик для терминала. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 DeepSeek-native AI coding agent for your terminal. Engineered around prefix-cache stability — leave it running.
+- **huangruiteng/loopx** ⭐2585 [orchestration]
+  - https://github.com/huangruiteng/loopx
+  - 💡 Этот репозиторий создает ядро состояния цикла для команд AI-агентов. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Lightweight loop engineering state kernel for long-running AI agent teams. Agent-loop agnostic across Codex, Claude Code, and other coding agents, with durable 
+- **TencentCloud/TencentDB-Agent-Memory** ⭐15675 [orchestration]
+  - https://github.com/TencentCloud/TencentDB-Agent-Memory
+  - 💡 Этот репозиторий представляет собой хаб памяти для команд AI-агентов. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 TencentDB Agent Memory is a team-level memory hub for AI Agents — turning conversations, docs, and code into four reusable memory assets (Chat Memory, Skill, LL
+- **browser-use/video-use** ⭐19831 [orchestration]
   - https://github.com/browser-use/video-use
-  - 💡 Этот репозиторий содержит инструмент для редактирования видео с помощью AI-агентов, который может быть полезен для нашего проекта в плане генерации музыкального контента.
+  - 💡 Этот репозиторий позволяет редактировать видео с помощью AI-агентов. Может быть полезен для проекта, поскольку имеет отношение к видеоконтенту.
   - 📄 Edit videos with coding agents
-- **didilili/ai-agents-from-zero** ⭐3437 [orchestration]
-  - https://github.com/didilili/ai-agents-from-zero
-  - 💡 Этот репозиторий содержит руководство по разработке AI-агентов, которое вряд ли будет полезно для нашего проекта, поскольку мы не занимаемся разработкой собственных AI-агентов.
-  - 📄 🚀 2026 最系统的 AI Agent 速成指南｜智能体实战教程 · 完整学习路径 + 实战项目 + 面试题库 · 对标大模型应用开发工程师岗位 · 覆盖LangChain / LangGraph / Coze / Dify / MCP / skills / LLM / RAG / 提示词 · 企业级部署与微调 · 
-- **sierra-research/tau2-bench** ⭐1740 [orchestration]
-  - https://github.com/sierra-research/tau2-bench
-  - 💡 Этот репозиторий содержит инструмент для оценки производительности AI-агентов, который вряд ли будет полезен для нашего проекта, поскольку мы не занимаемся разработкой собственных AI-агентов.
-  - 📄 τ-Bench: A Benchmark for Tool-Agent-User Interaction in Real-World Domains
-- **melgarafael/DeskcommCRM** ⭐324 [orchestration]
-  - https://github.com/melgarafael/DeskcommCRM
-  - 💡 Этот репозиторий содержит систему управления продажами с помощью AI-агентов, которая вряд ли будет полезна для нашего проекта, поскольку мы не занимаемся продажами.
-  - 📄 Open-source AI sales OS — self-hosted CRM with native AI agents + WhatsApp (WAHA). Open alternative to Kommo, Octadesk &amp; Intercom for any business that sell
+- **CherryHQ/cherry-studio** ⭐49852 [orchestration]
+  - https://github.com/CherryHQ/cherry-studio
+  - 💡 Этот репозиторий представляет собой AI-продуктивность студию. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 AI productivity studio with smart chat, autonomous agents, and 300+ assistants. Unified access to frontier LLMs
+- **cloudflare/computer** ⭐4334 [orchestration]
+  - https://github.com/cloudflare/computer
+  - 💡 Этот репозиторий дает возможность предоставить компьютер AI-агенту. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Give your agent a computer 👾
+- **iOfficeAI/AionUi** ⭐31566 [orchestration]
+  - https://github.com/iOfficeAI/AionUi
+  - 💡 Этот репозиторий представляет собой открытую 24/7-приложение для команд AI-агентов. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Open-source 24/7 Cowork app for OpenClaw, Hermes, Claude Code, Codex, OpenCode and 20+ more CLI Agent | Customize your assistants | Team them up ｜Star if you li
+- **K-Dense-AI/scientific-agent-skills** ⭐32816 [orchestration]
+  - https://github.com/K-Dense-AI/scientific-agent-skills
+  - 💡 Этот репозиторий содержит навыки для AI-агентов в области науки. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Turn any AI agent into an AI Scientist. The #1 Agent Skills library for science, used by 170,000+ scientists worldwide. 158 ready-to-use skills plus 100+ scient
+- **Unclecheng-li/VulnClaw** ⭐2588 [orchestration]
+  - https://github.com/Unclecheng-li/VulnClaw
+  - 💡 Этот репозиторий представляет собой инструмент для автоматизации процесса обнаружения уязвимостей с помощью AI-агентов. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 基于 AI Agent + MCP 工具链 + 渗透 Skill 编排， 配合大语言模型， 自然语言输入 → 自动完成「信息收集 → 漏洞发现 → 漏洞利用 → 报告生成」全流程。
+- **QwenLM/qwen-code** ⭐26776 [orchestration]
+  - https://github.com/QwenLM/qwen-code
+  - 💡 Этот репозиторий представляет собой открытый AI-кодировщик. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 An open-source AI coding agent that lives in your terminal.
+- **abhigyanpatwari/GitNexus** ⭐45127 [orchestration]
+  - https://github.com/abhigyanpatwari/GitNexus
+  - 💡 Этот репозиторий создает граф знаний для Git-репозиториев. Может быть полезен для анализа кода, но для проекта вряд ли пригодится напрямую, поскольку не имеет отношения к музыкальному контенту.
+  - 📄 GitNexus: The Zero-Server Code Intelligence Engine - GitNexus is a client-side knowledge graph creator that runs entirely in your browser. Drop in a git reposit
+- **promptfoo/promptfoo** ⭐23995 [orchestration]
+  - https://github.com/promptfoo/promptfoo
+  - 💡 Этот репозиторий позволяет тестировать запросы и AI-агентов. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Test your prompts, agents, and RAGs. Red teaming/pentesting/vulnerability scanning for AI. Compare performance of GPT, Claude, Gemini, DeepSeek, and more. Simpl
+- **livekit/agents** ⭐12693 [orchestration]
+  - https://github.com/livekit/agents
+  - 💡 Этот репозиторий представляет собой фреймворк для создания голосовых AI-агентов. Может быть полезен для проекта, поскольку имеет отношение к аудиоконтенту.
+  - 📄 A framework for building realtime voice AI agents 🤖🎙️📹
+- **FlowiseAI/Flowise** ⭐55206 [orchestration]
+  - https://github.com/FlowiseAI/Flowise
+  - 💡 Этот репозиторий позволяет создавать AI-агентов визуально. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Build AI Agents, Visually
+- **KnockOutEZ/wigolo** ⭐4356 [orchestration]
+  - https://github.com/KnockOutEZ/wigolo
+  - 💡 Этот репозиторий представляет собой веб-интерфейс для AI-кодировщиков. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 The go-to web for your AI coding agent — local-first search, fetch, crawl &amp; research over MCP. No API keys, no cloud, $0/query. Public beta.
+- **langchain-ai/open-swe** ⭐10490 [orchestration]
+  - https://github.com/langchain-ai/open-swe
+  - 💡 Этот репозиторий представляет собой открытого асинхронного AI-кодировщика. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 An Open-Source Asynchronous Coding Agent
+- **aws/agent-toolkit-for-aws** ⭐2247 [orchestration]
+  - https://github.com/aws/agent-toolkit-for-aws
+  - 💡 Этот репозиторий содержит инструменты для создания AI-агентов на AWS. Для проекта вряд ли пригодится, поскольку не имеет прямого отношения к автоматизации музыкального контента.
+  - 📄 Official, AWS-supported MCP servers, skills, and plugins to help AI agents build on AWS
