@@ -791,7 +791,18 @@ def main():
     # Аудио-фейды рассчитаны на ОДИНОЧНЫЙ клип. При сборке трека из сегментов каждый кусок принесёт
     # свой fade-in/fade-out → трек «дышит» затуханиями каждые 22с (услышано yaromat 2026-07-17).
     # job["audio_fade"]: true (деф.) | false (середина трека) | "in" (первый сегм.) | "out" (последний).
+    #
+    # 🔴 ПРАВИЛЬНЫЙ СПОСОБ СБОРКИ ТРЕКА (решение 2026-08-06): `"audio": "none"` — часть рендерится
+    # БЕЗ звука, части склеиваются по видео, а трек кладётся ОДНИМ файлом поверх готовой склейки.
+    # Резать звук незачем: монтаж вяжется к МЕТКАМ из stems.json (они абсолютные по треку), сам
+    # звук в монтаже не участвует. Так исчезают и фейды на швах, и накопительная ошибка времени.
+    # Замер 06.08 на клипе из 7 частей: на каждом шве RMS падал до нуля (провал 99–100%, ~2с).
+    audio_mode = str(job.get("audio", "track")).lower()
     af_mode = job.get("audio_fade", True)
+    if audio_mode != "none" and af_mode is True and audio_start > 0:
+        print("  ⚠️ audio_fade=True при audio_start>0 — это середина трека, на шве будет "
+              "провал звука. Для сборки частей ставь \"audio\":\"none\" и клади трек поверх склейки.",
+              flush=True)
     afade_out = max(0.0, duration - 1.5)
     af_parts = []
     if af_mode is True or af_mode == "in":
@@ -810,22 +821,28 @@ def main():
         f"{vig}"
         f"trim=duration={duration},setpts=PTS-STARTPTS{draw_chain}[vout]"
     )
+    silent = audio_mode == "none"
     cmd = [
         "ffmpeg", "-y", "-loglevel", "error",
         "-i", str(body),
         "-stream_loop", "-1", "-ss", str(scr_ss), "-i", SCRATCH,
         "-stream_loop", "-1", "-ss", str(grt_ss), "-i", GRIT,
-        "-ss", str(audio_start), "-t", str(duration), "-i", str(WORK / "track.mp3"),
-        "-filter_complex", fc,
-        "-map", "[vout]", "-map", "3:a",
-        "-af", af_chain,
+    ]
+    if not silent:
+        cmd += ["-ss", str(audio_start), "-t", str(duration), "-i", str(WORK / "track.mp3")]
+    cmd += ["-filter_complex", fc, "-map", "[vout]"]
+    cmd += ["-an"] if silent else ["-map", "3:a", "-af", af_chain]
+    cmd += [
         "-c:v", "libx264",
         *(["-crf", "30", "-preset", "ultrafast"] if preview
           else ["-crf", "23", "-preset", "fast", "-maxrate", "9M", "-bufsize", "18M"]),
         "-r", str(FPS),
-        "-c:a", "aac", "-b:a", "192k", "-pix_fmt", "yuv420p", "-shortest",
+        *([] if silent else ["-c:a", "aac", "-b:a", "192k"]),
+        "-pix_fmt", "yuv420p", "-shortest",
         str(result),
     ]
+    if silent:
+        print("  audio=none: часть без звука — трек кладётся поверх готовой склейки", flush=True)
     r = run(cmd)
     if r.returncode != 0 or not result.exists() or result.stat().st_size < 5000:
         print(r.stderr[-1200:]); yd_put_text(f"error: render rc={r.returncode}", f"{JOB_YD}/status.txt"); sys.exit("render fail")
