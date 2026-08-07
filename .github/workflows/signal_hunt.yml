@@ -42,4 +42,7 @@ jobs:
         env:
           GITHUB_TOKEN:      ${{ secrets.GH_MODELS_TOKEN }}
           GH_DISPATCH_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          SCOUT_CHAT_ID:      ${{ secrets.SCOUT_CHAT_ID }}
         run: python3 signal_hunt.py

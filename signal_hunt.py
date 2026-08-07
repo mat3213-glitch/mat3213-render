@@ -21,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from scout_filters import is_saturated  # noqa: E402
+from scout_filters import NoveltyIndex, is_saturated  # noqa: E402
 
 YD = "ydrive:Content factory"
 QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
@@ -32,8 +32,17 @@ GROK_THREAD = "1653"   # GROK SCOUT — РОУТИНГ ПО ИСТОЧНИКУ: 
 GH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
 
 
-def grok_signals_urls():
-    """source_link'и из свежего grok_*.json (ручной Grok) — это и есть мост Grok→auto_analyst."""
+def grok_signals():
+    """Кандидаты из свежего grok_*.json. Возвращает (в_анализатор, в_дайджест).
+
+    🔴 Правка 07.08 (задание yaromat «пусть грок тащит не репо с гитхаба, а глубинный интернет —
+    лайфхаки, бесплатные периоды, истории контент-фабрик»): раньше мост брал ТОЛЬКО ссылки на
+    github.com и всё остальное молча выбрасывал. С новым профилем скаута так терялось бы почти всё,
+    что он приносит. Теперь маршрута два:
+      • репо/инструмент → песочница auto_analyst (клонит, курлит, smoke-тестит) — как было;
+      • приём/акция/история/источник → ПРЯМО в дайджест TG: гонять статью через песочницу
+        бессмысленно, она там ничего не соберёт, а прочитать её должен человек.
+    """
     try:
         req = urllib.request.Request(
             f"https://api.github.com/repos/{SIGNALS_REPO}/contents/signals/incoming",
@@ -49,10 +58,10 @@ def grok_signals_urls():
             headers={"Authorization": f"token {GH_TOKEN}", "User-Agent": "curl/8.0"})
         doc = json.loads(base64.b64decode(json.load(urllib.request.urlopen(req2, timeout=30))["content"]))
         items = doc.get("candidates") or doc.get("items") or []
-        urls, sat = [], 0
+        to_analyst, to_digest, sat = [], [], 0
         for it in items:
             link = str(it.get("source_link", ""))
-            if not link.startswith("https://github.com/"):
+            if not link.startswith("http"):
                 continue
             # Замер 07.08 по четырём дням подряд: 38 из 55 кандидатов Grok'а — «бесплатные
             # LLM-шлюзы», класс, которым проект давно закрыт своим пулом воркеров. На выборке
@@ -61,12 +70,63 @@ def grok_signals_urls():
             if is_saturated(f"{it.get('what', '')} {it.get('why_us', '')} {link}"):
                 sat += 1
                 continue
-            urls.append(link)
-        print(f"[мост] {latest}: {len(urls)} github URL (отсеяно как насыщенная тема: {sat})")
-        return urls
+            kind = str(it.get("type", "")).lower()
+            if kind in ("tool", "repo") or link.startswith("https://github.com/"):
+                to_analyst.append(link)
+            else:
+                to_digest.append(it)
+        print(f"[мост] {latest}: в анализатор {len(to_analyst)}, в дайджест {len(to_digest)}, "
+              f"отсеяно как насыщенная тема {sat}")
+        return to_analyst, to_digest
     except Exception as e:
         print(f"[мост] fail: {str(e)[:140]}")
-        return []
+        return [], []
+
+
+def send_tg(text: str):
+    """Дайджест приёмов/акций в тред GROK SCOUT. Через CF Worker — api.telegram.org закрыт с RU-IP,
+    и канал держим единый даже с чистого egress раннера."""
+    worker = os.environ.get("CLOUDFLARE_WORKER", "")
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    chat = os.environ.get("SCOUT_CHAT_ID", "")
+    if not (worker and token and chat):
+        print("[tg] секреты не заданы — печатаю:\n" + text)
+        return
+    payload = json.dumps({"chat_id": chat, "message_thread_id": int(GROK_THREAD),
+                          "text": text[:3900], "disable_web_page_preview": True}).encode()
+    req = urllib.request.Request(f"{worker}/bot{token}/sendMessage", data=payload, method="POST",
+                                 headers={"Content-Type": "application/json", "User-Agent": "curl/8.0"})
+    try:
+        urllib.request.urlopen(req, timeout=45)
+        print(f"[tg] дайджест ушёл в тред {GROK_THREAD}")
+    except Exception as e:
+        print(f"[tg] ошибка: {str(e)[:140]}\n{text}")
+
+
+def build_digest(items: list) -> str:
+    """Срочное — вперёд: акция с дедлайном ценна ровно до даты окончания."""
+    order = {"promo": 0, "hack": 1, "source": 2, "craft": 3, "case": 4}
+    items = sorted(items, key=lambda x: order.get(str(x.get("type", "")).lower(), 9))
+    mark = {"promo": "🎟", "hack": "🔧", "case": "📈", "craft": "🎬", "source": "📦"}
+    lines = [f"🕳 Глубинный скаут — находок: {len(items)}\n"]
+    for it in items[:10]:
+        kind = str(it.get("type", "")).lower()
+        lines.append(f"{mark.get(kind, '•')} {it.get('what', '')}")
+        if it.get("why_us"):
+            lines.append(f"  {it['why_us']}")
+        if it.get("proof"):
+            lines.append(f"  📌 {str(it['proof'])[:180]}")
+        tail = []
+        if it.get("expires"):
+            tail.append(f"до {it['expires']}")
+        if str(it.get("region_ok", "")).lower() == "no":
+            tail.append("❌ не из РФ")
+        if it.get("needs_card") is True:
+            tail.append("нужна карта")
+        if tail:
+            lines.append("  ⏳ " + " · ".join(tail))
+        lines.append(f"  {it.get('source_link', '')}\n")
+    return "\n".join(lines)
 
 
 def existing_slugs():
@@ -79,16 +139,41 @@ def slug(u):
 
 
 def main():
+    analyst_urls, digest_items = grok_signals()
+
+    # ветка «глубинного интернета»: приёмы, акции, истории — человеку, а не в песочницу.
+    # Гейт новизны против прошлых выпусков живёт на ЯД (у раннера своего состояния нет).
+    if digest_items:
+        nov_local = "grok_novelty.json"
+        subprocess.run(["rclone", "copyto", f"{QUEUE}/{nov_local}", nov_local],
+                       capture_output=True, text=True)
+        nov = NoveltyIndex(Path(nov_local), threshold=0.5)
+        fresh = []
+        for it in digest_items:
+            text = f"{it.get('what', '')} {it.get('why_us', '')}"
+            ok, sim, who = nov.is_novel(text)
+            if ok:
+                fresh.append(it)
+                nov.add(str(it.get("source_link", ""))[:80], text)
+            else:
+                print(f"  [новизна] «{str(it.get('what', ''))[:40]}» ~{sim:.2f} ≈ {who}")
+        nov.save()
+        subprocess.run(["rclone", "copyto", nov_local, f"{QUEUE}/{nov_local}"],
+                       capture_output=True, text=True)
+        print(f"[дайджест] новых {len(fresh)} из {len(digest_items)}")
+        if fresh:
+            send_tg(build_digest(fresh))
+
     seen = existing_slugs()
     out, uniq = [], set()
-    for u in grok_signals_urls():
+    for u in analyst_urls:
         u = u.rstrip("/")
         if u in uniq or slug(u) in seen:
             continue
         uniq.add(u)
         out.append(u)
     if not out:
-        print("нет новых ссылок от Grok (всё уже проверено или файла нет)")
+        print("нет новых ссылок для анализатора (всё уже проверено или файла нет)")
         return
     out = out[:15]
     date = datetime.now().strftime("%Y-%m-%d")
