@@ -28,7 +28,10 @@ from pathlib import Path
 SATURATED = [
     "llm gateway", "llm-gateway", "llm proxy", "llm-proxy", "free llm", "free-llm",
     "openai compatible", "openai-compatible", "api aggregator", "model router",
-    "inference router", "inference endpoint", "api key pool", "free tier",
+    # 🔴 «free tier» ВЫНУТ 07.08: с новым профилем грока промо-периоды и бесплатные тиры —
+    # ЦЕЛЕВАЯ находка, а не мусор. Замер на истории: без этого терма шлюзы ловятся ровно так же
+    # (37 из 55), значит он ничего не держал, зато мог срезать легитимную акцию без крафт-слова.
+    "inference router", "inference endpoint", "api key pool",
     "coding agent", "agent framework", "multi-agent", "agentic framework",
     "agent orchestration", "autonomous agent", "ai assistant", "chatbot",
     "mcp server", "rag framework", "vector database", "prompt management",
