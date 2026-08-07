@@ -37,6 +37,15 @@ HERE = Path(__file__).parent
 QUERY_FILE = HERE / "repo_scout_queries.json"
 SEEN_FILE = HERE / "repo_scout_seen.json"
 REPORT_FILE = HERE / "repo_scout_latest.md"
+NOVELTY_FILE = HERE / "repo_scout_novelty.json"   # тексты показанных находок (гейт «то же другими словами»)
+
+from scout_filters import NoveltyIndex, is_saturated   # noqa: E402
+
+# Жёсткий потолок на КАТЕГОРИЮ в готовом шортлисте — включая добивку. До правки backfill
+# дожимал недобор слотов лучшими по velocity, а лучшие по velocity — всегда агентный trending:
+# так 4 разрешённых квотой orchestration превращались в 21 из 25.
+CAT_CAP = {"orchestration": 2}
+DEFAULT_CAT_CAP = 6
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -70,14 +79,18 @@ KEYWORDS = {
     "publishing": ["scheduler", "autopost", "social media", "cross-post", "publish"],
 }
 
+# 🔴 Правка 07.08: из списка ВЫНУТЫ общеагентные термы (llm/agent/gateway/inference/proxy/openai/
+# api/model/orchestration/router/aggregator/self-hosted/local). Именно они делали «релевантным»
+# весь поток trending: любой агентный фреймворк описан этими словами. Замер до правки —
+# 21 из 25 позиций шортлиста категории orchestration, 23 из 25 блёрбов «вряд ли пригодится».
+# Инфраструктуру мы не теряем: замену воркеру ловит SATURATED-исключение по крафтовому признаку
+# и отдельная квота категории (CAT_CAP), а не размытый фильтр релевантности.
 RELEVANCE_TERMS = [
     "video", "audio", "music", "ffmpeg", "render", "rendering", "clip", "clips",
     "reels", "shorts", "automation", "automate", "social", "telegram",
     "instagram", "tiktok", "youtube", "scheduler", "scheduling", "pipeline",
     "scraper", "scraping", "tempo", "onset", "playlist", "visualizer",
     "playwright", "autopost", "beat-sync", "music-video",
-    "llm", "agent", "agents", "gateway", "inference", "proxy", "openai", "api",
-    "model", "models", "orchestration", "self-hosted", "local", "router", "aggregator",
     "glsl", "shader", "datamosh", "glitch", "aesthetic", "imagemagick", "whisper",
     "transcription", "subtitle", "motion", "procedural", "diffusion", "comfyui",
 ]
@@ -241,15 +254,24 @@ def diversify(items: list[dict], total: int = 25, per_cat: int = 4) -> list[dict
         for cat, q in buckets.items():
             if len(result) >= total:
                 break
-            if q and taken[cat] < per_cat:
+            if q and taken[cat] < min(per_cat, CAT_CAP.get(cat, DEFAULT_CAT_CAP)):
                 result.append(q.popleft())
                 taken[cat] += 1
                 progress = True
-    # backfill: если после квот слотов не хватило — добираем лучшим из остатка (Grok-аудит)
+    # backfill: добираем лучшим из остатка, НО с тем же потолком на категорию. Раньше добивка
+    # шла без ограничений и одна категория съедала весь дайджест (замер 07.08: 21 из 25).
+    # Короткий честный список лучше двадцати пяти позиций с пометкой «вряд ли пригодится».
     if len(result) < total:
         leftover = sorted((it for q in buckets.values() for it in q),
                           key=lambda x: x.get("score", 0), reverse=True)
-        result.extend(leftover[: total - len(result)])
+        for it in leftover:
+            if len(result) >= total:
+                break
+            cat = it.get("category", "misc")
+            if taken[cat] >= CAT_CAP.get(cat, DEFAULT_CAT_CAP):
+                continue
+            result.append(it)
+            taken[cat] += 1
     return result
 
 
@@ -280,8 +302,14 @@ def build_candidates(max_per_query: int = 8) -> list[dict]:
     sort, qualifier = axis_for_today()
     print(f"[scout] ось дня: sort='{sort or 'best-match'}' qualifier='{qualifier or '-'}'")
 
+    dropped = {"saturated": 0}
+
     def consider(cand: dict):
         fn = cand["full_name"]
+        # тема, которой проект уже закрыт (свой пул воркеров/оркестратор) и без признаков ремесла
+        if is_saturated(f"{fn} {cand.get('description', '')}"):
+            dropped["saturated"] += 1
+            return
         old = by_name.get(fn)
         if old is None or cand["score"] > old["score"]:
             # при перезаписи сохраняем осмысленную категорию, если у победителя она "misc"
@@ -327,6 +355,7 @@ def build_candidates(max_per_query: int = 8) -> list[dict]:
 
     out = list(by_name.values())
     out.sort(key=lambda x: (x["score"], x["stars"]), reverse=True)
+    print(f"[scout] отсеяно как насыщенная тема (шлюзы/агенты/пентест): {dropped['saturated']}")
     return out
 
 
@@ -506,6 +535,26 @@ def main():
     if args.seed:
         print(f"🌱 seed: {len(items)} репо помечены виденными")
         return
+
+    # Гейт новизны: seen.json ловит ТО ЖЕ ИМЯ, а этот — ТУ ЖЕ СУТЬ под новым именем
+    # (замер 07.08 на истории грок-скаута: пары «то же другими словами» дают 0.53–0.82,
+    # разные темы — ниже 0.35, поэтому порог 0.5).
+    nov = NoveltyIndex(NOVELTY_FILE, threshold=0.5)
+    fresh, stale = [], []
+    for it in new_items:
+        text = f"{it['full_name']} {it.get('description') or ''}"
+        ok, sim, who = nov.is_novel(text)
+        if ok:
+            fresh.append(it)
+            nov.add(it["full_name"], text)
+        else:
+            stale.append((it["full_name"], round(sim, 2), who))
+    nov.save()
+    if stale:
+        print(f"[новизна] отсеяно как «уже было другими словами»: {len(stale)}")
+        for fn, sim, who in stale[:8]:
+            print(f"    {fn} ~{sim} ≈ {who}")
+    new_items = fresh
 
     digest = build_digest(new_items, len(items))
     if digest:

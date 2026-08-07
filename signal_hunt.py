@@ -15,8 +15,13 @@ import base64
 import json
 import os
 import subprocess
+import sys
 import urllib.request
 from datetime import datetime
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from scout_filters import is_saturated  # noqa: E402
 
 YD = "ydrive:Content factory"
 QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
@@ -44,9 +49,20 @@ def grok_signals_urls():
             headers={"Authorization": f"token {GH_TOKEN}", "User-Agent": "curl/8.0"})
         doc = json.loads(base64.b64decode(json.load(urllib.request.urlopen(req2, timeout=30))["content"]))
         items = doc.get("candidates") or doc.get("items") or []
-        urls = [it.get("source_link", "") for it in items
-                if str(it.get("source_link", "")).startswith("https://github.com/")]
-        print(f"[мост] {latest}: {len(urls)} github URL")
+        urls, sat = [], 0
+        for it in items:
+            link = str(it.get("source_link", ""))
+            if not link.startswith("https://github.com/"):
+                continue
+            # Замер 07.08 по четырём дням подряд: 38 из 55 кандидатов Grok'а — «бесплатные
+            # LLM-шлюзы», класс, которым проект давно закрыт своим пулом воркеров. На выборке
+            # ложных срабатываний ноль. Резать надо ЗДЕСЬ: каждый такой URL — это ещё один
+            # прогон анализатора (минуты GH) ради вердикта SKIP.
+            if is_saturated(f"{it.get('what', '')} {it.get('why_us', '')} {link}"):
+                sat += 1
+                continue
+            urls.append(link)
+        print(f"[мост] {latest}: {len(urls)} github URL (отсеяно как насыщенная тема: {sat})")
         return urls
     except Exception as e:
         print(f"[мост] fail: {str(e)[:140]}")
