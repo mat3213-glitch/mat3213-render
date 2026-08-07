@@ -1,0 +1,132 @@
+name: Clip Autobuild (parts → assemble, без бука)
+
+# Автономная сборка клипа целиком в облаке (задание yaromat 06.08): части идут ОЧЕРЕДЬЮ
+# (matrix + max-parallel:1 — concurrency НЕ очередь, она держит одного ожидающего и вытесняет
+# остальных, стоило 26 сцен из 29 05.08). Каждая часть читает фактические длины предыдущих с ЯД
+# и сама считает свой audio_start. Финальный джоб склеивает и кладёт трек одним файлом.
+
+on:
+  workflow_dispatch:
+    inputs:
+      clip_id:
+        description: 'CLIP_ID вида ГГГГ-ММ-ДД/имя (в корне render_jobs — только дата)'
+        required: true
+      parts:
+        description: 'Сколько частей'
+        required: true
+        default: '2'
+      base_start:
+        description: 'Смещение первой части от начала трека, с'
+        required: false
+        default: '0'
+      seed:
+        description: 'База seed (у части: seed + N*17)'
+        required: false
+        default: '2013'
+      send_tg:
+        description: 'Отправить готовый клип в TG (true/false)'
+        required: false
+        default: 'true'
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.mk.outputs.matrix }}
+    steps:
+      - id: mk
+        run: |
+          N=${{ inputs.parts }}
+          M=$(python3 -c "print('[' + ','.join(str(i) for i in range(1, $N+1)) + ']')")
+          echo "matrix=$M" >> "$GITHUB_OUTPUT"
+          echo "части: $M"
+
+  part:
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      max-parallel: 1        # ← ОЧЕРЕДЬ: часть N+1 стартует только когда N дописала свою длину
+      fail-fast: true        # ← кривой сдвиг лучше не тащить дальше по цепочке
+      matrix:
+        idx: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+          pip install --quiet scenedetect[opencv]
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Render part ${{ matrix.idx }}
+        env:
+          MODE: part
+          CLIP_ID:     ${{ inputs.clip_id }}
+          PART_INDEX:  ${{ matrix.idx }}
+          PARTS_TOTAL: ${{ inputs.parts }}
+          BASE_START:  ${{ inputs.base_start }}
+          SEED:        ${{ inputs.seed }}
+        run: python -u clip_autobuild.py
+      - name: Write error status on failure
+        if: failure()
+        env:
+          CLIP_ID: ${{ inputs.clip_id }}
+          IDX: ${{ matrix.idx }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$CLIP_ID/status.txt" \
+            <<< "error: part $IDX failed" || true
+
+  assemble:
+    needs: part
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Assemble + track + upload
+        env:
+          MODE: assemble
+          CLIP_ID:     ${{ inputs.clip_id }}
+          PARTS_TOTAL: ${{ inputs.parts }}
+          BASE_START:  ${{ inputs.base_start }}
+          SEND_TG:     ${{ inputs.send_tg }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID:         ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:       "5"
+        run: python -u clip_autobuild.py
+      - name: Write error status on failure
+        if: failure()
+        env:
+          CLIP_ID: ${{ inputs.clip_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$CLIP_ID/status.txt" \
+            <<< "error: assemble failed" || true
