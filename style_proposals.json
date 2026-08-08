@@ -1,78 +1,42 @@
 {
-  "_generated": "2026-08-07",
+  "_generated": "2026-08-08",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
       "name": "scout_warm_night_soft",
       "note": "scout: warm night soft",
-      "eq": "contrast=0.9:saturation=0.71:brightness=-0.086:gamma=1.08",
-      "balance": "rs=0.019:bs=-0.024:rm=0.034:bm=-0.039:rh=0.017:bh=-0.028",
+      "eq": "contrast=0.91:saturation=0.71:brightness=-0.075:gamma=1.08",
+      "balance": "rs=0.019:bs=-0.015:rm=0.061:bm=-0.055:rh=0.05:bh=-0.042",
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "40506096.jpg"
+      "_src": "52155156.jpg"
     },
     {
-      "name": "scout_neutral_night_muted",
-      "note": "scout: neutral night muted",
-      "eq": "contrast=1.01:saturation=0.68:brightness=-0.064:gamma=1.068",
-      "balance": "rm=-0.02:rh=0.024:bh=-0.036",
+      "name": "scout_neutral_mid_soft",
+      "note": "scout: neutral mid soft",
+      "eq": "contrast=1.03:saturation=0.72:brightness=0.002:gamma=0.997",
+      "balance": "rm=0.057:bm=-0.049:rh=0.083:gh=-0.027:bh=-0.056",
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "18313485.jpg"
+      "_src": "92254602.jpg"
     },
     {
       "name": "scout_neutral_mid_muted",
       "note": "scout: neutral mid muted",
-      "eq": "contrast=0.9:saturation=0.53:brightness=0.023:gamma=0.975",
-      "balance": null,
+      "eq": "contrast=1.28:saturation=0.57:brightness=0.013:gamma=0.986",
+      "balance": "rm=0.032:gm=0.048:bm=-0.081",
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "37511745.jpg"
-    },
-    {
-      "name": "scout_neutral_night_muted_2",
-      "note": "scout: neutral night muted",
-      "eq": "contrast=0.9:saturation=0.69:brightness=-0.052:gamma=1.056",
-      "balance": "rm=0.061:bm=-0.068:rh=0.058:bh=-0.072",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "90655944.jpg"
-    },
-    {
-      "name": "scout_neutral_night_soft",
-      "note": "scout: neutral night soft",
-      "eq": "contrast=1.09:saturation=1.0:brightness=-0.1:gamma=1.08",
-      "balance": null,
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "43251214.jpg"
-    },
-    {
-      "name": "scout_neutral_night_soft_2",
-      "note": "scout: neutral night soft",
-      "eq": "contrast=1.16:saturation=1.04:brightness=-0.1:gamma=1.08",
-      "balance": "bm=-0.02:rh=0.016",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "92905959.jpg"
+      "_src": "97772832.jpg"
     }
   ]
 }
