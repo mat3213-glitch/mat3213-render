@@ -1,42 +1,78 @@
 {
-  "_generated": "2026-08-08",
+  "_generated": "2026-08-09",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
-      "name": "scout_warm_night_soft",
-      "note": "scout: warm night soft",
-      "eq": "contrast=0.91:saturation=0.71:brightness=-0.075:gamma=1.08",
-      "balance": "rs=0.019:bs=-0.015:rm=0.061:bm=-0.055:rh=0.05:bh=-0.042",
+      "name": "scout_neutral_night_muted",
+      "note": "scout: neutral night muted",
+      "eq": "contrast=1.01:saturation=0.68:brightness=-0.064:gamma=1.068",
+      "balance": "rm=-0.02:rh=0.024:bh=-0.036",
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "52155156.jpg"
-    },
-    {
-      "name": "scout_neutral_mid_soft",
-      "note": "scout: neutral mid soft",
-      "eq": "contrast=1.03:saturation=0.72:brightness=0.002:gamma=0.997",
-      "balance": "rm=0.057:bm=-0.049:rh=0.083:gh=-0.027:bh=-0.056",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "92254602.jpg"
+      "_src": "98522967.jpg"
     },
     {
       "name": "scout_neutral_mid_muted",
       "note": "scout: neutral mid muted",
-      "eq": "contrast=1.28:saturation=0.57:brightness=0.013:gamma=0.986",
-      "balance": "rm=0.032:gm=0.048:bm=-0.081",
+      "eq": "contrast=0.9:saturation=0.53:brightness=0.023:gamma=0.975",
+      "balance": null,
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "97772832.jpg"
+      "_src": "86270147.jpg"
+    },
+    {
+      "name": "scout_neutral_night_muted_2",
+      "note": "scout: neutral night muted",
+      "eq": "contrast=0.9:saturation=0.69:brightness=-0.052:gamma=1.056",
+      "balance": "rm=0.061:bm=-0.068:rh=0.058:bh=-0.072",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "10681486.jpg"
+    },
+    {
+      "name": "scout_neutral_night_soft",
+      "note": "scout: neutral night soft",
+      "eq": "contrast=1.09:saturation=1.0:brightness=-0.1:gamma=1.08",
+      "balance": null,
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "67364933.jpg"
+    },
+    {
+      "name": "scout_neutral_night_soft_2",
+      "note": "scout: neutral night soft",
+      "eq": "contrast=1.16:saturation=1.04:brightness=-0.1:gamma=1.08",
+      "balance": "bm=-0.02:rh=0.016",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "94193855.jpg"
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "note": "scout: green mid soft",
+      "eq": "contrast=1.03:saturation=1.1:brightness=-0.02:gamma=1.021",
+      "balance": "gs=0.051:bs=-0.065:rm=0.1:gm=0.037:bm=-0.1:rh=0.1:gh=0.076:bh=-0.1",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "99019012.jpg"
     }
   ]
 }
