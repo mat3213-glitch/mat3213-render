@@ -132,8 +132,8 @@ jobs:
           PROMPT_CAP = 100000
           SB = "ydrive:Content factory/cloud_io/mimo_sandbox"
           # Живая память проекта (решение yaromat 30.07: «дай ему доступ к памяти вместо брифов»).
-          # Зеркало обновляет Stop-хук Claude КАЖДЫЙ ход (yaromat_music/backup.sh) — то есть бот
-          # видит ровно то, что видит Claude, без ручного PROJECT_BRIEF (тот протух за месяц).
+          # Память обновляет turn relay/backup — бот видит тот же проектный контекст,
+          # без ручного PROJECT_BRIEF (тот протух за месяц).
           # ДОСТУП ТОЛЬКО НА ЧТЕНИЕ: тут единственный rclone copy С ЯД, обратной заливки памяти нет,
           # а у самой модели инструментов не существует — записать в память она физически не может.
           MEM = "ydrive:Content factory/mirror/memory"
@@ -157,16 +157,16 @@ jobs:
               t = f.read_text(encoding="utf-8", errors="replace")
               return t[:cap] if cap else t
 
-          # Тир-1 (eager): ровно те три файла, что Claude читает целиком на старте сессии, + индекс.
+          # Тир-1 (eager): три основных файла проектной памяти + индекс.
           subprocess.run(
               ["rclone", "copy", MEM, str(MEM_LOCAL),
                "--include", "MEMORY_CORE.md", "--include", "PROJECT_MAP.md",
-               "--include", "NOW.md", "--include", "claude_auto/MEMORY.md"],
+               "--include", "NOW.md", "--include", "facts/MEMORY.md"],
               capture_output=True, timeout=300)
           core  = mem_read("MEMORY_CORE.md")
           pmap  = mem_read("PROJECT_MAP.md")
           now   = mem_read("NOW.md", NOW_CHARS)
-          index = mem_read("claude_auto/MEMORY.md", INDEX_CHARS)
+          index = mem_read("facts/MEMORY.md", INDEX_CHARS)
 
           message = os.environ["MESSAGE"]
 
@@ -193,7 +193,7 @@ jobs:
 
           facts = []
           for slug in pick_facts(message, index, FACT_LIMIT):
-              body = yd_read(f"{MEM}/claude_auto/{slug}.md", "")[:FACT_CHARS]
+              body = yd_read(f"{MEM}/facts/{slug}.md", "")[:FACT_CHARS]
               if body:
                   facts.append(f"--- {slug} ---\n{body}")
           facts_text = "\n\n".join(facts)
