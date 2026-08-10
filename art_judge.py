@@ -21,7 +21,7 @@ art_judge.py — VLM-СУДЬЯ БРЕНД-БРАКА ПО КАРТИНКЕ (г�
 
 Транспорт — ТРИ РАЗНЫХ ПРОВАЙДЕРА (30.07), потому что три модели одного вендора умирают одной
 квотой: `cf:` — наш CF Worker /analyze-frame (Workers AI, ключи CLOUDFLARE_WORKER+WORKER_SECRET),
-`or:` — OpenRouter free (OPENROUTER_API_KEY), `gh:` — GitHub Models (GITHUB_TOKEN, models: read).
+`or:` — OpenRouter free (OPENROUTER_API_KEY).
 Всё бесплатно. Судья без своего ключа молча выбывает, остальные работают.
 
 Запуск:
@@ -43,7 +43,6 @@ import urllib.error
 import urllib.request
 from collections import Counter
 
-ENDPOINT = "https://models.github.ai/inference/chat/completions"
 OR_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
 # АНСАМБЛЬ ИЗ ТРЁХ РАЗНЫХ ПРОВАЙДЕРОВ (решение yaromat 30.07). Раньше стояли три модели
@@ -222,13 +221,13 @@ def _chat_completions(url, token, model, prompt, b64, timeout=90):
 def ask_vision(judge, prompt, b64, token=None):
     """Один vision-вызов → (распарсенный JSON, None) либо (None, причина).
 
-    `judge` — «провайдер:модель»: `cf:` (наш CF Worker /analyze-frame), `or:` (OpenRouter),
-    `gh:` (GitHub Models). Без префикса считаем `gh:` — так старые вызовы (style_judge)
-    продолжают работать. Транспорты разные, контракт один: JSON по рубрике.
+    `judge` — «провайдер:модель»: `cf:` (наш CF Worker /analyze-frame) или
+    `or:` (OpenRouter). GitHub Models удалён. Транспорты разные, контракт один:
+    JSON по рубрике.
     """
     prov, _, model = judge.partition(":")
-    if not model:                       # голое имя модели = старый вызов GitHub Models
-        prov, model = "gh", judge
+    if not model:
+        return None, "нужен префикс cf: или or:"
 
     for attempt in range(3):
         try:
@@ -249,9 +248,7 @@ def ask_vision(judge, prompt, b64, token=None):
                     return None, "нет OPENROUTER_API_KEY"
                 v = extract_json(_chat_completions(OR_ENDPOINT, key, model, prompt, b64))
             else:
-                if not token:
-                    return None, "нет GITHUB_TOKEN"
-                v = extract_json(_chat_completions(ENDPOINT, token, model, prompt, b64))
+                return None, f"неподдерживаемый провайдер: {prov}"
             return (v, None) if v else (None, "битый JSON")
         except urllib.error.HTTPError as e:
             if e.code in (429, 503):

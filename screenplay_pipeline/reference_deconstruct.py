@@ -3,18 +3,20 @@
 reference_deconstruct.py — деконструктор референс-клипов (стадия 2 screenplay-pipeline).
 
 Берёт references.json (из reference_search.py) → скачивает видео, извлекает 16 кадров,
-собирает контакт-лист 4x4 → mimo-анализ структуры/хуков → reference_recipes.json на ЯД.
+собирает контакт-лист 4x4 → CF/OpenRouter VLM-анализ структуры/хуков →
+reference_recipes.json на ЯД.
 
 Usage:
   python3 reference_deconstruct.py --references path/to/references.json --job-id JOB_ID
 
 ВАЖНО: yt-dlp качает youtube.com напрямую — с RU-IP (бук) стабильно ловит read-timeout на
 API-запросах (проверено вживую 2026-07-03). Как shorts_harvest — запускать на GH Actions
-(US-раннер), не на буке. Остальная машинерия (кадры/контакт-лист/mimo) от IP не зависит,
+(US-раннер), не на буке. Остальная машинерия от IP не зависит,
 проверена локально на не-YouTube видео.
 """
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -25,6 +27,9 @@ from pathlib import Path
 
 from PIL import Image
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from art_judge import JUDGES, ask_vision
+
 try:
     from dotenv import load_dotenv
     load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env", override=False)
@@ -32,7 +37,6 @@ except Exception:
     pass
 
 YD_ROOT = "ydrive:Content factory"
-MIMO = os.path.expanduser("~/.mimocode/bin/mimo")
 
 RUBRIC = (
     "Перед тобой контакт-лист из 16 кадров видео-референса (сетка 4x4, кадры идут по таймлайну слева-направо, сверху-вниз).\n"
@@ -163,23 +167,17 @@ def make_contact_sheet(frames: list[str], tmpdir: str, name: str) -> str | None:
 
 
 def judge_video(contact_sheet: str, timeout: int = 180) -> dict | None:
-    try:
-        r = subprocess.run(
-            [MIMO, "run", "--pure", "--dangerously-skip-permissions",
-             RUBRIC, "-f", contact_sheet],
-            capture_output=True, text=True, timeout=timeout,
-            stdin=subprocess.DEVNULL,
-        )
-    except subprocess.TimeoutExpired:
-        return None
-    raw = re.sub(r'[一-鿿]', '', r.stdout or "")
-    d = extract_json(raw)
-    if not d:
-        return None
     required = ["hook", "rhythm", "motion", "color", "composition", "why_works", "verdict"]
-    if not all(k in d for k in required):
-        return None
-    return {k: str(d[k]) for k in required}
+    b64 = base64.b64encode(Path(contact_sheet).read_bytes()).decode()
+    for provider in JUDGES:
+        d, err = ask_vision(provider, RUBRIC, b64)
+        if d and all(k in d for k in required):
+            result = {k: str(d[k]) for k in required}
+            result["scenes"] = d.get("scenes", [])
+            result["judge"] = provider
+            return result
+        print(f"  judge {provider}: {err or 'invalid schema'}", file=sys.stderr)
+    return None
 
 
 def upload_yd(path: str, job_id: str):
@@ -230,7 +228,7 @@ def main():
 
             analysis = judge_video(sheet)
             if not analysis:
-                print(f"  skip: mimo не вернул JSON", file=sys.stderr)
+                print(f"  skip: vision-ансамбль не вернул JSON", file=sys.stderr)
                 errors += 1
                 continue
 

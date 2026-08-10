@@ -16,22 +16,18 @@ from concurrent.futures import ThreadPoolExecutor
 MODELS = [m for m in os.environ.get("LITELLM_GH_MODELS", "").split(",") if m.strip()] or [
     "groq/llama-3.3-70b-versatile",
     "openrouter/meta-llama/llama-3.3-70b-instruct:free",
-    "gemini/gemini-2.0-flash",
-    "github/gpt-4o-mini",
+    "gemini/gemini-2.5-flash",
     # доп. фолбэк-слой (каталог awesome-free-llm-apis, 2026-07-03): те же ключи
     # (OPENROUTER_API_KEY/GEMINI_API_KEY), новые free-модели той же платформы —
     # шире охват при 429 на топовых моделях, новых секретов не требуется.
     "openrouter/qwen/qwen-2.5-72b-instruct:free",
     "openrouter/deepseek/deepseek-chat:free",
-    "gemini/gemini-1.5-flash",
 ]
 YD_IN = "ydrive:Content factory/cloud_io/litellm_ci/in"
 YD_OUT = "ydrive:Content factory/cloud_io/litellm_ci/out"
 
 
 def call(prompt, system, timeout=120, max_tokens=1024):
-    if os.environ.get("GITHUB_TOKEN") and not os.environ.get("GITHUB_API_KEY"):
-        os.environ["GITHUB_API_KEY"] = os.environ["GITHUB_TOKEN"]
     import litellm
     litellm.drop_params = True
     msgs = ([{"role": "system", "content": system}] if system else []) + \

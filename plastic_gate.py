@@ -2,24 +2,24 @@
 """
 plastic_gate.py — БОЕВОЙ ГЕЙТ пластмассовости для пула генерации.
 
-Переиспользуемый шаг конвейера: берёт папку-пул на ЯД (png/mp4) → mimo-судья (обучен рубрикой
-Claude, склейка 3 кадров для видео) → score 0-100 → отбраковка пластика по порогу.
-Детектор: mimo v2 (Spearman +0.58 / AUC 0.78 на разметке yaromat, бесплатно, без квот).
+Переиспользуемый шаг конвейера: берёт папку-пул на ЯД (png/mp4), склеивает
+3 кадра видео и опрашивает CF/OpenRouter vision-ансамбль.
 
 БЕЗОПАСНО: по умолчанию --dry-run (только gate_report.json, ничего не двигает).
 С --enforce отбракованные ПЕРЕМЕЩАЮТСЯ в <pool>/_rejected/ (ОБРАТИМО, не удаляются).
 
 Запуск (GH workflow plastic_gate.yml): POOL=cloud_io/<pool> THRESHOLD=55 ENFORCE=0|1 python plastic_gate.py
 """
+import base64
 import os, re, json, subprocess, tempfile, glob
 from PIL import Image
+from art_judge import JUDGES, PANEL, ask_vision
 
 YD_ROOT = "ydrive:Content factory"
 POOL = os.environ["POOL"].strip().lstrip("/")                  # путь относительно "Content factory/", напр. cloud_io/qwen_pool/2026-06-26
 POOL_YD = f"{YD_ROOT}/{POOL}"
 THRESHOLD = float(os.environ.get("THRESHOLD", "55"))           # reject если score >= THRESHOLD
 ENFORCE = os.environ.get("ENFORCE", "0") == "1"                # двигать отбракованные
-MIMO = os.path.expanduser("~/.mimocode/bin/mimo")
 WORK = tempfile.mkdtemp(prefix="gate_")
 LOCAL = os.path.join(WORK, "media"); os.makedirs(LOCAL, exist_ok=True)
 STRIPS = os.path.join(WORK, "strips"); os.makedirs(STRIPS, exist_ok=True)
@@ -82,16 +82,23 @@ def make_strip(frames, name):
     out=os.path.join(STRIPS,f"{name}_strip.jpg"); strip.save(out,quality=88); return out
 
 def judge(strip, timeout=180):
-    try:
-        r=subprocess.run([MIMO,"run","--pure","--dangerously-skip-permissions",RUBRIC,"-f",strip],
-                         capture_output=True,text=True,timeout=timeout,stdin=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        return None,"timeout"
-    d=extract_json(r.stdout or "")
-    if not d or "plastic" not in d: return None,"no-json"
-    try: v=max(0.0,min(100.0,float(d["plastic"])))
-    except Exception: return None,"bad-num"
-    return v, re.sub(r'[一-鿿]','',str(d.get("reason","")))[:70]
+    b64 = base64.b64encode(open(strip, "rb").read()).decode()
+    votes, reasons, errors = [], [], []
+    for provider in JUDGES:
+        d, err = ask_vision(provider, RUBRIC, b64)
+        if d and "plastic" in d:
+            try:
+                votes.append(max(0.0, min(100.0, float(d["plastic"]))))
+                reasons.append(re.sub(r'[一-鿿]', '', str(d.get("reason", "")))[:70])
+            except (TypeError, ValueError):
+                errors.append(f"{provider}:bad-num")
+        else:
+            errors.append(f"{provider}:{err or 'no-json'}")
+        if len(votes) >= PANEL:
+            break
+    if not votes:
+        return None, "; ".join(errors)[:160] or "no-votes"
+    return round(sum(votes) / len(votes), 1), " | ".join(reasons)[:160]
 
 # скачать пул (медиа)
 sh(f'rclone copy "{POOL_YD}" "{LOCAL}" --include "*.mp4" --include "*.png" --include "*.jpg" --include "*.jpeg" --transfers 6 --max-depth 1')
@@ -111,7 +118,7 @@ for path in media:
 
 rejected=[r for r in results if r["verdict"]=="REJECT"]
 passed  =[r for r in results if r["verdict"]=="pass"]
-report={"pool":POOL,"threshold":THRESHOLD,"enforce":ENFORCE,"detector":"mimo+rubric_claude (AUC0.78)",
+report={"pool":POOL,"threshold":THRESHOLD,"enforce":ENFORCE,"detector":"cf+openrouter vision ensemble",
         "total":len(results),"passed":len(passed),"rejected":len(rejected),"skipped":len(results)-len(passed)-len(rejected),
         "items":results}
 rp=os.path.join(WORK,"gate_report.json"); open(rp,"w").write(json.dumps(report,ensure_ascii=False,indent=2))

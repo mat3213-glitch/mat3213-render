@@ -10,7 +10,6 @@ on:
 
 permissions:
   contents: read
-  models: read              # дефолтный GITHUB_TOKEN получает доступ к GitHub Models
 
 jobs:
   reflect:
@@ -32,6 +31,7 @@ jobs:
       - name: Reflect + optimize (cloud)
         env:
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
+          OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY }}
           GITHUB_REPOSITORY:   ${{ github.repository }}
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}

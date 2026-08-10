@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """
-plastic_gate_core.py — импортируемое ядро plastic gate (кадры/контакт-стрип/mimo-судья).
+plastic_gate_core.py — импортируемое ядро plastic gate (кадры/контакт-стрип/VLM).
 
 Вынесено из plastic_gate.py (был флат-скрипт на env-переменных, пул-свип) без изменения
 логики — чтобы синхронно гейтить ОДНУ свежую сцену (Фаза 1 screenplay-pipeline), а не только
 ночной свип целого пула. plastic_gate.py продолжает работать как есть (не переписан).
 """
+import base64
 import os
 import re
 import subprocess
 import json
 import tempfile
 from PIL import Image
-
-MIMO = os.path.expanduser("~/.mimocode/bin/mimo")
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from art_judge import JUDGES, PANEL, ask_vision
 
 RUBRIC = (
     "Перед тобой кадр(ы) AI-видео/картинки. Оцени ПЛАСТМАССОВОСТЬ = неправдоподобие (НЕ красоту):\n"
@@ -99,19 +101,23 @@ def make_strip(frames, name, strips_dir):
 
 
 def judge(strip, timeout=180):
-    try:
-        r = subprocess.run([MIMO, "run", "--pure", "--dangerously-skip-permissions", RUBRIC, "-f", strip],
-                           capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL)
-    except subprocess.TimeoutExpired:
-        return None, "timeout"
-    d = extract_json(r.stdout or "")
-    if not d or "plastic" not in d:
-        return None, "no-json"
-    try:
-        v = max(0.0, min(100.0, float(d["plastic"])))
-    except Exception:
-        return None, "bad-num"
-    return v, re.sub(r'[一-鿿]', '', str(d.get("reason", "")))[:70]
+    b64 = base64.b64encode(open(strip, "rb").read()).decode()
+    votes, reasons, errors = [], [], []
+    for provider in JUDGES:
+        d, err = ask_vision(provider, RUBRIC, b64)
+        if d and "plastic" in d:
+            try:
+                votes.append(max(0.0, min(100.0, float(d["plastic"]))))
+                reasons.append(re.sub(r'[一-鿿]', '', str(d.get("reason", "")))[:70])
+            except (TypeError, ValueError):
+                errors.append(f"{provider}:bad-num")
+        else:
+            errors.append(f"{provider}:{err or 'no-json'}")
+        if len(votes) >= PANEL:
+            break
+    if not votes:
+        return None, "; ".join(errors)[:160] or "no-votes"
+    return round(sum(votes) / len(votes), 1), " | ".join(reasons)[:160]
 
 
 def judge_media(path: str, threshold: float = 55, timeout: int = 180) -> dict:

@@ -2,7 +2,7 @@
 """
 final_qc.py — Финальный QC на собранном клипе.
 
-Использует mimo для проверки:
+Использует CF/OpenRouter vision-ансамбль для проверки:
 - Соответствия частоты склеек заявленному ритму.
 - Консистентности текстуры/зерна по всему клипу.
 - Читаемости текста/шрифтов.
@@ -13,6 +13,7 @@ Usage:
 """
 
 import argparse
+import base64
 import json
 import os
 import re
@@ -22,8 +23,8 @@ import tempfile
 from pathlib import Path
 
 from PIL import Image
-
-MIMO = os.path.expanduser("~/.mimocode/bin/mimo")
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from art_judge import JUDGES, ask_vision
 WORK = tempfile.mkdtemp(prefix="qc_")
 STRIPS = os.path.join(WORK, "strips")
 os.makedirs(STRIPS, exist_ok=True)
@@ -117,22 +118,18 @@ def make_strip(frames, name):
 
 
 def judge(strip, timeout=180):
-    try:
-        r = subprocess.run(
-            [MIMO, "run", "--pure", "--dangerously-skip-permissions", RUBRIC, "-f", strip],
-            capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL
-        )
-    except subprocess.TimeoutExpired:
-        return None, "timeout"
-    
-    d = extract_json(r.stdout or "")
-    if not d:
-        return None, "no-json"
-    
-    # Проверка всех обязательных полей
     required = ["cuts_ok", "texture_consistent", "fonts_ok", "plastic_score"]
-    if not all(k in d for k in required):
-        return None, f"missing-fields: {[k for k in required if k not in d]}"
+    b64 = base64.b64encode(Path(strip).read_bytes()).decode()
+    d = None
+    errors = []
+    for provider in JUDGES:
+        candidate, err = ask_vision(provider, RUBRIC, b64)
+        if candidate and all(k in candidate for k in required):
+            d = candidate
+            break
+        errors.append(f"{provider}:{err or 'missing-fields'}")
+    if d is None:
+        return None, "; ".join(errors)[:200] or "no-json"
         
     # Валидация типов и значений
     try:
@@ -141,7 +138,7 @@ def judge(strip, timeout=180):
     except Exception:
         return None, "bad-plastic-score"
         
-    # pass вычисляется на стороне вызывающего кода, но mimo может вернуть свой pass
+    # pass вычисляется на стороне вызывающего кода.
     reason = str(d.get("reason", "N/A"))[:100]
     
     return {

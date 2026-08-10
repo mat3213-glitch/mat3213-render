@@ -27,6 +27,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: qwen-shared-session
+  cancel-in-progress: false
+
 jobs:
   # ── 1. План: собрать цели → matrix ────────────────────────────────────────────────
   plan:

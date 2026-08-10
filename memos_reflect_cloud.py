@@ -2,13 +2,13 @@
 """
 memos_reflect_cloud.py — облачная рефлексия + оптимизатор (GH Actions, бук-независимо).
 
-Самодостаточный (stdlib + rclone + GH Models по умолчному токену с permissions: models:read).
+Самодостаточный (stdlib + rclone + OpenRouter).
 Запускается по cron на GH Actions. Анализирует БЕЗ бука:
   • GitHub API — ВСЕ раны репо (новые воркфлоу подхватываются сами, без хардкод-списка);
   • ЯД memory_os_feed/ — em-ит рендеров/скриптов (исход/ошибки/инсайты);
   • ЯД AUDIT/CHECKPOINT.md — последнее состояние сессии (запросы юзера + действия Claude).
 
-Мозг — GitHub Models. Два прохода: reflect (ошибки акторов + точность задач юзера) и
+Мозг — OpenRouter. Два прохода: reflect (ошибки акторов + точность задач юзера) и
 optimize (конкретные предложения: fix/optimize/simplify). Результат:
   • ЯД AUDIT/REFLECTION.md + AUDIT/PROPOSALS.md (человекочитаемо);
   • findings-ошибки как записи в ЯД-фид (бук ingest вольёт в локальную БД);
@@ -25,10 +25,14 @@ from pathlib import Path
 YD = "ydrive:Content factory"
 YD_FEED = f"{YD}/cloud_io/memory_os_feed"
 YD_AUDIT = f"{YD}/mirror/AUDIT"
-GH_URL = "https://models.github.ai/inference/chat/completions"
-GH_MODELS = ("openai/gpt-4o-mini", "meta/llama-3.3-70b-instruct")
+LLM_URL = "https://openrouter.ai/api/v1/chat/completions"
+LLM_MODELS = tuple(m.strip() for m in os.environ.get(
+    "OPENROUTER_MODELS",
+    "cohere/north-mini-code:free,nvidia/nemotron-3-super-120b-a12b:free",
+).split(",") if m.strip())
 REPO = os.environ.get("GITHUB_REPOSITORY", "mat3213-glitch/mat3213-render")
 TOKEN = os.environ.get("GITHUB_TOKEN", "")
+LLM_TOKEN = os.environ.get("OPENROUTER_API_KEY", "")
 TG_WORKER = os.environ.get("CLOUDFLARE_WORKER", "")
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("SCOUT_CHAT_ID", "")
@@ -112,19 +116,20 @@ def pull_checkpoint() -> str:
 
 
 def ask(system: str, user: str, max_tokens=1500):
-    if not TOKEN:
+    if not LLM_TOKEN:
         return None
-    for model in GH_MODELS:
+    for model in LLM_MODELS:
         try:
             body = json.dumps({"model": model, "max_tokens": max_tokens, "temperature": 0.4,
                                "messages": [{"role": "system", "content": system},
                                             {"role": "user", "content": user}]}).encode()
-            req = urllib.request.Request(GH_URL, data=body,
-                                         headers={"Authorization": f"Bearer {TOKEN}",
+            req = urllib.request.Request(LLM_URL, data=body,
+                                         headers={"Authorization": f"Bearer {LLM_TOKEN}",
                                                   "Content-Type": "application/json",
-                                                  "Accept": "application/json"})
+                                                  "Accept": "application/json",
+                                                  "User-Agent": "content-factory-reflect/2"})
             with urllib.request.urlopen(req, timeout=90) as r:
-                txt = json.loads(r.read())["choices"][0]["message"]["content"]
+                txt = json.loads(r.read(2_000_000))["choices"][0]["message"]["content"]
             if txt and txt.strip():
                 t = txt.strip()
                 if t.startswith("```"):
@@ -138,18 +143,18 @@ def ask(system: str, user: str, max_tokens=1500):
                         except Exception:
                             pass
         except Exception as e:
-            log(f"models {model} err: {e}")
+            log(f"OpenRouter {model} err: {e}")
     return None
 
 
 REFLECT_SYS = (
-    "Ты — облачный слой рефлексии фабрики контента. Акторы: claude, mimo, gh-ai, api, user. "
+    "Ты — облачный слой рефлексии фабрики контента. Акторы: codex, kimi, qwen, api, user. "
     "Найди ошибки/трения/потери и как избежать/исправить. Для user оцени точность постановки задач. "
     "СТРОГО JSON: {\"errors\":[{\"actor\",\"what\",\"root_cause\",\"how_avoid\",\"how_fix\",\"severity\"}],"
     "\"interactions\":[{\"precision\":0,\"ambiguities\",\"suggestion\"}],\"summary\":\"\"}"
 )
 OPTIMIZE_SYS = (
-    "Ты — оптимизатор фабрики (Claude-дирижёр + бесплатные mimo/GH Models, рендеры на GH, "
+    "Ты — оптимизатор фабрики (Codex-тимлид + Kimi/Qwen/OpenRouter, рендеры на GH, "
     "железо Atom/1.8GB). По ошибкам/инсайтам предложи КОНКРЕТНЫЕ скриптовые улучшения для "
     "исключения ошибки или буста (меньше токенов, проще, быстрее). СТРОГО JSON-массив: "
     "[{\"type\":\"fix|optimize|simplify|automate\",\"target\",\"proposal\",\"benefit\",\"effort\"}]"

@@ -54,23 +54,15 @@ jobs:
           STYLE_SCOUT_THREAD_ID: "634"                          # тема «STYLE SCOUT»
         run: python style_scout.py --per-query "${{ github.event.inputs.per_query || '3' }}" --limit "${{ github.event.inputs.limit || '6' }}"
 
-      # ── Фаза 1: mimo как глаз+судья (dedicated free-личность с ЯД, отдельно от бука) ──
-      - name: Restore mimo (binary + CI auth from ydrive)
-        run: |
-          set -e
-          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
-          chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"  "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client" "$HOME/.local/share/mimocode/mimo-free-client"
-
-      - name: Judge candidates (mimo)
+      - name: Judge candidates (CF + OpenRouter vision)
         env:
           CLOUDFLARE_WORKER:     ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:         ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY:    ${{ secrets.OPENROUTER_API_KEY }}
           TELEGRAM_BOT_TOKEN:    ${{ secrets.TELEGRAM_BOT_TOKEN }}
           STYLE_SCOUT_CHAT_ID:   ${{ secrets.SCOUT_CHAT_ID }}
           STYLE_SCOUT_THREAD_ID: "634"
-        run: python style_judge.py   # MIMO_BIN дефолтит на ~/.mimocode/bin/mimo; best-effort, мердж за yaromat
+        run: python style_judge.py
 
       - name: Commit proposals + judge
         run: |
@@ -81,6 +73,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "no proposals change"
           else
-            git commit -m "style-scout: new candidates + mimo judge [skip ci]"
+            git commit -m "style-scout: new candidates + vision judge [skip ci]"
             git push
           fi

@@ -6,15 +6,13 @@ style_judge.py — Фаза 1 агента-разнообразия: ГЛАЗ+С
 на нашем футаже) + кандидатов из style_proposals.json + бренд-рубрику → зовёт vision-ансамбль →
 пишет style_judge.json (вердикт/скор/причина на каждый лук) → постит рекомендацию в TG-тред 634.
 
-🔴 ТРАНСПОРТ ПЕРЕВЕДЁН С mimo НА GITHUB MODELS (2026-07-29). mimo умер 27.07 (free-тир снят),
-и вместе с ним молча умер этот судья: `Path(MIMO).exists()` → False → «пропуск», воркфлоу
-зелёный, вердиктов нет. Теперь тот же ансамбль, что судит пул артов (`art_judge.ask_vision`):
-три vision-модели голосуют, keep решается БОЛЬШИНСТВОМ, score усредняется.
+Транспорт — живой CF Workers AI + OpenRouter ансамбль из
+`art_judge.ask_vision`. Mimo и GitHub Models удалены.
 
 ВАЖНО: judge НЕ мерджит в прод. styles.json не трогается. Последнее слово — за yaromat
 (он запускает style_scout_merge.py по рекомендации). Best-effort: не валит воркфлоу.
 
-Env: GITHUB_TOKEN (models: read), CLOUDFLARE_WORKER/TELEGRAM_BOT_TOKEN/STYLE_SCOUT_CHAT_ID/
+Env: OPENROUTER_API_KEY, CLOUDFLARE_WORKER/WORKER_SECRET/TELEGRAM_BOT_TOKEN/STYLE_SCOUT_CHAT_ID/
      STYLE_SCOUT_THREAD_ID (TG). Контакт-лист ищется в /tmp/style_scout/style_scout_*.jpg.
 """
 import os, sys, json, re, glob, base64, time
@@ -141,11 +139,10 @@ def main():
     if not sheets:
         print(f"[judge] контакт-лист не найден ({SHEET_GLOB}) — пропуск"); return
     sheet = sheets[-1]
-    token = os.environ.get("GITHUB_TOKEN")
     print(f"[judge] сетка={sheet} | кандидатов={len(names)} | ансамбль={len(MODELS)}")
-    if not token:
-        print("[judge] нет GITHUB_TOKEN (models: read) — пропуск")
-        tg_text("Style Scout · судья без GITHUB_TOKEN. Кандидаты в style_proposals.json — реши вручную.")
+    if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("CLOUDFLARE_WORKER")):
+        print("[judge] нет ни одного vision-транспорта — пропуск")
+        tg_text("Style Scout · vision-транспорты не настроены. Кандидаты реши вручную.")
         return
 
     prompt = build_prompt(names)
@@ -153,7 +150,7 @@ def main():
     per_name = defaultdict(lambda: {"keep": 0, "scores": [], "reasons": []})
     n_ok = 0
     for m in MODELS:
-        v, err = ask_vision(m, prompt, b64, token)
+        v, err = ask_vision(m, prompt, b64)
         if not v or "verdicts" not in v:
             print(f"  ✗ {m.split('/')[-1]}: {err or 'нет verdicts'}")
             continue

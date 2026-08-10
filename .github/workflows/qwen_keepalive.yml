@@ -25,6 +25,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: qwen-shared-session
+  cancel-in-progress: false
+
 env:
   WARN_DAYS: "10"           # осталось меньше — кричим в TG
   ALERT_THREAD: "5"         # фактори-тред: алерт должен быть ВИДЕН, см. аудит watchdog
@@ -66,7 +70,8 @@ jobs:
         id: touch
         continue-on-error: true    # не смогли достучаться — всё равно доложим срок
         run: |
-          python3 qwen/qwen_chat.py "Ответь одним словом: ок" --model "" --timeout 180
+          printf '%s\n' 'Ответь одним словом: ок' | \
+            python3 qwen/qwen_chat.py --stdin --model "" --timeout 180
 
       - name: Push refreshed session back to ЯД
         if: steps.touch.outcome == 'success'

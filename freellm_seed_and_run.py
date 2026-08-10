@@ -17,7 +17,6 @@ freellm_seed_and_run.py — драйвер для freellmapi на GH Actions (в
   GROQ_API_KEY               → groq
   OPENROUTER_API_KEY         → openrouter
   HUGGINGFACE_TOKEN          → huggingface
-  GH_MODELS_TOKEN/GITHUB_TOKEN → github
 Stdlib-only (urllib) — на раннере без доп. зависимостей.
 """
 from __future__ import annotations
@@ -43,7 +42,6 @@ KEY_MAP = [
     ("GROQ_API_KEY", "groq"),
     ("OPENROUTER_API_KEY", "openrouter"),
     ("HUGGINGFACE_TOKEN", "huggingface"),
-    ("GH_MODELS_TOKEN", "github"),
 ]
 
 
@@ -149,7 +147,7 @@ def main():
     seeded = seed_keys(session)
     print(f"seeded keys: {json.dumps(seeded, ensure_ascii=False)}", file=sys.stderr)
     unified = get_unified(session)
-    print(f"unified key: {unified[:16]}… ({len(unified)} chars)", file=sys.stderr)
+    print(f"unified key loaded ({len(unified)} chars)", file=sys.stderr)
 
     tasks = json.loads(open(args.batch, encoding="utf-8").read())
     if isinstance(tasks, dict):

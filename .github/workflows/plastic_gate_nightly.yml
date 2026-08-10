@@ -1,8 +1,8 @@
 name: Plastic Gate Nightly (отбраковка пластика из пулов)
 
-# Вариант B (консенсус Claude+mimo): изолированный ночной гейт ПОСЛЕ генераций.
+# Изолированный ночной гейт после генераций.
 # Проходит свежие пулы qwen/veofree за сегодня/вчера (UTC), гейтит каждый
-# через plastic_gate.py (mimo+рубрика Claude, enforce → пластик в _rejected/, обратимо).
+# через plastic_gate.py (CF/OpenRouter vision ensemble; enforce → _rejected/, обратимо).
 
 on:
   workflow_dispatch:
@@ -46,14 +46,6 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
-      - name: Restore mimo binary + auth from ydrive
-        run: |
-          set -e
-          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
-          chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
       - name: Run nightly gate
         env:
           THRESHOLD:          ${{ inputs.threshold || '55' }}
@@ -62,4 +54,6 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:         ${{ secrets.SCOUT_CHAT_ID }}
           TG_THREAD_ID:       '2182'
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python -u plastic_gate_nightly.py

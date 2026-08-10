@@ -40,17 +40,12 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
-      - name: Restore mimo binary + auth from ydrive
-        run: |
-          set -e
-          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
-          chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
       - name: Run plastic_gate.py
         env:
           POOL:      ${{ inputs.pool }}
           THRESHOLD: ${{ inputs.threshold }}
           ENFORCE:   ${{ inputs.enforce }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python -u plastic_gate.py

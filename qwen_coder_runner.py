@@ -27,11 +27,11 @@ def main():
         model = t.get("model") or ""
         prompt = t["prompt"]
         t0 = time.time()
-        args = ["python3", QWEN_CHAT, prompt, "--model", model, "--timeout", "240"]
+        args = ["python3", QWEN_CHAT, "--stdin", "--model", model, "--timeout", "240"]
         # per-task try: одна зависшая/упавшая задача не должна убить весь батч (иначе out.json
         # не запишется и fanout получит «таймаут» по всем). Каждый исход → строка результата.
         try:
-            r = subprocess.run(args, capture_output=True, text=True, timeout=330)
+            r = subprocess.run(args, input=prompt, capture_output=True, text=True, timeout=330)
             text = r.stdout.strip()
             ok = r.returncode == 0 and text != ""
             err = "" if ok else (r.stderr or "")[-200:]

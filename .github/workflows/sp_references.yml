@@ -71,15 +71,6 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Restore mimo binary + auth from ydrive
-        run: |
-          set -e
-          mkdir -p "$HOME/.mimocode/bin" "$HOME/.local/share/mimocode"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo" "$HOME/.mimocode/bin/mimo"
-          chmod +x "$HOME/.mimocode/bin/mimo"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/installation_id"   "$HOME/.local/share/mimocode/installation_id"
-          rclone copyto "ydrive:Content factory/cloud_io/mimo_ci/mimo-free-client"  "$HOME/.local/share/mimocode/mimo-free-client"
-
       - name: Pull brief_full.yaml from job
         env:
           JOB_ID: ${{ inputs.job_id }}
@@ -105,6 +96,9 @@ jobs:
       - name: Stage 2 — reference_deconstruct
         env:
           JOB_ID: ${{ inputs.job_id }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/references.json" references.json
           python3 screenplay_pipeline/reference_deconstruct.py --references references.json \

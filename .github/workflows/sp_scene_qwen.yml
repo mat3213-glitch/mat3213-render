@@ -20,6 +20,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: qwen-shared-session
+  cancel-in-progress: false
+
 jobs:
   gen:
     runs-on: ubuntu-latest

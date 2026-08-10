@@ -13,6 +13,7 @@
 """
 import sys
 import json
+import os
 import time
 import argparse
 import asyncio
@@ -24,6 +25,7 @@ SESSION_FILE = Path(__file__).parent / "qwen_session.json"
 OUTPUTS = Path(__file__).parent / "outputs"
 BASE_URL = "https://chat.qwen.ai"
 DEFAULT_MODEL = "Qwen3-Coder"
+MAX_PROMPT_CHARS = 100_000
 
 
 def poll_for_text(cookies: dict, chat_id: str, timeout: int = 240) -> str:
@@ -39,9 +41,18 @@ def poll_for_text(cookies: dict, chat_id: str, timeout: int = 240) -> str:
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            r = s.get(f"{BASE_URL}/api/v2/chats/{chat_id}", timeout=15)
+            r = s.get(f"{BASE_URL}/api/v2/chats/{chat_id}", timeout=15, stream=True)
             if r.status_code == 200:
-                data = r.json().get("data", {})
+                if int(r.headers.get("Content-Length", "0") or 0) > 2_000_000:
+                    print("\n  [poll] ответ больше 2 MB", file=sys.stderr)
+                    return ""
+                raw = bytearray()
+                for chunk in r.iter_content(64 * 1024):
+                    raw.extend(chunk)
+                    if len(raw) > 2_000_000:
+                        print("\n  [poll] ответ больше 2 MB", file=sys.stderr)
+                        return ""
+                data = json.loads(raw).get("data", {})
                 msgs = data.get("chat", {}).get("history", {}).get("messages", {})
                 for msg in msgs.values():
                     if msg.get("role") != "assistant":
@@ -97,11 +108,12 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
         print("Нет сессии. Сначала: python3 Instrument/Qwen/AUTH.py", file=sys.stderr)
         sys.exit(2)
 
+    SESSION_FILE.chmod(0o600)
     state = json.loads(SESSION_FILE.read_text())
     cookies = {c["name"]: c["value"] for c in state.get("cookies", [])
                if any(d in c.get("domain", "") for d in ["qwen.ai", "alibaba", "aliyun"])}
 
-    print(f"  [qwen-chat] model={model} prompt=«{prompt[:60]}»", file=sys.stderr)
+    print(f"  [qwen-chat] model={model} prompt_chars={len(prompt)}", file=sys.stderr)
 
     async with async_playwright() as p:
         try:
@@ -172,7 +184,10 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
         try:
             fresh = await ctx.storage_state()
             if _token_exp(fresh) >= _token_exp(state) and _token_exp(fresh) > 0:
-                SESSION_FILE.write_text(json.dumps(fresh, ensure_ascii=False))
+                tmp = SESSION_FILE.with_suffix(".json.tmp")
+                tmp.write_text(json.dumps(fresh, ensure_ascii=False))
+                os.chmod(tmp, 0o600)
+                os.replace(tmp, SESSION_FILE)
                 print(f"  [session] обновлена, JWT до {_exp_human(fresh)}", file=sys.stderr)
             else:
                 print(f"  [session] НЕ обновляю: новый токен хуже старого "
@@ -180,6 +195,10 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
         except Exception as e:
             print(f"  [session] не смог сохранить: {str(e)[:100]}", file=sys.stderr)
 
+        # Poll must use the post-navigation cookies, not the stale pre-browser state.
+        fresh_cookies = await ctx.cookies()
+        cookies = {c["name"]: c["value"] for c in fresh_cookies
+                   if any(d in c.get("domain", "") for d in ["qwen.ai", "alibaba", "aliyun"])}
         await browser.close()
 
     if not chat_ids:
@@ -191,13 +210,27 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description="Qwen текст-чат (кодер) через chat.qwen.ai")
-    ap.add_argument("prompt", help="Промпт")
+    ap.add_argument("prompt", nargs="?", help="Промпт")
+    ap.add_argument("--stdin", action="store_true", help="Читать prompt из stdin")
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Модель (default {DEFAULT_MODEL})")
     ap.add_argument("--timeout", type=int, default=240)
     args = ap.parse_args()
 
     OUTPUTS.mkdir(exist_ok=True)
-    text = asyncio.run(chat(args.prompt, args.model, args.timeout))
+    prompt = sys.stdin.read() if args.stdin else (args.prompt or "")
+    if not prompt.strip():
+        ap.error("пустой prompt")
+    if len(prompt) > MAX_PROMPT_CHARS:
+        ap.error(f"prompt длиннее {MAX_PROMPT_CHARS} символов")
+    lock_path = SESSION_FILE.with_suffix(".lock")
+    lock_path.touch(mode=0o600, exist_ok=True)
+    try:
+        import fcntl
+        with lock_path.open("r+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            text = asyncio.run(chat(prompt, args.model, args.timeout))
+    except ImportError:
+        text = asyncio.run(chat(prompt, args.model, args.timeout))
     if not text:
         sys.exit(1)
     print(text)   # чистый ответ в stdout — fanout захватит

@@ -29,7 +29,6 @@ on:
 
 permissions:
   contents: read
-  models: read        # без этого GITHUB_TOKEN не пускает в models.github.ai
 
 jobs:
   judge:
@@ -74,7 +73,6 @@ jobs:
           # PAT, а НЕ эфемерный GITHUB_TOKEN раннера: у того лимит на GH Models мизерный —
           # смоук 30.07 показал «rate-limit исчерпан» у gpt-4o и gpt-4.1 на ПЕРВОМ же арте,
           # вердикт выносил один gpt-4o-mini, т.е. ансамбля фактически не было.
-          GITHUB_TOKEN: ${{ secrets.GH_MODELS_TOKEN || secrets.GITHUB_TOKEN }}
           # 🔴 БЕЗ ЭТИХ ТРЁХ АНСАМБЛЬ ВЫРОЖДАЕТСЯ В ОДИН ГОЛОС. Судьи `cf:` и `or:`
           # выбывают молча («нет CLOUDFLARE_WORKER» / «нет OPENROUTER_API_KEY»), и весь
           # прогон выносит один gpt-4o-mini — при этом job зелёный (смоук 30812037881:

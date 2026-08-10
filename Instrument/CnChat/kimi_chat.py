@@ -29,6 +29,9 @@ REFRESH_URL = "https://auth.kimi.com/api/account.gateway.v1.AuthService/RefreshT
 CHAT_URL = "https://www.kimi.com/apiv2/kimi.gateway.chat.v1.ChatService/Chat"
 SCENARIO = "SCENARIO_K2D5"
 ACCESS_CACHE_NAME = ".kimi_access.json"
+MAX_FRAME_BYTES = 8 * 1024 * 1024
+MAX_STREAM_BYTES = 16 * 1024 * 1024
+MAX_PROMPT_CHARS = 100_000
 # CJK Unified Ideographs + Ext A/B ranges commonly seen in leaks
 _CJK_RE = re.compile(
     r"[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF"
@@ -54,6 +57,7 @@ def load_refresh_token(session_path: Path) -> str:
         eprint(f"Файл сессии не найден: {session_path}")
         sys.exit(2)
     try:
+        session_path.chmod(0o600)
         data = json.loads(session_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         eprint(f"Не удалось прочитать сессию: {exc}")
@@ -114,6 +118,7 @@ def save_access_cache(cache_path: Path, token: str) -> None:
     try:
         tmp = cache_path.with_suffix(cache_path.suffix + f".tmp{os.getpid()}")
         tmp.write_text(json.dumps(payload), encoding="utf-8")
+        os.chmod(tmp, 0o600)
         os.replace(tmp, cache_path)
     except OSError as exc:
         eprint(f"Не удалось записать кэш access_token: {exc}")
@@ -133,7 +138,7 @@ def refresh_access_token(refresh_token: str, timeout: float) -> str:
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read()
+            raw = resp.read(1_000_001)
             status = getattr(resp, "status", 200)
     except urllib.error.HTTPError as exc:
         err_body = exc.read().decode("utf-8", errors="replace")
@@ -150,6 +155,9 @@ def refresh_access_token(refresh_token: str, timeout: float) -> str:
         eprint("Сетевой таймаут при обновлении токена")
         sys.exit(3)
 
+    if len(raw) > 1_000_000:
+        eprint("Обновление токена: ответ больше 1 MB")
+        sys.exit(3)
     try:
         data = json.loads(raw.decode("utf-8"))
     except json.JSONDecodeError:
@@ -169,20 +177,35 @@ def get_access_token(session_path: Path, timeout: float, force_refresh: bool = F
         cached = load_cached_access(cache)
         if cached:
             return cached
-    rt = load_refresh_token(session_path)
-    token = refresh_access_token(rt, timeout)
-    save_access_cache(cache, token)
-    return token
+    lock_path = cache.with_suffix(cache.suffix + ".lock")
+    lock_path.touch(mode=0o600, exist_ok=True)
+    try:
+        import fcntl
+        with lock_path.open("r+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            if not force_refresh:
+                cached = load_cached_access(cache)
+                if cached:
+                    return cached
+            rt = load_refresh_token(session_path)
+            token = refresh_access_token(rt, timeout)
+            save_access_cache(cache, token)
+            return token
+    except ImportError:  # Windows fallback; cache write itself remains atomic.
+        rt = load_refresh_token(session_path)
+        token = refresh_access_token(rt, timeout)
+        save_access_cache(cache, token)
+        return token
 
 
 def connect_frame(payload: bytes, flag: int = 0) -> bytes:
     return bytes([flag]) + len(payload).to_bytes(4, "big") + payload
 
 
-def build_chat_body(prompt: str, thinking: bool) -> bytes:
+def build_chat_body(prompt: str, thinking: bool, web: bool) -> bytes:
     obj: dict[str, Any] = {
         "scenario": SCENARIO,
-        "tools": [],
+        "tools": ([{"type": "TOOL_TYPE_SEARCH", "search": {}}] if web else []),
         "message": {
             "role": "user",
             "blocks": [
@@ -196,7 +219,7 @@ def build_chat_body(prompt: str, thinking: bool) -> bytes:
         },
         "options": {
             "thinking": thinking,
-            "enable_plugin": False,
+            "enable_plugin": web,
             "reasoning_effort": "REASONING_EFFORT_LOW",
         },
         "project_id": "",
@@ -207,16 +230,22 @@ def build_chat_body(prompt: str, thinking: bool) -> bytes:
 def iter_connect_frames(stream: Any) -> Iterator[tuple[int, bytes]]:
     """Parse Connect frames: [1 byte flag][4 byte BE length][payload]."""
     buf = b""
+    total = 0
     while True:
         chunk = stream.read(8192)
         if not chunk:
             break
+        total += len(chunk)
+        if total > MAX_STREAM_BYTES:
+            raise ValueError(f"Kimi stream exceeds {MAX_STREAM_BYTES} bytes")
         buf += chunk
         while True:
             if len(buf) < 5:
                 break
             flag = buf[0]
             length = int.from_bytes(buf[1:5], "big")
+            if length > MAX_FRAME_BYTES:
+                raise ValueError(f"Kimi frame exceeds {MAX_FRAME_BYTES} bytes")
             if len(buf) < 5 + length:
                 break
             payload = buf[5 : 5 + length]
@@ -271,9 +300,10 @@ def chat_once(
     prompt: str,
     timeout: float,
     thinking: bool,
+    web: bool,
 ) -> tuple[str, int, Optional[int]]:
     """Returns (answer, event_count, http_error_code_or_None)."""
-    body = build_chat_body(prompt, thinking)
+    body = build_chat_body(prompt, thinking, web)
     req = urllib.request.Request(
         CHAT_URL,
         data=body,
@@ -291,9 +321,14 @@ def chat_once(
     )
     pieces: list[str] = []
     events = 0
+    deadline = time.monotonic() + timeout
+    recent: list[str] = []
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             for _flag, payload in iter_connect_frames(resp):
+                if time.monotonic() > deadline:
+                    eprint("Kimi wall-timeout; recent events: " + " | ".join(recent[-12:]))
+                    return "", events, 408
                 if not payload:
                     continue
                 try:
@@ -303,10 +338,19 @@ def chat_once(
                 if not isinstance(event, dict):
                     continue
                 events += 1
+                summary = str(event.get("mask") or event.get("op") or next(iter(event), "?"))
+                recent.append(summary[:80])
+                if os.environ.get("KIMI_DEBUG_EVENTS") == "1" and "tool" in summary.lower():
+                    eprint("KIMI_TOOL_EVENT " + json.dumps(event, ensure_ascii=False)[:4000])
                 check_event_exception(event)     # отказ сервиса → наружу с причиной
                 piece = extract_text_from_event(event)
                 if piece:
                     pieces.append(piece)
+                message = event.get("message")
+                if (pieces and isinstance(message, dict)
+                        and message.get("role") == "assistant"
+                        and message.get("status") == "MESSAGE_STATUS_COMPLETED"):
+                    break
     except urllib.error.HTTPError as exc:
         return "", events, int(exc.code)
     except urllib.error.URLError as exc:
@@ -328,13 +372,14 @@ def run_chat(
     session_path: Path,
     timeout: float,
     thinking: bool,
+    web: bool,
 ) -> tuple[str, int]:
     token = get_access_token(session_path, timeout, force_refresh=False)
     # Перегрузка у Kimi транзиентна: та же задача через паузу проходит. Три попытки
     # с нарастающей паузой дешевле, чем отдавать оркестратору пустоту.
     for attempt in range(3):
         try:
-            answer, events, err = chat_once(token, prompt, timeout, thinking)
+            answer, events, err = chat_once(token, prompt, timeout, thinking, web)
             break
         except KimiRefused as refusal:
             if "OVERLOADED" not in str(refusal) or attempt == 2:
@@ -347,7 +392,7 @@ def run_chat(
     if err in (401, 403):
         eprint(f"Чат вернул HTTP {err}, обновляю токен и повторяю…")
         token = get_access_token(session_path, timeout, force_refresh=True)
-        answer, events, err = chat_once(token, prompt, timeout, thinking)
+        answer, events, err = chat_once(token, prompt, timeout, thinking, web)
         if err is not None:
             eprint(f"Повтор после обновления токена не удался (HTTP {err})")
             sys.exit(3)
@@ -362,7 +407,8 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         prog="kimi_chat.py",
         description="Headless HTTP-драйвер Kimi Chat (stdlib only)",
     )
-    p.add_argument("prompt", help="Текст запроса к модели")
+    p.add_argument("prompt", nargs="?", help="Текст запроса к модели")
+    p.add_argument("--stdin", action="store_true", help="Читать prompt из stdin (не светить в argv/ps)")
     p.add_argument(
         "--session",
         type=Path,
@@ -385,13 +431,18 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Включить options.thinking=true",
     )
+    p.add_argument("--web", action="store_true", help="Включить нативный Kimi web search")
     return p.parse_args(argv)
 
 
 def main(argv: Optional[list[str]] = None) -> None:
     args = parse_args(argv)
-    if not args.prompt or not str(args.prompt).strip():
+    prompt = sys.stdin.read() if args.stdin else (args.prompt or "")
+    if not prompt or not str(prompt).strip():
         eprint("Пустой prompt — укажите текст запроса")
+        sys.exit(2)
+    if len(str(prompt)) > MAX_PROMPT_CHARS:
+        eprint(f"Prompt длиннее {MAX_PROMPT_CHARS} символов")
         sys.exit(2)
     if args.timeout <= 0:
         eprint("Таймаут должен быть положительным числом")
@@ -400,10 +451,11 @@ def main(argv: Optional[list[str]] = None) -> None:
     session_path = args.session if args.session is not None else default_session_path()
     t0 = time.monotonic()
     answer, events = run_chat(
-        prompt=str(args.prompt),
+        prompt=str(prompt),
         session_path=session_path,
         timeout=float(args.timeout),
         thinking=bool(args.thinking),
+        web=bool(args.web),
     )
     elapsed = time.monotonic() - t0
     ok = bool(answer.strip())

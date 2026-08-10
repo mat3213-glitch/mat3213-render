@@ -24,6 +24,10 @@ on:
   # schedule:
   #  - cron: '43 */5 * * *'   # каждые 5ч (~4-5/день под аккаунт-квоту Qwen); целевой заказ-пул 2026-07-11
 
+concurrency:
+  group: qwen-shared-session
+  cancel-in-progress: false
+
 jobs:
   gen:
     runs-on: ubuntu-latest

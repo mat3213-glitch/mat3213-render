@@ -27,10 +27,12 @@ import json
 import argparse
 import datetime
 import tempfile
-import subprocess
+import base64
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from plastic_gate_core import frames_of, make_strip, extract_json, MIMO, sh  # переиспользуем
+from plastic_gate_core import frames_of, make_strip, sh  # переиспользуем кадры/стрип/rclone
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from art_judge import JUDGES, ask_vision
 
 YD = "ydrive:Content factory"
 CATALOG_REL = "cloud_io/ai_pool_catalog.jsonl"
@@ -54,20 +56,21 @@ TAG_RUBRIC = (
 
 
 def tag_media(local_path: str, timeout: int = 180) -> dict | None:
-    """Один уже скачанный локально файл → словарь тегов, или None при сбое mimo/JSON."""
+    """Один локальный файл → теги от первого живого CF/OpenRouter vision-провайдера."""
     with tempfile.TemporaryDirectory(prefix="pool_tag_") as strips_dir:
         name = os.path.splitext(os.path.basename(local_path))[0]
         strip = make_strip(frames_of(local_path, strips_dir), name, strips_dir)
         if not strip:
             return None
-        try:
-            r = subprocess.run(
-                [MIMO, "run", "--pure", "--dangerously-skip-permissions", TAG_RUBRIC, "-f", strip],
-                capture_output=True, text=True, timeout=timeout, stdin=subprocess.DEVNULL,
-            )
-        except subprocess.TimeoutExpired:
-            return None
-        d = extract_json(r.stdout or "")
+        with open(strip, "rb") as stream:
+            image_b64 = base64.b64encode(stream.read()).decode()
+        d = None
+        for provider in JUDGES:
+            candidate, error = ask_vision(provider, TAG_RUBRIC, image_b64)
+            if isinstance(candidate, dict):
+                d = candidate
+                break
+            print(f"      {provider}: {error or 'no-json'}")
         if not d:
             return None
         scale = d.get("scale") if d.get("scale") in SCALES else "medium"
@@ -114,7 +117,7 @@ def media_list(pool: str, date: str) -> list[str]:
     Живой баг найден в первом backfill-прогоне 2026-07-04: --include "*.png" ловил не только
     img_01.png (реальный кадр), но и *.fail.png (скриншот НЕУДАЧНОЙ генерации VeoFree — не
     футаж) + rclone lsf иногда отдавал "_rejected/" САМ каталог как запись (trailing slash),
-    который потом падал на copyto/mimo. Фильтруем оба класса явно."""
+    который потом падал на copyto/tagger. Фильтруем оба класса явно."""
     r = sh(f'rclone lsf "{YD}/cloud_io/{pool}/{date}/" --max-depth 1 '
            f'--include "*.mp4" --include "*.png" --include "*.jpg"')
     out = []
@@ -169,7 +172,7 @@ def main():
                     print(f"  → тегирую {rel}")
                     tags = tag_media(local)
                     if tags is None:
-                        print(f"    ✗ mimo не ответил/битый JSON")
+                        print(f"    ✗ vision-провайдеры не ответили/битый JSON")
                         continue
                     entry = {
                         "id": entry_id, "pool": pool, "date": date,
