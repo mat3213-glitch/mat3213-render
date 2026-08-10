@@ -6,7 +6,7 @@ memos_reflect_cloud.py — облачная рефлексия + оптимиз�
 Запускается по cron на GH Actions. Анализирует БЕЗ бука:
   • GitHub API — ВСЕ раны репо (новые воркфлоу подхватываются сами, без хардкод-списка);
   • ЯД memory_os_feed/ — em-ит рендеров/скриптов (исход/ошибки/инсайты);
-  • ЯД AUDIT/CHECKPOINT.md — последнее состояние сессии (запросы юзера + действия Claude).
+  • ЯД AUDIT/CHECKPOINT.md — последнее состояние сессии (запросы юзера + действия Codex).
 
 Мозг — OpenRouter. Два прохода: reflect (ошибки акторов + точность задач юзера) и
 optimize (конкретные предложения: fix/optimize/simplify). Результат:
@@ -197,7 +197,7 @@ def main():
     rclone("copyto", "/tmp/REFLECTION.md", f"{YD_AUDIT}/REFLECTION.md", timeout=60)
 
     # PROPOSALS.md
-    pmd = [f"# PROPOSALS (cloud) — {ts}", "", "> Внедрение — за yaromat/Claude.", ""]
+    pmd = [f"# PROPOSALS (cloud) — {ts}", "", "> Внедрение — за yaromat/Codex.", ""]
     for p in proposals:
         pmd += [f"## [{p.get('type','?').upper()}] {p.get('target','')} · effort={p.get('effort','?')}",
                 f"- что: {p.get('proposal','')}", f"- выигрыш: {p.get('benefit','')}", ""]
