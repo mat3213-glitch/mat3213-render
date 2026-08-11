@@ -95,6 +95,11 @@
       "status": "park",
       "decided_at": "2026-08-11",
       "reason": "Smart GOP-boundary cutting is at most a future ingest optimization; the creative render path re-encodes and VFR/HDR seam risks outweigh current value."
+    },
+    "sourcebot-dev/sourcebot": {
+      "status": "park",
+      "decided_at": "2026-08-11",
+      "reason": "Self-hosted code search/code-intelligence is useful only as a future repo-review layer on stronger infrastructure. Do not install now: Docker/Postgres/Redis stack needs more RAM than the Atom host, license is FSL/Other, and MCP access requires a Sourcebot license key."
     }
   }
 }
