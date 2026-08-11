@@ -9,6 +9,7 @@ import auto_analyst
 from auto_analyst import (
     board_rows_from_reports,
     normalize_analyst_target,
+    process,
     process_targets,
     verify_remote_json,
 )
@@ -77,6 +78,38 @@ def test_target_failure_cannot_be_reported_as_success() -> None:
             raise AssertionError("missing report must fail the analyst job")
 
 
+def test_qwen_json_failure_writes_degraded_report() -> None:
+    rubric = {
+        "hard_rejects": [{"id": "dead_and_no_concept"}],
+        "criteria": {"relevance": {"weight": 100}},
+        "thresholds": {"smoke_test": 60, "concept_note": 7, "watch": 40},
+    }
+    ctx = {
+        "url": "https://github.com/Owner/Broken",
+        "kind": "repo",
+        "meta": {"full_name": "Owner/Broken"},
+        "readme": "",
+        "tree": "",
+        "manifests": {},
+        "license": "?",
+        "local": "/tmp/unused",
+    }
+    ok = mock.Mock(returncode=0, stdout="")
+    with tempfile.TemporaryDirectory() as td, \
+         mock.patch.object(auto_analyst, "OUTDIR", Path(td)), \
+         mock.patch.object(auto_analyst, "fetch", return_value=ctx), \
+         mock.patch.object(auto_analyst, "analyze", return_value={"_error": "bad qwen json"}), \
+         mock.patch.object(auto_analyst, "rclone", return_value=ok), \
+         mock.patch.object(auto_analyst, "verify_remote_json"), \
+         mock.patch.object(auto_analyst, "tg"):
+        result = process("https://github.com/Owner/Broken", rubric)
+        report_path = Path(td) / result["slug"] / "report.json"
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert result["score"] == 0
+    assert result["route"] == "SKIP (analysis-error)"
+    assert report["analysis"]["_analysis_error"] == "bad qwen json"
+
+
 def test_remote_report_requires_matching_readback() -> None:
     ok = mock.Mock(returncode=0, stdout=json.dumps({
         "url": "https://example.com/tool", "slug": "tool"
@@ -101,5 +134,6 @@ if __name__ == "__main__":
     test_target_validation_preserves_external_route()
     test_board_is_ledger_view_and_drops_github_garbage()
     test_target_failure_cannot_be_reported_as_success()
+    test_qwen_json_failure_writes_degraded_report()
     test_remote_report_requires_matching_readback()
     print("auto analyst board lifecycle: all tests passed")

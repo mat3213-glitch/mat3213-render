@@ -424,6 +424,31 @@ def analyze(ctx: dict, rubric: dict) -> dict:
     return data
 
 
+def degraded_analysis(ctx: dict, rubric: dict, error: str) -> dict:
+    """Valid fail-closed analysis payload when Qwen/browser returns no JSON.
+
+    Scout targets are often weak or malformed. Losing the target entirely makes the
+    board lie by omission, so analyzer-runtime failure is stored as a normal report
+    with zero score and an explicit skip route.
+    """
+    hard_rejects = {h["id"]: True for h in rubric.get("hard_rejects", [])}
+    scores = {cid: 0 for cid in rubric.get("criteria", {})}
+    short = str(error or "unknown analysis error")[:500]
+    return {
+        "_analysis_error": short,
+        "summary": f"Авто-анализ не получил валидный JSON от Qwen для {ctx.get('url', '?')}.",
+        "scores": scores,
+        "hard_rejects": hard_rejects,
+        "what_extract": "Ничего не внедрять до повторного ручного/автоматического анализа.",
+        "what_discard": "Текущий результат Qwen: невалидный или отсутствующий JSON.",
+        "concept_note": "",
+        "risk_architecture": "high — анализ не завершён валидным отчётом, пригодность не доказана",
+        "risk_stability": "high — Qwen/browser/session вернул невалидный результат",
+        "autonomy": "no — требуется повторный анализ или ручная проверка",
+        "verdict": f"SKIP: анализатор не смог построить валидный отчёт. Причина: {short}",
+    }
+
+
 def weighted_score(scores: dict, rubric: dict) -> int:
     crit = rubric["criteria"]
     total = 0.0
@@ -582,10 +607,13 @@ def process(url, rubric) -> dict:
     ctx = fetch(url, WORKDIR / slug)
     a = analyze(ctx, rubric)
     if "_error" in a:
-        tg(f"❌ <b>Анализатор</b>: {url}\nОшибка анализа: {a['_error'][:300]}")
-        raise RuntimeError("analysis did not produce a valid report")
-    score = weighted_score(a.get("scores", {}), rubric)
-    route = route_of(a, score, rubric)
+        log(f"  QWEN_ERR {url}: {a['_error'][:300]}")
+        a = degraded_analysis(ctx, rubric, a["_error"])
+        score = 0
+        route = "SKIP (analysis-error)"
+    else:
+        score = weighted_score(a.get("scores", {}), rubric)
+        route = route_of(a, score, rubric)
 
     smoke = None
     if route.startswith("TOOL") and ctx["kind"] == "repo":
