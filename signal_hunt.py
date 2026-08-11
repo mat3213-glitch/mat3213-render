@@ -22,6 +22,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scout_filters import NoveltyIndex, is_saturated  # noqa: E402
+from scout_ledger import canonical_name, github_full_name, load_excluded_names  # noqa: E402
 
 YD = "ydrive:Content factory"
 QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
@@ -30,6 +31,28 @@ SIGNALS_REPO = "mat3213-glitch/mat3213-signals"
 RENDER_REPO = "mat3213-glitch/mat3213-render"
 GROK_THREAD = "1653"   # GROK SCOUT — РОУТИНГ ПО ИСТОЧНИКУ: всё, что нашёл Grok (даже репо), идёт сюда
 GH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
+HERE = Path(__file__).resolve().parent
+LEDGER_FILE = HERE / "repo_scout_ledger.json"
+SEEN_FILE = HERE / "repo_scout_seen.json"
+
+
+def filter_lifecycle_urls(urls: list[str], excluded_names: set[str]) -> tuple[list[str], list[str]]:
+    """Remove decided/seen GitHub repositories before the analyst queue.
+
+    Grok may link an issue, branch or ``.git`` URL rather than the repository root;
+    all variants resolve to the same case-insensitive ``owner/repo`` ledger key.
+    Non-GitHub tool/article URLs are outside Repo Scout lifecycle and pass through.
+    Returns ``(kept, dropped_repo_names)`` for an auditable bridge log.
+    """
+    excluded = {canonical_name(name) for name in excluded_names}
+    kept, dropped = [], []
+    for url in urls:
+        full_name = github_full_name(url)
+        if full_name and canonical_name(full_name) in excluded:
+            dropped.append(full_name)
+            continue
+        kept.append(url)
+    return kept, dropped
 
 
 def grok_signals():
@@ -51,7 +74,7 @@ def grok_signals():
         groks = sorted(f["name"] for f in files if f["name"].startswith("grok_"))
         if not groks:
             print("нет grok_*.json")
-            return []
+            return [], []
         latest = groks[-1]
         req2 = urllib.request.Request(
             f"https://api.github.com/repos/{SIGNALS_REPO}/contents/signals/incoming/{latest}",
@@ -140,6 +163,16 @@ def slug(u):
 
 def main():
     analyst_urls, digest_items = grok_signals()
+
+    # Repo Scout и Grok — два входа в ОДНУ analyst queue. Поэтому lifecycle должен
+    # применяться к обоим: иначе adopted/rejected/park/pilot или просто уже показанное
+    # репо немедленно возвращается через второй канал под deep-link URL.
+    ledger, excluded = load_excluded_names(LEDGER_FILE, SEEN_FILE)
+    analyst_urls, lifecycle_dropped = filter_lifecycle_urls(analyst_urls, excluded)
+    print(f"[мост] lifecycle ledger={len(ledger.repos)}, deny-set={len(excluded)}, "
+          f"отсеяно GitHub repo={len(lifecycle_dropped)}")
+    for full_name in lifecycle_dropped[:8]:
+        print(f"  [lifecycle] уже решено/показано: {full_name}")
 
     # ветка «глубинного интернета»: приёмы, акции, истории — человеку, а не в песочницу.
     # Гейт новизны против прошлых выпусков живёт на ЯД (у раннера своего состояния нет).

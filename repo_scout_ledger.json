@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "repos": {
+    "Breakthrough/PySceneDetect": {
+      "status": "adopted",
+      "decided_at": "2026-07-03",
+      "reason": "Scene-count QC is integrated in clip_producer_job.py and vzrosly_clip_job.py."
+    },
+    "roboflow/supervision": {
+      "status": "adopted",
+      "decided_at": "2026-07-10",
+      "reason": "Deterministic source QC is integrated in screenplay_pipeline/source_qc.py."
+    },
+    "m-bain/whisperx": {
+      "status": "adopted",
+      "decided_at": "2026-07-10",
+      "reason": "Optional vocal timing is integrated through vocal_sync.py and director.py."
+    },
+    "KyaniteLabs/kinocut": {
+      "status": "adopted",
+      "decided_at": "2026-07-30",
+      "reason": "The Video Receipt pattern is integrated in arts_pool_job.py."
+    },
+    "christophschuhmann/improved-aesthetic-predictor": {
+      "status": "rejected",
+      "decided_at": "2026-06-26",
+      "reason": "Calibration on project samples produced an inverse correlation with the required taste axis."
+    },
+    "wyattblue/auto-editor": {
+      "status": "rejected",
+      "decided_at": "2026-07-10",
+      "reason": "A real music-video smoke test removed 0%; it does not fit continuous downtempo audio."
+    },
+    "Comfy-Org/ComfyUI": {
+      "status": "rejected",
+      "decided_at": "2026-08-10",
+      "reason": "GPU/VRAM requirements do not fit the CPU-only GitHub Actions render environment."
+    },
+    "ffglitch/ffglitch": {
+      "status": "park",
+      "decided_at": "2026-07-03",
+      "reason": "Potentially useful only behind a visual preview gate; not a current production dependency."
+    },
+    "scriptituk/xfade-easing": {
+      "status": "pilot",
+      "decided_at": "2026-08-11",
+      "reason": "Candidate for a small preview-gated comparison of safe FFmpeg xfade expressions."
+    },
+    "browser-use/video-use": {
+      "status": "pilot",
+      "decided_at": "2026-08-11",
+      "reason": "Candidate for transcript packing and timeline PNG review without replacing the existing EDL."
+    }
+  }
+}

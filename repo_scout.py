@@ -2,8 +2,8 @@
 """
 repo_scout.py — еженедельный наблюдатель GitHub: ищет репо для улучшения проекта.
 
-Запуск на GitHub Actions (repo_scout.yml). Состояние (seen.json) коммитится
-обратно в репо — дедуп переживает между прогонами.
+Запуск на GitHub Actions (repo_scout.yml). ``seen.json`` остаётся совместимым
+журналом показов, а явные решения проекта живут в ``repo_scout_ledger.json``.
 
 Дайджест НОВЫХ репо шлётся в Telegram через CF Worker (как bot_service).
 
@@ -38,8 +38,10 @@ QUERY_FILE = HERE / "repo_scout_queries.json"
 SEEN_FILE = HERE / "repo_scout_seen.json"
 REPORT_FILE = HERE / "repo_scout_latest.md"
 NOVELTY_FILE = HERE / "repo_scout_novelty.json"   # тексты показанных находок (гейт «то же другими словами»)
+LEDGER_FILE = HERE / "repo_scout_ledger.json"     # adopted/rejected/park/pilot — source of truth решений
 
 from scout_filters import NoveltyIndex, is_saturated   # noqa: E402
+from scout_ledger import canonical_name, load_excluded_names   # noqa: E402
 
 # Жёсткий потолок на КАТЕГОРИЮ в готовом шортлисте — включая добивку. До правки backfill
 # дожимал недобор слотов лучшими по velocity, а лучшие по velocity — всегда агентный trending:
@@ -295,17 +297,23 @@ def is_relevant(repo: dict) -> bool:
     return bool(_STRONG_RE.search(name))     # имя — только по СИЛЬНЫМ (без мусора api/model/local)
 
 
-def build_candidates(max_per_query: int = 8) -> list[dict]:
+def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = None) -> list[dict]:
     """Два источника: Search API (ось ротируется по дню) + github.com/trending (ось velocity).
     Скоринг — velocity_score (звёзды слабо, свежесть/период сильно). Дедуп: выше score побеждает."""
     by_name: dict[str, dict] = {}
     sort, qualifier = axis_for_today()
     print(f"[scout] ось дня: sort='{sort or 'best-match'}' qualifier='{qualifier or '-'}'")
 
-    dropped = {"saturated": 0}
+    excluded_names = {canonical_name(x) for x in (excluded_names or set())}
+    dropped = {"saturated": 0, "lifecycle": 0}
 
     def consider(cand: dict):
         fn = cand["full_name"]
+        # Самый ранний lifecycle-гейт. Решённые и уже показанные репо не попадают
+        # в by_name, следовательно физически не могут дойти до diversify/LLM/latest.
+        if canonical_name(fn) in excluded_names:
+            dropped["lifecycle"] += 1
+            return
         # тема, которой проект уже закрыт (свой пул воркеров/оркестратор) и без признаков ремесла
         if is_saturated(f"{fn} {cand.get('description', '')}"):
             dropped["saturated"] += 1
@@ -356,6 +364,7 @@ def build_candidates(max_per_query: int = 8) -> list[dict]:
     out = list(by_name.values())
     out.sort(key=lambda x: (x["score"], x["stars"]), reverse=True)
     print(f"[scout] отсеяно как насыщенная тема (шлюзы/агенты/пентест): {dropped['saturated']}")
+    print(f"[scout] отсеяно ledger/seen до shortlist+LLM: {dropped['lifecycle']}")
     return out
 
 
@@ -521,18 +530,23 @@ def main():
     ap.add_argument("--seed", action="store_true", help="Пометить текущее виденным без дайджеста")
     args = ap.parse_args()
 
-    candidates = build_candidates()
+    ledger, excluded = load_excluded_names(LEDGER_FILE, SEEN_FILE)
+    by_status: dict[str, int] = defaultdict(int)
+    for entry in ledger.repos.values():
+        by_status[entry["status"]] += 1
+    print(f"[scout] ledger={len(ledger.repos)} {dict(sorted(by_status.items()))}; "
+          f"legacy seen={len(load_seen())}; deny-set={len(excluded)}")
+
+    candidates = build_candidates(excluded_names=excluded)
     items = diversify(candidates, total=max(1, args.top), per_cat=4)
     print(f"[scout] кандидатов {len(candidates)} → шортлист {len(items)} (round-robin по категориям)")
-    enrich_with_llm(items)
-    write_report(items)
 
     seen = load_seen()
-    new_items = [it for it in items if it["full_name"] not in seen]
     seen.update(it["full_name"] for it in items)
     save_seen(seen)
 
     if args.seed:
+        write_report([])
         print(f"🌱 seed: {len(items)} репо помечены виденными")
         return
 
@@ -541,7 +555,7 @@ def main():
     # разные темы — ниже 0.35, поэтому порог 0.5).
     nov = NoveltyIndex(NOVELTY_FILE, threshold=0.5)
     fresh, stale = [], []
-    for it in new_items:
+    for it in items:
         text = f"{it['full_name']} {it.get('description') or ''}"
         ok, sim, who = nov.is_novel(text)
         if ok:
@@ -554,9 +568,14 @@ def main():
         print(f"[новизна] отсеяно как «уже было другими словами»: {len(stale)}")
         for fn, sim, who in stale[:8]:
             print(f"    {fn} ~{sim} ≈ {who}")
-    new_items = fresh
+    items = fresh
 
-    digest = build_digest(new_items, len(items))
+    # LLM и latest.md получают только прошедшие ОБА ранних гейта: lifecycle/name
+    # и смысловую новизну. latest.md — представление текущего запуска, не состояние.
+    enrich_with_llm(items)
+    write_report(items)
+
+    digest = build_digest(items, len(items))
     if digest:
         print(digest)
         send_tg(digest)
