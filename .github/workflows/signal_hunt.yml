@@ -41,7 +41,6 @@ jobs:
 
       - name: Bridge Grok signals → analyst queue → dispatch
         env:
-          GITHUB_TOKEN:      ${{ secrets.GH_MODELS_TOKEN }}
           GH_DISPATCH_TOKEN: ${{ github.token }}
           CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}

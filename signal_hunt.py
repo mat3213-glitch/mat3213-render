@@ -6,12 +6,11 @@
 Дискавери = заземлённый поиск: repo_scout (GitHub Search) + ручной Grok (X/Reddit/Habr).
 
 Этот скрипт = «перекладыватель ссылок»: берёт source_link из свежего
-signals/incoming/grok_<date>.json (что прислал ручной Grok — реальные находки) →
+grok_<date>.json на ЯД (что прислал ручной Grok — реальные находки) →
 дедуп против verified_tools → ЯД analyst_queue/pending/ → диспатч auto_analyst.yml
 (matrix --from-queue, тред 1653 GROK SCOUT). Песочница auto_analyst заземляет: реально
 клонит/курлит каждый URL, мёртвое отсеивается.
 """
-import base64
 import json
 import os
 import subprocess
@@ -28,10 +27,10 @@ from scout_needs import CurrentNeeds  # noqa: E402
 YD = "ydrive:Content factory"
 QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
 TOOLS = f"{YD}/verified_tools"
-SIGNALS_REPO = "mat3213-glitch/mat3213-signals"
 RENDER_REPO = "mat3213-glitch/mat3213-render"
+SIGNALS_YD = f"{YD}/cloud_io/CreativeLab/signals/grok"
 GROK_THREAD = "1653"   # GROK SCOUT — РОУТИНГ ПО ИСТОЧНИКУ: всё, что нашёл Grok (даже репо), идёт сюда
-GH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
+GH_DISPATCH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
 HERE = Path(__file__).resolve().parent
 LEDGER_FILE = HERE / "repo_scout_ledger.json"
 SEEN_FILE = HERE / "repo_scout_seen.json"
@@ -86,19 +85,21 @@ def grok_signals(needs: CurrentNeeds | None = None):
         бессмысленно, она там ничего не соберёт, а прочитать её должен человек.
     """
     try:
-        req = urllib.request.Request(
-            f"https://api.github.com/repos/{SIGNALS_REPO}/contents/signals/incoming",
-            headers={"Authorization": f"token {GH_TOKEN}", "User-Agent": "curl/8.0"})
-        files = json.load(urllib.request.urlopen(req, timeout=30))
-        groks = sorted(f["name"] for f in files if f["name"].startswith("grok_"))
+        listing = subprocess.run(
+            ["rclone", "lsf", SIGNALS_YD, "--files-only", "--include", "grok_*.json"],
+            check=True, capture_output=True, text=True, timeout=60,
+        )
+        groks = sorted(name.strip() for name in listing.stdout.splitlines()
+                       if name.strip().startswith("grok_"))
         if not groks:
             print("нет grok_*.json")
             return [], []
         latest = groks[-1]
-        req2 = urllib.request.Request(
-            f"https://api.github.com/repos/{SIGNALS_REPO}/contents/signals/incoming/{latest}",
-            headers={"Authorization": f"token {GH_TOKEN}", "User-Agent": "curl/8.0"})
-        doc = json.loads(base64.b64decode(json.load(urllib.request.urlopen(req2, timeout=30))["content"]))
+        fetched = subprocess.run(
+            ["rclone", "cat", f"{SIGNALS_YD}/{latest}"],
+            check=True, capture_output=True, text=True, timeout=60,
+        )
+        doc = json.loads(fetched.stdout)
         items = doc.get("candidates") or doc.get("items") or []
         to_analyst, to_digest, sat, needs_drop = [], [], 0, 0
         for it in items:
@@ -127,9 +128,8 @@ def grok_signals(needs: CurrentNeeds | None = None):
         print(f"[мост] {latest}: в анализатор {len(to_analyst)}, в дайджест {len(to_digest)}, "
               f"отсеяно как насыщенная тема {sat}, без current-needs evidence {needs_drop}")
         return to_analyst, to_digest
-    except Exception as e:
-        print(f"[мост] fail: {str(e)[:140]}")
-        return [], []
+    except Exception as exc:
+        raise RuntimeError(f"Grok signal source failed: {type(exc).__name__}") from None
 
 
 def send_tg(text: str):
@@ -247,7 +247,7 @@ def main():
     req = urllib.request.Request(
         f"https://api.github.com/repos/{RENDER_REPO}/actions/workflows/auto_analyst.yml/dispatches",
         data=body, method="POST",
-        headers={"Authorization": f"token {GH_TOKEN}", "User-Agent": "curl/8.0",
+        headers={"Authorization": f"token {GH_DISPATCH_TOKEN}", "User-Agent": "curl/8.0",
                  "Accept": "application/vnd.github+json"})
     try:
         urllib.request.urlopen(req, timeout=30)

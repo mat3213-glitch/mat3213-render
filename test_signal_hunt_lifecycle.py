@@ -4,7 +4,7 @@ from pathlib import Path
 
 from scout_ledger import github_full_name
 from scout_needs import CurrentNeeds
-from signal_hunt import NEEDS_FILE, assess_grok_github_item, filter_lifecycle_urls
+from signal_hunt import NEEDS_FILE, assess_grok_github_item, filter_lifecycle_urls, grok_signals
 
 
 def test_github_url_normalization() -> None:
@@ -48,8 +48,21 @@ def test_grok_github_link_requires_current_need_evidence() -> None:
     assert unrelated and not unrelated["accepted"] and unrelated["reason"] == "no mandatory evidence"
 
 
+def test_signal_source_failure_is_blocking() -> None:
+    from unittest import mock
+
+    with mock.patch("signal_hunt.subprocess.run", side_effect=TimeoutError):
+        try:
+            grok_signals()
+        except RuntimeError as exc:
+            assert str(exc) == "Grok signal source failed: TimeoutError"
+        else:
+            raise AssertionError("signal source failure must not become a successful empty run")
+
+
 if __name__ == "__main__":
     test_github_url_normalization()
     test_grok_bridge_filters_lifecycle_before_queue()
     test_grok_github_link_requires_current_need_evidence()
+    test_signal_source_failure_is_blocking()
     print("signal hunt lifecycle: all tests passed")
