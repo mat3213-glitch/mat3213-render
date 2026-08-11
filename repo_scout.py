@@ -48,6 +48,7 @@ from scout_needs import CurrentNeeds   # noqa: E402
 # Не даёт даже полезному gap вытеснить остальные актуальные потребности.
 CAT_CAP: dict[str, int] = {}
 DEFAULT_CAT_CAP = 6
+LAST_BUILD_STATS: dict[str, int] = {}
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
@@ -214,9 +215,11 @@ def diversify(items: list[dict], total: int = 25, per_cat: int = 4) -> list[dict
 
 
 def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = None,
-                     needs: CurrentNeeds | None = None) -> list[dict]:
+                     needs: CurrentNeeds | None = None,
+                     fallback_total: int = 8) -> list[dict]:
     """Два источника: Search API (ось ротируется по дню) + github.com/trending (ось velocity).
     Скоринг — velocity_score (звёзды слабо, свежесть/период сильно). Дедуп: выше score побеждает."""
+    global LAST_BUILD_STATS
     by_name: dict[str, dict] = {}
     sort, qualifier = axis_for_today()
     print(f"[scout] ось дня: sort='{sort or 'best-match'}' qualifier='{qualifier or '-'}'")
@@ -224,8 +227,42 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
     excluded_names = {canonical_name(x) for x in (excluded_names or set())}
     needs = needs or CurrentNeeds(NEEDS_FILE)
     dropped = {"saturated": 0, "lifecycle": 0, "needs": 0}
+    fallback_by_name: dict[str, dict] = {}
+    needs_by_id = {str(need["id"]): need for need in needs.needs}
 
-    def consider(cand: dict):
+    def consider_fallback(cand: dict, query: dict):
+        """Keep a small query-grounded reserve for manual runs that would be empty.
+
+        Strict current-needs evidence remains the main path. This reserve is only
+        used when strict output is zero, and every item is explicitly marked as
+        lower confidence so it can be reviewed, not silently adopted.
+        """
+        need = needs_by_id.get(str(query.get("need_id") or ""))
+        if not need:
+            return
+        text = f"{cand['full_name']} {cand.get('description', '')}"
+        if is_saturated(text):
+            return
+        cand = dict(cand)
+        cand.update({
+            "need_id": need["id"],
+            "category": need["category"],
+            "priority": need["priority"],
+            "gap": need["gap"],
+            "evidence": [f"query matched: {query.get('query')}"],
+            "coverage": 0.0,
+            "need_score": max(1, need["priority"] * 10 - 15),
+            "integration_cost": need["integration_cost"],
+            "duplicate_risk": f"high — fallback candidate; metadata did not contain exact evidence terms; {need['duplicate_risk']}",
+            "fallback_mode": "query-grounded",
+        })
+        cand["velocity_score"] = cand.get("score", 0)
+        cand["score"] = round(cand["need_score"] + cand["velocity_score"] * 0.1, 2)
+        old = fallback_by_name.get(cand["full_name"])
+        if old is None or cand["score"] > old["score"]:
+            fallback_by_name[cand["full_name"]] = cand
+
+    def consider(cand: dict, query: dict | None = None):
         fn = cand["full_name"]
         # Самый ранний lifecycle-гейт. Решённые и уже показанные репо не попадают
         # в by_name, следовательно физически не могут дойти до diversify/LLM/latest.
@@ -235,6 +272,8 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
         assessment = needs.assess(cand)
         if not assessment["accepted"]:
             dropped["needs"] += 1
+            if assessment.get("reason") == "no mandatory evidence" and query is not None:
+                consider_fallback(cand, query)
             return
         # тема, которой проект уже закрыт (свой пул воркеров/оркестратор) и без признаков ремесла
         if is_saturated(f"{fn} {cand.get('description', '')}"):
@@ -271,7 +310,7 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
                 "category": cat,
                 "score": velocity_score(stars, 0, str(repo.get("pushed_at") or "")),
                 "source": "search",
-            })
+            }, q)
 
     # источник 2 — trending (velocity), фильтр релевантности + категория по ключевым словам
     for repo in fetch_trending(TRENDING_LANGS, since="daily"):
@@ -288,6 +327,16 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
 
     out = list(by_name.values())
     out.sort(key=lambda x: (x["score"], x["stars"]), reverse=True)
+    if not out and fallback_total > 0 and fallback_by_name:
+        out = sorted(fallback_by_name.values(), key=lambda x: (x["score"], x["stars"]), reverse=True)[:fallback_total]
+        print(f"[scout] strict shortlist empty → fallback query-grounded candidates: {len(out)}")
+    LAST_BUILD_STATS = {
+        "candidates": len(out),
+        "fallback_candidates": sum(1 for item in out if item.get("fallback_mode")),
+        "saturated_dropped": dropped["saturated"],
+        "lifecycle_dropped": dropped["lifecycle"],
+        "needs_dropped": dropped["needs"],
+    }
     print(f"[scout] отсеяно как насыщенная тема (шлюзы/агенты/пентест): {dropped['saturated']}")
     print(f"[scout] отсеяно ledger/seen до shortlist+LLM: {dropped['lifecycle']}")
     print(f"[scout] отсеяно current-needs/evidence до shortlist+LLM: {dropped['needs']}")
@@ -415,6 +464,8 @@ def build_digest(new_items: list[dict], total: int) -> str:
     lines = [f"🔭 GitHub scout: {len(new_items)} новых репо для проекта\n"]
     for it in new_items[:12]:
         lines.append(f"⭐ {it['stars']}  {it['full_name']}")
+        if it.get("fallback_mode"):
+            lines.append("⚠️ fallback: query-grounded, нужна ручная проверка evidence")
         lines.append(f"🎯 gap: {it.get('need_id')} — {it.get('gap')}")
         lines.append(f"🔎 evidence: {', '.join(it.get('evidence') or [])}")
         lines.append(f"🧩 интеграция: {it.get('integration_cost')} · дубль-риск: {it.get('duplicate_risk')}")
@@ -430,6 +481,7 @@ def write_report(items: list[dict]):
     for it in items:
         lines += [f"- **{it['full_name']}** ⭐{it['stars']} [{it['category']}]",
                   f"  - {it['html_url']}",
+                  f"  - ⚠️ fallback: {it.get('fallback_mode')}" if it.get("fallback_mode") else "",
                   f"  - 🎯 gap `{it.get('need_id')}` (priority {it.get('priority')}): {it.get('gap')}",
                   f"  - 🔎 evidence: {', '.join(it.get('evidence') or [])}",
                   f"  - 🧩 integration cost: {it.get('integration_cost')}",
@@ -437,7 +489,19 @@ def write_report(items: list[dict]):
         if it.get("blurb"):
             lines.append(f"  - 💡 {it['blurb']}")
         lines.append(f"  - 📄 {(it.get('description') or '')[:160]}")
+    lines = [line for line in lines if line != ""]
     REPORT_FILE.write_text("\n".join(lines), encoding="utf-8")
+
+
+def build_status_digest(stats: dict) -> str:
+    return "\n".join([
+        "🔭 Repo Scout: прогон завершён",
+        f"shortlist: {stats.get('shortlist', 0)}",
+        f"candidates: {stats.get('candidates', 0)}",
+        f"seen/lifecycle dropped: {stats.get('lifecycle_dropped', 0)}",
+        f"current-needs/evidence dropped: {stats.get('needs_dropped', 0)}",
+        "auto_analyst: не запускался",
+    ])
 
 
 def send_tg(text: str):
@@ -520,7 +584,10 @@ def main():
         print(digest)
         send_tg(digest)
     else:
+        stats = dict(LAST_BUILD_STATS)
+        stats["shortlist"] = len(items)
         print(f"новых репо нет (просканировано {len(items)})")
+        send_tg(build_status_digest(stats))
 
 
 if __name__ == "__main__":

@@ -88,10 +88,64 @@ def test_latest_and_digest_explain_decision() -> None:
         repo_scout.REPORT_FILE = old_report
 
 
+def test_empty_strict_result_uses_query_grounded_fallback() -> None:
+    import repo_scout
+
+    needs = CurrentNeeds(HERE / "repo_scout_current_needs.v1.json")
+    old_queries = repo_scout.load_queries
+    old_search = repo_scout.search_github
+    old_trending = repo_scout.fetch_trending
+    old_sleep = repo_scout.time.sleep
+    try:
+        repo_scout.load_queries = lambda *_: [
+            {"query": "camera movement prompt", "category": "craft",
+             "need_id": "camera_prompt_contracts", "label": "test"}
+        ]
+        repo_scout.search_github = lambda *args, **kwargs: [
+            {"full_name": "Owner/Fallback", "html_url": "https://github.com/Owner/Fallback",
+             "description": "Useful repository with sparse metadata", "language": "Python",
+             "stargazers_count": 7, "pushed_at": ""},
+            {"full_name": "Owner/Seen", "html_url": "https://github.com/Owner/Seen",
+             "description": "Useful repository with sparse metadata", "language": "Python",
+             "stargazers_count": 9, "pushed_at": ""},
+        ]
+        repo_scout.fetch_trending = lambda *args, **kwargs: []
+        repo_scout.time.sleep = lambda *_: None
+
+        items = repo_scout.build_candidates(
+            excluded_names={"owner/seen"}, needs=needs, fallback_total=3,
+        )
+        assert [item["full_name"] for item in items] == ["Owner/Fallback"]
+        assert items[0]["fallback_mode"] == "query-grounded"
+        assert "query matched:" in items[0]["evidence"][0]
+        assert repo_scout.LAST_BUILD_STATS["fallback_candidates"] == 1
+    finally:
+        repo_scout.load_queries = old_queries
+        repo_scout.search_github = old_search
+        repo_scout.fetch_trending = old_trending
+        repo_scout.time.sleep = old_sleep
+
+
+def test_zero_status_digest_is_not_empty() -> None:
+    import repo_scout
+
+    digest = repo_scout.build_status_digest({
+        "shortlist": 0,
+        "candidates": 0,
+        "lifecycle_dropped": 20,
+        "needs_dropped": 75,
+    })
+    assert "Repo Scout: прогон завершён" in digest
+    assert "shortlist: 0" in digest
+    assert "auto_analyst: не запускался" in digest
+
+
 if __name__ == "__main__":
     test_mandatory_evidence_and_forbidden_topics()
     test_priority_dominates_coverage()
     test_vcr_is_pattern_evidence_not_renderer_adoption()
     test_queries_only_come_from_versioned_needs()
     test_latest_and_digest_explain_decision()
+    test_empty_strict_result_uses_query_grounded_fallback()
+    test_zero_status_digest_is_not_empty()
     print("scout current needs: all tests passed")
