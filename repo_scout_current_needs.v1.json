@@ -56,14 +56,12 @@
       "priority": 9,
       "gap": "Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.",
       "queries": [
-        "video contact sheet",
-        "video timeline transcript"
+        "video timeline waveform",
+        "transcript based video editing"
       ],
       "positive_terms": [
         "timeline view",
         "timeline png",
-        "video contact sheet",
-        "storyboard contact sheet",
         "packed transcript",
         "transcript based video editing",
         "waveform timeline"
@@ -114,6 +112,28 @@
       "negative_terms": ["model weights", "checkpoint", "comfyui", "cuda", "training"],
       "integration_cost": "low",
       "duplicate_risk": "high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки"
+    },
+    {
+      "id": "preview_verification_contracts",
+      "category": "vision",
+      "priority": 8,
+      "gap": "Renderer-agnostic preview evidence: sampled keyframes/contact sheet и machine-readable ошибки поверх существующего рендера.",
+      "queries": [
+        "video visual verification contact sheet",
+        "video snapshot preview json error contract"
+      ],
+      "positive_terms": [
+        "visual verification loop",
+        "snapshot preview",
+        "snapshot previews",
+        "video contact sheet",
+        "json error contract",
+        "machine readable error payload",
+        "sampled keyframes"
+      ],
+      "negative_terms": ["new render engine", "procedural full-frame", "glitch", "neon", "vinyl"],
+      "integration_cost": "low",
+      "duplicate_risk": "high — contact sheets и preview receipts уже есть; ценен только единый renderer-agnostic contract"
     },
     {
       "id": "filmic_overlays",

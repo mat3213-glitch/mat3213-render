@@ -50,6 +50,11 @@
       "status": "pilot",
       "decided_at": "2026-08-11",
       "reason": "Candidate for transcript packing and timeline PNG review without replacing the existing EDL."
+    },
+    "coltonbatts/VCR": {
+      "status": "park",
+      "decided_at": "2026-08-11",
+      "reason": "ADOPT-PATTERN only: snapshot/contact-sheet/JSON-error verification contract. Do not add the Rust motion renderer; it duplicates FFmpeg/Remotion and conflicts with the no-procedural-full-frame boundary."
     }
   }
 }

@@ -38,6 +38,20 @@ def test_priority_dominates_coverage() -> None:
     assert high["need_score"] > lower["need_score"]
 
 
+def test_vcr_is_pattern_evidence_not_renderer_adoption() -> None:
+    needs = CurrentNeeds(HERE / "repo_scout_current_needs.v1.json")
+    assessment = needs.assess({
+        "full_name": "coltonbatts/VCR",
+        "description": ("Headless Rust motion graphics renderer with a visual verification loop, "
+                        "snapshot previews, video contact sheet and JSON error contract"),
+        "language": "Rust",
+    })
+    assert assessment["accepted"]
+    assert assessment["need_id"] == "preview_verification_contracts"
+    assert assessment["integration_cost"] == "medium"
+    assert assessment["duplicate_risk"].startswith("high")
+
+
 def test_queries_only_come_from_versioned_needs() -> None:
     needs = CurrentNeeds(HERE / "repo_scout_current_needs.v1.json")
     queries = needs.queries()
@@ -77,6 +91,7 @@ def test_latest_and_digest_explain_decision() -> None:
 if __name__ == "__main__":
     test_mandatory_evidence_and_forbidden_topics()
     test_priority_dominates_coverage()
+    test_vcr_is_pattern_evidence_not_renderer_adoption()
     test_queries_only_come_from_versioned_needs()
     test_latest_and_digest_explain_decision()
     print("scout current needs: all tests passed")
