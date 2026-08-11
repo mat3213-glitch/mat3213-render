@@ -14,7 +14,14 @@ permissions:
   contents: read
 
 jobs:
+  blocked:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "BLOCKED: full-frame Remotion motorics are historical only; use tsx_overlay.yml."
+          exit 1
   render:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

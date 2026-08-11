@@ -52,7 +52,14 @@ permissions:
   contents: read
 
 jobs:
+  blocked:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "BLOCKED: LTX generation is paused by owner decision (2026-08-06)."
+          exit 1
   gen:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     # Kaggle: ~4 мин загрузка модели + ~5 мин генерация, плюс очередь на свободный GPU
     timeout-minutes: 120

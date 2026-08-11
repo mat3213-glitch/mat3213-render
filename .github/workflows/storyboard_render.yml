@@ -39,7 +39,7 @@ jobs:
           key: pip-aubio-${{ runner.os }}-v1
 
       - name: Install Python deps
-        run: pip install aubio numpy scipy
+        run: pip install aubio numpy scipy pillow
 
       - name: Configure rclone ydrive
         env:
@@ -55,6 +55,9 @@ jobs:
       - name: Run storyboard_render_job.py
         env:
           JOB_ID: ${{ inputs.job_id }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python -u storyboard_render_job.py
 
       - name: Write error status on failure

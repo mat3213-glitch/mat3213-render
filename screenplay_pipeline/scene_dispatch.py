@@ -51,16 +51,16 @@ MAX_RETRIES_DEFAULT = 3
 RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 
 ENGINE_WORKFLOWS = {
-    # ltx — i2v-движок, заведён 2026-07-28.
+    # LTX historical wiring is intentionally not registered here. Owner paused
+    # it on 2026-08-06; sp_scene_ltx.yml also fails closed at its entrypoint.
     # ❄️ veofree ЗАМОРОЖЕН 2026-07-28 (решение yaromat): сервис доходит до «Generating Video 100%»
     # и не отдаёт результат. Проверено владельцем с ДОМАШНЕГО IP и с регистрацией — то же самое,
     # значит дело не в наших раннерах и не в датацентровых адресах. Ломается сам сервис.
     # Строка оставлена закомментированной: вернуть = раскомментировать + добавить в ENGINE_ORDER.
     # "veofree": "sp_scene_veofree.yml",
     "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
-    "ltx":     "sp_scene_ltx.yml",       # i2v self-host на Kaggle GPU (LTX-Video 0.9.5), ~11 мин/клип
 }
-ENGINE_ORDER = ["qwen", "ltx"]  # veofree заморожен 2026-07-28 — остались два движка
+ENGINE_ORDER = ["qwen"]
 
 # LTX-Video 0.9.5 — профиль сильных/слабых сторон, замерен на трёх стиллах 2026-07-28
 # (тест `mat3213/ltx-physics-test`, вердикт yaromat принят):

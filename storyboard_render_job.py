@@ -25,6 +25,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "screenplay_pipeline"))
 import transition_router as _tr        # L6: выбор приёма стыка
 import transition_render as _trn       # L6: xfade-цепочка с сохранением тайминга
+from render_contract import (
+    RenderContractError,
+    assert_media_contract,
+    creative_qc_policy,
+    load_approval,
+    preview_reference,
+    require_complete,
+    validate_render_job,
+    write_render_receipt,
+)
 
 JOB_ID = os.environ.get("JOB_ID", "")
 if not JOB_ID:
@@ -187,11 +197,33 @@ def main():
     if not yd_get(f"{JOB_YD}/track.mp3", track):
         sys.exit("нет track.mp3 в job-папке")
     sb = json.loads(sb_file.read_text(encoding="utf-8"))
+    approval_file = WORKDIR / "approval.json"
+    approval_file.unlink(missing_ok=True)
+    try:
+        approval = None
+        if yd_get(f"{JOB_YD}/approval.json", approval_file):
+            approval = load_approval(approval_file)
+        preview_receipt = None
+        if str(sb.get("render_mode") or "preview").lower() == "full":
+            receipt_file = WORKDIR / "source_preview_receipt.json"
+            receipt_file.unlink(missing_ok=True)
+            preview_job_id, _ = preview_reference(sb, pipeline="storyboard_render")
+            if yd_get(
+                f"{CF}/cloud_io/render_jobs/{preview_job_id}/render_receipt.json", receipt_file
+            ):
+                preview_receipt = json.loads(receipt_file.read_text(encoding="utf-8"))
+        render_mode = validate_render_job(
+            sb, pipeline="storyboard_render", approval=approval,
+            preview_receipt=preview_receipt,
+        )
+    except RenderContractError as exc:
+        yd_put_status(f"FAIL: render contract: {exc}")
+        sys.exit(str(exc))
     shots = sb.get("shots", [])
     fmt = sb.get("format", "vertical")
     cover = COVER.get(fmt, COVER["vertical"])
     reel_dur = float(sb.get("duration") or sum(float(s["t_dur"]) for s in shots))
-    print(f"  кадров={len(shots)} format={fmt} reel≈{reel_dur:.1f}с", flush=True)
+    print(f"  кадров={len(shots)} format={fmt} reel≈{reel_dur:.1f}с mode={render_mode}", flush=True)
     if not shots:
         sys.exit("storyboard без shots")
 
@@ -222,6 +254,11 @@ def main():
     if not rendered:
         yd_put_status("FAIL: ни один кадр не отрендерился")
         sys.exit("0 кадров")
+    try:
+        require_complete(len(shots), len(rendered), label="storyboard shots")
+    except RenderContractError as exc:
+        yd_put_status(f"FAIL: {exc}")
+        sys.exit(str(exc))
 
     # 2. склейка с переходами (L6 transition-router): xfade-цепочка, фолбэк на concat.
     print("\n── Склейка (переходы) ──", flush=True)
@@ -296,10 +333,47 @@ def main():
                "-movflags", "+faststart", str(result)]):
         sys.exit("mux не вышел")
 
+    try:
+        media = assert_media_contract(result, expected_duration=reel_dur)
+    except RenderContractError as exc:
+        yd_put_status(f"FAIL: media contract: {exc}")
+        sys.exit(str(exc))
+    print(f"  media contract: {media}", flush=True)
+
+    try:
+        qc_run = subprocess.run([
+            sys.executable,
+            str(Path(__file__).resolve().parent / "screenplay_pipeline" / "final_qc.py"),
+            "--clip", str(result), "--job-id", JOB_ID,
+        ], timeout=180)
+        qc_rc = qc_run.returncode
+    except subprocess.TimeoutExpired:
+        qc_rc = 124
+    qc_blocks, qc_status = creative_qc_policy(render_mode, qc_rc)
+    if qc_blocks:
+        yd_put_status("FAIL: final_qc rejected render")
+        sys.exit("final_qc rejected render")
+    if qc_rc != 0:
+        print(f"  final_qc advisory for preview: rc={qc_rc}; manual review required",
+              flush=True)
+
     sz = result.stat().st_size // 1024
     print(f"\n✅ result.mp4 {sz}KB → ЯД", flush=True)
-    yd_put(result, f"{JOB_YD}/result.mp4")
-    yd_put_status(f"done: {len(rendered)} кадров, {reel_dur:.0f}с, {fmt}, {sz}KB")
+    if not yd_put(result, f"{JOB_YD}/result.mp4"):
+        yd_put_status("FAIL: result upload")
+        sys.exit("result upload failed")
+    receipt_file = WORKDIR / "render_receipt.json"
+    receipt = write_render_receipt(
+        receipt_file, output_path=result, job_id=JOB_ID,
+        mode=render_mode, pipeline="storyboard_render",
+    )
+    if not yd_put(receipt_file, f"{JOB_YD}/render_receipt.json"):
+        yd_put_status("FAIL: render receipt upload")
+        sys.exit("render receipt upload failed")
+    yd_put_status(
+        f"{qc_status}: {len(rendered)} кадров, {reel_dur:.0f}с, {fmt}, {sz}KB, "
+        f"mode={render_mode}, sha256={receipt['sha256']}, creative_qc_rc={qc_rc}"
+    )
 
 
 def yd_put_status(text: str):

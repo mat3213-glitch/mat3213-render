@@ -69,7 +69,8 @@ def extract_json(t):
 
 
 def sh(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    """Run an argv list only; media paths are data, never shell syntax."""
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 def frames_of(path, n=8):
@@ -77,7 +78,10 @@ def frames_of(path, n=8):
     if ext in (".png", ".jpg", ".jpeg"):
         return [path]
     
-    dur_str = sh(f'ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"').stdout.strip()
+    dur_str = sh([
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=nw=1:nk=1", path,
+    ]).stdout.strip()
     try:
         dur = float(dur_str)
     except Exception:
@@ -90,7 +94,10 @@ def frames_of(path, n=8):
         pct = i / (n + 1)
         t = dur * pct
         f = os.path.join(STRIPS, f"{base}_{i}.jpg")
-        sh(f'ffmpeg -nostdin -y -ss {t:.2f} -i "{path}" -frames:v 1 -q:v 3 -vf scale=512:-1 "{f}"')
+        sh([
+            "ffmpeg", "-nostdin", "-y", "-ss", f"{t:.2f}", "-i", path,
+            "-frames:v", "1", "-q:v", "3", "-vf", "scale=512:-1", f,
+        ])
         if os.path.exists(f):
             out.append(f)
     return out
@@ -130,6 +137,10 @@ def judge(strip, timeout=180):
         errors.append(f"{provider}:{err or 'missing-fields'}")
     if d is None:
         return None, "; ".join(errors)[:200] or "no-json"
+
+    for key in ("cuts_ok", "texture_consistent", "fonts_ok"):
+        if type(d.get(key)) is not bool:
+            return None, f"bad-{key}-type"
         
     # Валидация типов и значений
     try:
@@ -142,9 +153,9 @@ def judge(strip, timeout=180):
     reason = str(d.get("reason", "N/A"))[:100]
     
     return {
-        "cuts_ok": bool(d["cuts_ok"]),
-        "texture_consistent": bool(d["texture_consistent"]),
-        "fonts_ok": bool(d["fonts_ok"]),
+        "cuts_ok": d["cuts_ok"],
+        "texture_consistent": d["texture_consistent"],
+        "fonts_ok": d["fonts_ok"],
         "plastic_score": plastic,
         "reason": reason
     }, "ok"
@@ -213,6 +224,8 @@ def main():
     print(json.dumps(report, ensure_ascii=False, indent=2))
     
     upload_yd(rp, args.job_id)
+    if not final_pass:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

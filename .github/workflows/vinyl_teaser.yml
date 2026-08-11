@@ -8,7 +8,14 @@ on:
         required: true
 
 jobs:
+  blocked:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "BLOCKED: vinyl treatment is prohibited by the current creative contract."
+          exit 1
   render:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
