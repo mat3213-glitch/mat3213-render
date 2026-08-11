@@ -1,44 +1,28 @@
 {
   "verdicts": [
     {
-      "name": "scout_warm_night_soft",
-      "keep": false,
-      "score": 4.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Too warm, lacks cold teal tone"
+      "name": "scout_neutral_night_muted",
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Хороший холодный нуар, попадает в общую эстетику"
     },
     {
-      "name": "scout_warm_night_muted",
-      "keep": false,
-      "score": 5.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Muted but too warm, not in brand palette"
+      "name": "scout_neutral_mid_muted",
+      "keep": true,
+      "score": 7.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Приглушенный тон, но не хватает глубины teal"
     },
     {
-      "name": "scout_cool_mid_muted",
-      "keep": false,
-      "score": 0,
-      "votes": "0/2",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
-    },
-    {
-      "name": "scout_warm_night_muted_2",
-      "keep": false,
-      "score": 5.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Closer to teal but still too warm"
-    },
-    {
-      "name": "scout_green_night_soft",
-      "keep": false,
-      "score": 0,
-      "votes": "0/2",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "name": "scout_neutral_night_muted_2",
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Чистый холодный тон, соответствует вайбу"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -46,13 +30,34 @@
       "score": 8.0,
       "votes": "2/2",
       "status": "принят",
-      "reason": "Good cold teal tone, fits brand aesthetic"
+      "reason": "Мягкий свет, отличная кинематографичная глубина"
+    },
+    {
+      "name": "scout_neutral_night_soft_2",
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Хороший холодный градиент, без грязных оттенков"
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "keep": true,
+      "score": 8.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Идеальное попадание в целевой deep teal и атмосферу"
     }
   ],
   "recommend_merge": [
-    "scout_neutral_night_soft"
+    "scout_neutral_night_muted",
+    "scout_neutral_mid_muted",
+    "scout_neutral_night_muted_2",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
   "disputed": [],
-  "_generated": "2026-07-29",
-  "_judge": "gh-vision-ensemble(2/3)"
+  "_generated": "2026-08-11",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
