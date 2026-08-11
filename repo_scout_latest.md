@@ -1,28 +1,68 @@
-# Repo Scout — 2026-08-10T11:08:22.903248
+# Repo Scout — 2026-08-11T08:46:05.596138
 
-Всего в шортлисте: 6
+Всего в шортлисте: 8
 
-- **Comfy-Org/ComfyUI** ⭐125968 [aigen]
-  - https://github.com/Comfy-Org/ComfyUI
-  - 💡 Автоматизирует работу с диффузионными моделями, может быть полезен для генерации артов и видео в проекте yaromat, облегчая процесс создания музыкального контента.
-  - 📄 The most powerful and modular diffusion model GUI, api and backend with a graph/nodes interface.
-- **ruvnet/RuView** ⭐89147 [vision]
-  - https://github.com/ruvnet/RuView
-  - 💡 Для проекта вряд ли пригодится, поскольку занимается мониторингом и обнаружением присутствия с помощью сигналов WiFi, что не связано напрямую с музыкальным контентом или автоматизацией видео.
-  - 📄 π RuView turns commodity WiFi signals into real-time spatial intelligence, vital sign monitoring, and presence detection — all without a single pixel of video.
-- **heygen-com/hyperframes** ⭐40331 [video]
-  - https://github.com/heygen-com/hyperframes
-  - 💡 Позволяет рендерить видео на основе HTML, может быть полезен для создания музыкальных видеороликов в проекте yaromat, упрощая процесс генерации видеоконтента.
-  - 📄 Write HTML. Render video. Built for agents.
-- **scrapy/scrapy** ⭐63775 [misc]
-  - https://github.com/scrapy/scrapy
-  - 💡 Автоматизирует процесс веб-скраппинга, может быть полезен для сбора данных о музыкальных треках или видео, но требует дополнительной настройки для конкретных задач проекта yaromat.
-  - 📄 Scrapy, a fast high-level web crawling &amp; scraping framework for Python.
-- **KunAgent/Kun** ⭐6064 [orchestration]
-  - https://github.com/KunAgent/Kun
-  - 💡 Предоставляет локальную среду для работы с искусственным интеллектом, может быть полезен для разработки и тестирования компонентов проекта yaromat, особенно тех, что связаны с автоматизацией и интеллектуальным анализом данных.
-  - 📄 Local-first AI agent workspace for coding, writing, design, research, and automation — one runtime for desktop GUI and TUI.
-- **apify/crawlee** ⭐25324 [orchestration]
-  - https://github.com/apify/crawlee
-  - 💡 Автоматизирует процесс веб-скраппинга и браузерной автоматизации, может быть полезен для сбора данных для проекта yaromat, особенно если необходимо извлекать информацию из веб-сайтов или скачивать медиафайлы.
-  - 📄 Crawlee—A web scraping and browser automation library for Node.js to build reliable crawlers. In JavaScript and TypeScript. Extract data for AI, LLMs, RAG, or G
+- **BluerAngala/cc-ffmpeg-xfade** ⭐0 [video]
+  - https://github.com/BluerAngala/cc-ffmpeg-xfade
+  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
+  - 🔎 evidence: xfade easing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
+  - 💡 Репозиторий предоставляет органичные стыки поверх уже работающего FFmpeg xfade без дешевого цифрового glitch-визуала. Закрывает gap органичных стыков. Цена интеграции низкая, но duplicate-risk средний.
+  - 📄 Pre-built FFmpeg with xfade-easing — GLSL page curl transitions for video generation
+- **MikeKemmerer/videokiosk2** ⭐0 [vision]
+  - https://github.com/MikeKemmerer/videokiosk2
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: freeze detection
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Репозиторий предоставляет детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения. Закрывает gap детерминированного CPU-QC. Цена интеграции средняя, duplicate-risk средний.
+  - 📄 VLC kiosk wrapper with freeze detection and Midori failover for Raspberry Pi
+- **huihuihui-wq/cibeprompt** ⭐1 [craft]
+  - https://github.com/huihuihui-wq/cibeprompt
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Закрывает gap проверяемых операторских словарей. Цена интеграции низкая, но duplicate-risk высокий.
+  - 📄 Bilingual AI video cinematography prompt engineer.
+- **capycappy/FPS-RePlayer** ⭐1 [video]
+  - https://github.com/capycappy/FPS-RePlayer
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: waveform timeline
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Репозиторий предоставляет компактное timeline/transcript-представление для дешевого ревью режиссуры. Закрывает gap компактного timeline-представления. Цена интеграции низкая, duplicate-risk средний.
+  - 📄 Frame-by-frame video player for reviewing FPS gameplay clips — bidirectional frame stepping, cursor-following magnifier, audio-waveform timeline, and 9:16 verti
+- **clipcurator/ai-storyboard-prompt-shot-continuity-map** ⭐1 [vision]
+  - https://github.com/clipcurator/ai-storyboard-prompt-shot-continuity-map
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: shot continuity
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Репозиторий предоставляет детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения. Закрывает gap детерминированного CPU-QC. Цена интеграции средняя, duplicate-risk средний.
+  - 📄 Continuity maps for AI storyboard prompts, shot memory, camera movement, character anchors, and prompt handoff.
+- **ian9911007/CAMERA-MOVEMENT-PROMPT** ⭐0 [craft]
+  - https://github.com/ian9911007/CAMERA-MOVEMENT-PROMPT
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Закрывает gap проверяемых операторских словарей. Цена интеграции низкая, но duplicate-risk высокий.
+  - 📄 
+- **kacperkan/cutter** ⭐0 [video]
+  - https://github.com/kacperkan/cutter
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: waveform timeline
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Репозиторий предоставляет компактное timeline/transcript-представление для дешевого ревью режиссуры. Закрывает gap компактного timeline-представления. Цена интеграции низкая, duplicate-risk средний.
+  - 📄 macOS-native lossless video cutter — SwiftUI app + CLI. Drag segments on a waveform timeline, scrub audio, export cuts without re-encoding (frame-exact smart cu
+- **ar3mathe/vista-cue-timer** ⭐0 [video]
+  - https://github.com/ar3mathe/vista-cue-timer
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: waveform timeline
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Репозиторий предоставляет компактное timeline/transcript-представление для дешевого ревью режиссуры. Закрывает gap компактного timeline-представления. Цена интеграции низкая, duplicate-risk средний.
+  - 📄 Client-side React app for annotating video/audio with labeled keyframes on a waveform timeline — designed for measuring lighting cue durations
