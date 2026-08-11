@@ -1,11 +1,11 @@
-name: kimi chat bot
+name: qwen chat bot
 
-# Облачный бот @ghmimo_bot БЕЗ БУКА. Движок — Kimi (чистый HTTP, без браузера).
+# Облачный бот @ghmimo_bot БЕЗ БУКА. Движок — qwen-coder-gh (чистый HTTP-воркер, без бука).
 # CF Worker (mat3213-cloudbot /mimo) получает TG-вебхук → dispatch этого воркфлоу →
-# Instrument/CnChat/kimi_chat.py считает задачу → ответ уходит в TG (текст + голос).
+# qwen/qwen_chat.py считает задачу → ответ уходит в TG (текст + голос).
 #
-# История движка: mimo (мёртв 27.07, free-тир снят) → qwen-coder-gh (жив, но Playwright+Chromium,
-# ~2.5-5 мин и одна сессия на весь пул) → Kimi: stdlib-only, ~10-15с, сессия до 27.10.2026.
+# История движка: mimo (мёртв 27.07, free-тир снят) → qwen-coder-gh (жив, Playwright+Chromium,
+# ~2.5-5 мин и одна сессия на весь пул) → Kimi был промежуточной заменой и снят.
 # Память треда: ydrive:Content factory/cloud_io/mimo_bot/threads/<safe_key>.json (путь сохранён —
 # бот тот же, история диалогов не теряется).
 # Secrets в render-репо: YDRIVE_*, CLOUDFLARE_WORKER, MIMO_BOT_TOKEN.
@@ -37,10 +37,10 @@ on:
         type: string
 
 permissions:
-  contents: read      # Kimi = чат без инструментов: ни gh, ни git, ни dispatch. actions:write НЕ нужен.
+  contents: read      # Qwen = чат без инструментов: ни gh, ни git, ни dispatch. actions:write НЕ нужен.
 
 concurrency:
-  # One persisted Kimi session is shared by every Telegram thread.
+  # One persisted Qwen session is shared by every Telegram thread.
   group: kimi-shared-session
   cancel-in-progress: false
 
@@ -103,18 +103,18 @@ jobs:
           PY
 
       # ── ВЕТКА CHAT ────────────────────────────────────────────────────────────
-      # Ни pip, ни Playwright, ни Chromium: kimi_chat.py — stdlib-only, системного python3 достаточно.
-      - name: Pull Kimi session from ydrive
+      # Ни pip, ни Playwright, ни Chromium: qwen_chat.py — stdlib-only, системного python3 достаточно.
+      - name: Pull Qwen session from ydrive
         if: ${{ inputs.action != 'clear' }}
         run: |
           set -e
-          rclone copyto "ydrive:Content factory/cloud_io/cnchat_ci/kimi_session.json" \
-            Instrument/CnChat/kimi_session.json
-          SIZE=$(stat -c%s Instrument/CnChat/kimi_session.json)
-          echo "сессия Kimi: $SIZE б"
+          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" \
+            qwen/qwen_session.json
+          SIZE=$(stat -c%s qwen/qwen_session.json)
+          echo "сессия Qwen: $SIZE б"
           # refresh_token живёт 90 дней и при обновлении НЕ ротируется (сервер отдаёт
           # только accessToken) → заливать сессию обратно на ЯД не нужно.
-          [ "$SIZE" -gt 1000 ] || { echo "::error::сессия Kimi битая/пустая"; exit 1; }
+          [ "$SIZE" -gt 1000 ] || { echo "::error::сессия Qwen битая/пустая"; exit 1; }
 
       - name: Build prompt with thread context
         if: ${{ inputs.action != 'clear' }}
@@ -139,7 +139,7 @@ jobs:
           MEM = "ydrive:Content factory/mirror/memory"
           MEM_LOCAL = pathlib.Path("/tmp/projmem")
           # Бюджет считан по замеру 30.07: core 3.8К + map 16.2К + now 12К + индекс 10К = 42К симв.,
-          # плюс до 3 факт-файлов = ~60К. Держимся под 61К — это проверенный потолок Kimi на длину.
+          # плюс до 3 факт-файлов = ~60К. Держимся под 61К — это проверенный потолок Qwen на длину.
           NOW_CHARS   = 12000   # NOW.md ~80 КБ и растёт: берём голову — свежее лежит сверху
           INDEX_CHARS = 10000   # меню-роутер к факт-файлам
           FACT_CHARS  = 6000    # один факт-файл
@@ -206,7 +206,7 @@ jobs:
 
           SPEAKER = "\U0001F50A"   # эмодзи-литерал в yml-heredoc на раннере не матчится — только escape
           PREAMBLE = (
-              "Ты — Kimi, исполнитель задач yaromat в облаке (Telegram-бот проекта content_factory).\n"
+              "Ты — Qwen, исполнитель задач yaromat в облаке (Telegram-бот проекта content_factory).\n"
               "Выполни ТЕКУЩУЮ ЗАДАЧУ и верни результат: код / расчёт / текст. По делу, без воды.\n"
               "У тебя НЕТ инструментов: ни shell, ни rclone, ни git, ни доступа к диску и репозиторию.\n"
               "Ты отвечаешь ТЕКСТОМ. Если для задачи нужна команда — напиши её, чтобы человек запустил.\n"
@@ -262,25 +262,23 @@ jobs:
                 + (f", фолбэк-бриф {len(brief)}" if brief else ""))
           PY
 
-      - name: Run Kimi
+      - name: Run Qwen
         if: ${{ inputs.action != 'clear' }}
         id: run
         run: |
           # set +e ОБЯЗАТЕЛЕН: дефолтный shell у GH — bash -e, и ненулевой rc драйвера
           # оборвал бы шаг ДО отправки ответа в TG — пользователь получил бы тишину
-          # вместо «❌ kimi: rc=...». Ровно этой болезнью и болел mimo_chat.yml.
+          # вместо «❌ qwen: rc=...». Ровно этой болезнью и болел старый mimo_chat.yml.
           set +e
-          mkdir -p /tmp/kimirun
+          mkdir -p /tmp/qwenrun
           START=$(date +%s)
-          timeout 1800 python3 "$GITHUB_WORKSPACE/Instrument/CnChat/kimi_chat.py" \
-            --stdin --web --thinking \
-            --session "$GITHUB_WORKSPACE/Instrument/CnChat/kimi_session.json" \
-            --timeout 1740 \
-            > /tmp/kimirun/clean.txt 2> /tmp/kimirun/err.txt < /tmp/prompt.txt
+          timeout 1800 python3 "$GITHUB_WORKSPACE/qwen/qwen_chat.py" \
+            --stdin --model "Qwen3-Coder" --timeout 1740 \
+            > /tmp/qwenrun/clean.txt 2> /tmp/qwenrun/err.txt < /tmp/prompt.txt
           RC=$?
           END=$(date +%s)
-          echo "RC=$RC ELAPSED=$((END-START)) BYTES=$(stat -c%s /tmp/kimirun/clean.txt)"
-          tail -5 /tmp/kimirun/err.txt || true
+          echo "RC=$RC ELAPSED=$((END-START)) BYTES=$(stat -c%s /tmp/qwenrun/clean.txt)"
+          tail -5 /tmp/qwenrun/err.txt || true
           echo "rc=$RC"                 >> "$GITHUB_OUTPUT"
           echo "elapsed=$((END-START))" >> "$GITHUB_OUTPUT"
           exit 0
@@ -292,7 +290,7 @@ jobs:
           python3 - <<'PY'
           import subprocess, datetime, pathlib
           clean = ""
-          p = pathlib.Path("/tmp/kimirun/clean.txt")
+          p = pathlib.Path("/tmp/qwenrun/clean.txt")
           if p.exists():
               clean = p.read_text(encoding="utf-8", errors="replace").strip()
           rnotes = "ydrive:Content factory/cloud_io/mimo_sandbox/MEMORY/notes.md"
@@ -334,8 +332,8 @@ jobs:
           chat_id = os.environ.get("CHAT_ID", "")
           thread_id = os.environ.get("THREAD_ID", "")
 
-          clean = pathlib.Path("/tmp/kimirun/clean.txt")
-          err   = pathlib.Path("/tmp/kimirun/err.txt")
+          clean = pathlib.Path("/tmp/qwenrun/clean.txt")
+          err   = pathlib.Path("/tmp/qwenrun/err.txt")
           text = clean.read_text(encoding="utf-8", errors="replace").strip() if clean.exists() else ""
           ok = (rc == "0") and bool(text)
 
@@ -355,7 +353,7 @@ jobs:
               subprocess.run(["rclone", "copyto", th_local, th_remote], capture_output=True)
           else:
               err_text = (err.read_text(errors="replace")[-300:] if err.exists() else "")
-              resp = f"❌ kimi: rc={rc} {err_text}".strip()
+              resp = f"❌ qwen: rc={rc} {err_text}".strip()
 
           # Отправляем в TG (чанками по 3900 симв.)
           for i in range(0, max(len(resp), 1), 3900):
@@ -387,7 +385,7 @@ jobs:
           python3 - <<'PY'
           import os, re, asyncio, subprocess
           try:
-              text = open("/tmp/kimirun/clean.txt", encoding="utf-8").read().strip()
+              text = open("/tmp/qwenrun/clean.txt", encoding="utf-8").read().strip()
           except Exception:
               text = ""
           if not text:

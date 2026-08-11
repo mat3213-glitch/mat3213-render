@@ -1,0 +1,68 @@
+name: Pinterest Board Fetch
+
+# Раздельный этап 1:
+# берём доску / pin.it, скачиваем ВСЕ видео, складываем raw на ЯД в датированный
+# корень по регламенту: Content factory/cloud_io/YYYY-MM-DD/pinterest_board_pipeline/<run>/raw
+
+on:
+  workflow_dispatch:
+    inputs:
+      board_ref:
+        description: "Slug доски, board URL или pin.it shortlink"
+        required: false
+        default: "pin.it/3wpVSWYhI"
+      run_name:
+        description: "Имя подкаталога внутри даты"
+        required: false
+        default: "pinterest_board_pipeline"
+
+concurrency:
+  group: pinterest-board-fetch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Install Python deps
+        run: |
+          pip install -q requests yt-dlp playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch board videos
+        env:
+          BOARD_REF: ${{ inputs.board_ref }}
+        run: |
+          python -u pinterest_board_fetch.py \
+            --board "$BOARD_REF" \
+            --dest-folder "Content factory/cloud_io/$(TZ=Asia/Novosibirsk date +%F)/${{ inputs.run_name }}/${GITHUB_RUN_ID}"
+
+      - name: Summarize fetch
+        if: success()
+        run: |
+          echo "Fetch stored on YaD under the dated project folder."
+          echo "Next step: point the uniquize workflow at the raw folder printed above."

@@ -1,0 +1,60 @@
+name: Pinterest Board Uniquize
+
+# Раздельный этап 2:
+# забираем raw-папку с ЯД, прогоняем все mp4 через UNIQUIZE.py и складываем
+# результат в sibling uniq/ на ЯД.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_folder:
+        description: "ЯД raw-папка из fetch workflow"
+        required: true
+        default: "Content factory/cloud_io/YYYY-MM-DD/pinterest_board_pipeline/<run>/raw"
+
+concurrency:
+  group: pinterest-board-uniquize
+  cancel-in-progress: false
+
+jobs:
+  uniquize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Download raw board folder
+        env:
+          SOURCE_FOLDER: ${{ inputs.source_folder }}
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          python -u pinterest_board_uniquize.py \
+            --source-folder "$SOURCE_FOLDER"
+
+      - name: Summarize uniquize
+        if: success()
+        run: |
+          echo "Uniquized outputs stored under the sibling uniq/ folder on YaD."
