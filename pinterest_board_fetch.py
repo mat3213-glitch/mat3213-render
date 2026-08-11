@@ -139,7 +139,14 @@ def collect_pins(board_ref: str, max_idle: int = 6) -> dict:
         page.goto(board_url, wait_until="load", timeout=40000)
         time.sleep(3)
         resolved_url = page.url or board_url
+        page_html = ""
+        try:
+            page_html = page.content()
+        except Exception:
+            pass
         pin_match = re.search(r"pinterest\.com/pin/(\d+)/?", resolved_url)
+        if not pin_match and page_html:
+            pin_match = re.search(r"pinterest\.com/pin/(\d+)/?", page_html)
         if pin_match:
             pid = pin_match.group(1)
             pins[pid] = {
@@ -224,7 +231,6 @@ def main() -> int:
     TMP.mkdir(parents=True, exist_ok=True)
     dest_folder = args.dest_folder.rstrip("/")
     raw_remote = f"ydrive:{dest_folder}/raw"
-    sh(["rclone", "mkdir", raw_remote], timeout=120)
 
     print(f"[board] collect: {args.board}", flush=True)
     pins = collect_pins(args.board)
