@@ -1,3 +1,74 @@
-# Repo Scout — 2026-08-11T10:25:50.118253
-
-Всего в шортлисте: 0
+# Repo Scout — 2026-08-11T10:33:42.252191
+Всего в шортлисте: 8
+- **agentino-os/agentino-skill-video-slideshow** ⭐0 [video]
+  - https://github.com/agentino-os/agentino-skill-video-slideshow
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
+  - 🔎 evidence: query matched: ffmpeg xfade transition
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
+  - 💡 Создает слайдшоу из изображений и аудио с помощью FFmpeg, закрывает gap органичных стыков, интеграция оправдана из-за низкой стоимости
+  - 📄 Images + optional audio → MP4 slideshow with Ken Burns zoom and xfade transitions. Pure ffmpeg.
+- **sakthivelj/video2image** ⭐8 [vision]
+  - https://github.com/sakthivelj/video2image
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: duplicate frame detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Экстрактор кадров из видео, помогает в QC фризов и дубликатов, интеграция имеет среднюю стоимость и высокий риск дублирования
+  - 📄 Video2Image is a Python desktop GUI for extracting frames from single or multiple video files and saving them as images. It supports batch processing, key-frame
+- **ellmos-ai/ai-media-editor** ⭐6 [video]
+  - https://github.com/ellmos-ai/ai-media-editor
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Местный AI-редактор мультимедиа, предоставляет компактное представление timeline и transcript, интеграция имеет низкую стоимость, но высокий риск дублирования
+  - 📄 Local AI media editor for video, audio and podcasts with local transcription, transcript-based cuts, Hyperframes motion graphics and agent-driven edits
+- **SolFlourishes/VideoText** ⭐0 [vision]
+  - https://github.com/SolFlourishes/VideoText
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: duplicate frame detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Преобразует видео в редактируемый текст, помогает в QC фризов и дубликатов, интеграция имеет среднюю стоимость и высокий риск дублирования
+  - 📄 Convert presentation and lecture videos into structured, editable text using stable-frame detection, OCR, layout reconstruction, and duplicate consolidation.
+- **edzzn/autovideo** ⭐1 [video]
+  - https://github.com/edzzn/autovideo
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Текстовый видео-редактор, позволяет редактировать видео по транскрипту, интеграция имеет низкую стоимость, но высокий риск дублирования
+  - 📄 Text-based video editor for macOS - Cut videos by editing transcript
+- **baheesa/inter_frame_forgery_detection** ⭐0 [vision]
+  - https://github.com/baheesa/inter_frame_forgery_detection
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: duplicate frame detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Обнаруживает манипуляции с видео, включая вставку, удаление и дублирование кадров, интеграция имеет среднюю стоимость и высокий риск дублирования
+  - 📄 Python code for inter-frame video forgery detection using TCN and stacking ensemble — frame insertion, deletion & duplication; digital video forensics (Springer
+- **preston176/openscript** ⭐18 [video]
+  - https://github.com/preston176/openscript
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Местный видео-редактор с текстовым редактированием, предоставляет компактное представление timeline и transcript, интеграция имеет низкую стоимость, но высокий риск дублирования
+  - 📄 Local-first, open-source video editor with text-based editing. Edit videos by editing the transcript.
+- **charan-ravikumar/Image-Size-Reducer** ⭐0 [vision]
+  - https://github.com/charan-ravikumar/Image-Size-Reducer
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: duplicate frame detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Инструмент для уменьшения размера изображений и видео, также обнаруживает дубликаты, интеграция имеет среднюю стоимость и высокий риск дублирования
+  - 📄 A highly optimized Python/Jupyter tool for batch reducing image & video sizes with binary search compression, EXIF metadata retention, duplicate detection, and 
