@@ -42,9 +42,9 @@
       "reason": "Potentially useful only behind a visual preview gate; not a current production dependency."
     },
     "scriptituk/xfade-easing": {
-      "status": "pilot",
+      "status": "adopted",
       "decided_at": "2026-08-11",
-      "reason": "Candidate for a small preview-gated comparison of safe FFmpeg xfade expressions."
+      "reason": "ADOPT-PATTERN only: deterministic smoothstep easing for safe fade/dissolve is implemented in transition_router.py and transition_render.py; no upstream code or binary was imported."
     },
     "browser-use/video-use": {
       "status": "pilot",
