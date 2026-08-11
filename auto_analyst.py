@@ -198,6 +198,7 @@ def lifecycle_status(url: str, ledger: ScoutLedger) -> str:
 def board_rows_from_reports(reports: list[dict], ledger: ScoutLedger) -> tuple[list[dict], int]:
     """Pure board projection. Ledger is source of truth; invalid targets are omitted."""
     rows, dropped = [], 0
+    represented = set()
     for report in reports:
         raw_url = report.get("url", "")
         url = normalize_analyst_target(raw_url)
@@ -211,7 +212,26 @@ def board_rows_from_reports(reports: list[dict], ledger: ScoutLedger) -> tuple[l
             "route": report.get("route", "?"),
             "status": lifecycle_status(url, ledger),
         })
-    rows.sort(key=lambda x: x["score"], reverse=True)
+        full_name = github_full_name(url)
+        if full_name:
+            represented.add(full_name.casefold())
+
+    # A lifecycle decision must remain visible even if a historical analyzer job
+    # failed before persisting its report. Ledger-only rows make that invariant
+    # explicit instead of silently losing decisions from the board projection.
+    for full_name, entry in ledger.repos.items():
+        if full_name.casefold() in represented:
+            continue
+        url = f"https://github.com/{full_name}"
+        rows.append({
+            "url": url,
+            "slug": slug_of(url),
+            "score": "—",
+            "route": "LEDGER ONLY",
+            "status": BOARD_STATUS[entry["status"]],
+        })
+    rows.sort(key=lambda x: x["score"] if isinstance(x["score"], (int, float)) else -1,
+              reverse=True)
     return rows, dropped
 
 def collect_targets(args) -> list[str]:

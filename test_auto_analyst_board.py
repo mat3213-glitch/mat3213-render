@@ -34,6 +34,7 @@ def test_board_is_ledger_view_and_drops_github_garbage() -> None:
             "Owner/No": {"status": "rejected"},
             "Owner/Later": {"status": "park"},
             "Owner/Try": {"status": "pilot"},
+            "Owner/Missing": {"status": "rejected"},
         }}), encoding="utf-8")
         ledger = ScoutLedger(path)
         reports = [
@@ -49,13 +50,20 @@ def test_board_is_ledger_view_and_drops_github_garbage() -> None:
         ]
         rows, dropped = board_rows_from_reports(reports, ledger)
         by_url = {row["url"]: row for row in rows}
-        assert dropped == 3 and len(rows) == 6
+        assert dropped == 3 and len(rows) == 7
         assert by_url["https://github.com/owner/done"]["status"] == "✅ ADOPTED"
         assert by_url["https://github.com/Owner/No"]["status"] == "❌ REJECTED"
         assert by_url["https://github.com/Owner/Later"]["status"] == "🅿 PARK"
         assert by_url["https://github.com/Owner/Try"]["status"] == "🧪 PILOT"
         assert by_url["https://github.com/Owner/New"]["status"] == "PENDING"
         assert by_url["https://example.com/article"]["status"] == "PENDING"
+        assert by_url["https://github.com/Owner/Missing"] == {
+            "url": "https://github.com/Owner/Missing",
+            "slug": "github__com__Owner__Missing",
+            "score": "—",
+            "route": "LEDGER ONLY",
+            "status": "❌ REJECTED",
+        }
 
 
 def test_target_failure_cannot_be_reported_as_success() -> None:
