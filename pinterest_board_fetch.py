@@ -139,6 +139,18 @@ def collect_pins(board_ref: str, max_idle: int = 6) -> dict:
         page.goto(board_url, wait_until="load", timeout=40000)
         time.sleep(3)
         resolved_url = page.url or board_url
+        pin_match = re.search(r"pinterest\.com/pin/(\d+)/?", resolved_url)
+        if pin_match:
+            pid = pin_match.group(1)
+            pins[pid] = {
+                "video_url": "",
+                "link": resolved_url,
+                "domain": "pinterest.com",
+                "title": "",
+                "board_url": resolved_url,
+            }
+            browser.close()
+            return pins
         if "pinterest.com/" in resolved_url:
             board_slug = re.search(r"pinterest\.com/[^/]+/([^/?#]+)/?", resolved_url).group(1) if re.search(r"pinterest\.com/[^/]+/([^/?#]+)/?", resolved_url) else board_slug
         idle = 0
@@ -265,10 +277,14 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    r = sh(["rclone", "copy", str(TMP), raw_remote], timeout=1800)
-    if r.returncode != 0:
-        print(r.stderr[-1000:], flush=True)
-        return 2
+    for local in sorted(TMP.iterdir()):
+        if not local.is_file():
+            continue
+        remote_file = f"{raw_remote}/{local.name}"
+        r = sh(["rclone", "copyto", str(local), remote_file], timeout=300)
+        if r.returncode != 0:
+            print(r.stderr[-1000:], flush=True)
+            return 2
 
     kinds = Counter(t["method"] for t in tasks)
     print(f"[board] uploaded raw -> {raw_remote}", flush=True)
