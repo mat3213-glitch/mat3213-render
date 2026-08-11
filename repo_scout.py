@@ -34,7 +34,7 @@ import requests
 TRENDING_LANGS = ["python", "typescript", ""]
 
 HERE = Path(__file__).parent
-QUERY_FILE = HERE / "repo_scout_queries.json"
+NEEDS_FILE = HERE / "repo_scout_current_needs.v1.json"
 SEEN_FILE = HERE / "repo_scout_seen.json"
 REPORT_FILE = HERE / "repo_scout_latest.md"
 NOVELTY_FILE = HERE / "repo_scout_novelty.json"   # тексты показанных находок (гейт «то же другими словами»)
@@ -42,11 +42,11 @@ LEDGER_FILE = HERE / "repo_scout_ledger.json"     # adopted/rejected/park/pilot 
 
 from scout_filters import NoveltyIndex, is_saturated   # noqa: E402
 from scout_ledger import canonical_name, load_excluded_names   # noqa: E402
+from scout_needs import CurrentNeeds   # noqa: E402
 
-# Жёсткий потолок на КАТЕГОРИЮ в готовом шортлисте — включая добивку. До правки backfill
-# дожимал недобор слотов лучшими по velocity, а лучшие по velocity — всегда агентный trending:
-# так 4 разрешённых квотой orchestration превращались в 21 из 25.
-CAT_CAP = {"orchestration": 2}
+# Жёсткий потолок на один current-need/category в готовом шортлисте — включая добивку.
+# Не даёт даже полезному gap вытеснить остальные актуальные потребности.
+CAT_CAP: dict[str, int] = {}
 DEFAULT_CAT_CAP = 6
 
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -64,64 +64,6 @@ PROJECT_CONTEXT = (
     "Локальное железо слабое (Atom, 1.8 ГБ RAM, без GPU) — всё тяжёлое выносим на GH Actions или в облако."
 )
 
-# Категории trending-репо ДОЛЖНЫ совпадать со схемой запросов (repo_scout_queries.json),
-# иначе diversify дробит слоты на две несовместимые таксономии (Grok-аудит 2026-07-24).
-KEYWORDS = {
-    "craft": ["camera move", "lut", "color grade", "film emulation", "grain", "halation",
-              "light leak", "visualizer", "parallax", "depth map", "cinematic", "overlay",
-              "reels", "shorts", "hook"],
-    "video": ["ffmpeg", "glsl", "shader", "motion graphics", "scene detect", "shot boundary",
-              "transition", "video editing", "render"],
-    "aigen": ["text to video", "image to video", "i2v", "t2v", "diffusion", "stable video",
-              "flux", "sdxl", "comfyui", "image generation"],
-    "audio": ["audio", "music", "librosa", "aubio", "beat", "onset", "tempo", "pydub", "pedalboard"],
-    "vision": ["aesthetic", "watermark", "ocr", "quality scoring", "predictor", "detection"],
-    "orchestration": ["openai compatible", "llm gateway", "inference", "agent", "router",
-                      "proxy", "aggregator"],
-    "publishing": ["scheduler", "autopost", "social media", "cross-post", "publish"],
-}
-
-# 🔴 Правка 07.08: из списка ВЫНУТЫ общеагентные термы (llm/agent/gateway/inference/proxy/openai/
-# api/model/orchestration/router/aggregator/self-hosted/local). Именно они делали «релевантным»
-# весь поток trending: любой агентный фреймворк описан этими словами. Замер до правки —
-# 21 из 25 позиций шортлиста категории orchestration, 23 из 25 блёрбов «вряд ли пригодится».
-# Инфраструктуру мы не теряем: замену воркеру ловит SATURATED-исключение по крафтовому признаку
-# и отдельная квота категории (CAT_CAP), а не размытый фильтр релевантности.
-RELEVANCE_TERMS = [
-    "video", "audio", "music", "ffmpeg", "render", "rendering", "clip", "clips",
-    "reels", "shorts", "automation", "automate", "social", "telegram",
-    "instagram", "tiktok", "youtube", "scheduler", "scheduling", "pipeline",
-    "scraper", "scraping", "tempo", "onset", "playlist", "visualizer",
-    "playwright", "autopost", "beat-sync", "music-video",
-    "glsl", "shader", "datamosh", "glitch", "aesthetic", "imagemagick", "whisper",
-    "transcription", "subtitle", "motion", "procedural", "diffusion", "comfyui",
-]
-_REL_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in RELEVANCE_TERMS) + r")\b")
-
-# СИЛЬНЫЕ термы — однозначно наши; только они матчатся по ИМЕНИ репо (у trending описание
-# бывает терсовым/пустым). Широкие термы (api/model/local/agent…) по имени тащат мусор — только desc.
-STRONG_TERMS = [
-    "ffmpeg", "librosa", "aubio", "comfyui", "remotion", "lottie", "glsl", "shader",
-    "visualizer", "datamosh", "whisperx", "pyscenedetect", "diffusion", "i2v", "t2v",
-    "lut", "halation", "parallax", "bodymovin", "pedalboard",
-]
-_STRONG_RE = re.compile(r"\b(" + "|".join(re.escape(t) for t in STRONG_TERMS) + r")\b")
-
-DEFAULT_QUERIES = [
-    {"label": "ffmpeg python automation", "category": "video", "query": "ffmpeg python video automation OR pipeline"},
-    {"label": "beat synced video", "category": "video", "query": "beat sync video OR music visualizer OR audio reactive"},
-    {"label": "AI video generation", "category": "video", "query": "text to video OR image to video generation open source"},
-    {"label": "reels shorts generator", "category": "video", "query": "shorts OR reels generator automation"},
-    {"label": "audio beat detection", "category": "audio", "query": "beat detection OR onset OR tempo librosa OR aubio"},
-    {"label": "social media scheduler", "category": "social", "query": "social media scheduler self-hosted autopost"},
-    {"label": "playwright automation", "category": "automation", "query": "playwright automation scraper bot python"},
-    {"label": "content pipeline", "category": "workflow", "query": "content pipeline orchestration automation"},
-    {"label": "github actions media", "category": "workflow", "query": "github actions ffmpeg OR video render"},
-    {"label": "telegram bot framework", "category": "community", "query": "telegram bot framework python media"},
-    {"label": "video uniquization", "category": "video", "query": "video uniquify OR deduplication OR variation generator"},
-]
-
-
 def gh_headers() -> dict:
     h = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28",
          "User-Agent": "yaromat-repo-scout"}
@@ -130,15 +72,9 @@ def gh_headers() -> dict:
     return h
 
 
-def load_queries() -> list[dict]:
-    if QUERY_FILE.exists():
-        try:
-            data = json.loads(QUERY_FILE.read_text(encoding="utf-8"))
-            if isinstance(data, list) and data:
-                return [q for q in data if isinstance(q, dict) and q.get("query")]
-        except Exception:
-            pass
-    return DEFAULT_QUERIES
+def load_queries(needs: CurrentNeeds | None = None) -> list[dict]:
+    """Current-needs config is authoritative; legacy queries are rollback-only."""
+    return (needs or CurrentNeeds(NEEDS_FILE)).queries()
 
 
 def load_seen() -> set[str]:
@@ -277,27 +213,8 @@ def diversify(items: list[dict], total: int = 25, per_cat: int = 4) -> list[dict
     return result
 
 
-def text_of(repo: dict) -> str:
-    return " ".join(str(repo.get(k, "") or "") for k in ["name", "full_name", "description", "language"]).lower()
-
-
-def categorize(repo: dict) -> str:
-    t = text_of(repo)
-    for cat, words in KEYWORDS.items():
-        if any(w in t for w in words):
-            return cat
-    return "misc"
-
-
-def is_relevant(repo: dict) -> bool:
-    desc = str(repo.get("description") or "").lower()
-    if desc and _REL_RE.search(desc):        # описание — по полному списку термов
-        return True
-    name = str(repo.get("full_name") or "").lower()
-    return bool(_STRONG_RE.search(name))     # имя — только по СИЛЬНЫМ (без мусора api/model/local)
-
-
-def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = None) -> list[dict]:
+def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = None,
+                     needs: CurrentNeeds | None = None) -> list[dict]:
     """Два источника: Search API (ось ротируется по дню) + github.com/trending (ось velocity).
     Скоринг — velocity_score (звёзды слабо, свежесть/период сильно). Дедуп: выше score побеждает."""
     by_name: dict[str, dict] = {}
@@ -305,7 +222,8 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
     print(f"[scout] ось дня: sort='{sort or 'best-match'}' qualifier='{qualifier or '-'}'")
 
     excluded_names = {canonical_name(x) for x in (excluded_names or set())}
-    dropped = {"saturated": 0, "lifecycle": 0}
+    needs = needs or CurrentNeeds(NEEDS_FILE)
+    dropped = {"saturated": 0, "lifecycle": 0, "needs": 0}
 
     def consider(cand: dict):
         fn = cand["full_name"]
@@ -314,10 +232,18 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
         if canonical_name(fn) in excluded_names:
             dropped["lifecycle"] += 1
             return
+        assessment = needs.assess(cand)
+        if not assessment["accepted"]:
+            dropped["needs"] += 1
+            return
         # тема, которой проект уже закрыт (свой пул воркеров/оркестратор) и без признаков ремесла
         if is_saturated(f"{fn} {cand.get('description', '')}"):
             dropped["saturated"] += 1
             return
+        cand.update({k: v for k, v in assessment.items() if k != "accepted"})
+        cand["velocity_score"] = cand.get("score", 0)
+        # Need coverage is the main ranking axis. Velocity is merely a small tie-breaker.
+        cand["score"] = round(assessment["need_score"] + cand["velocity_score"] * 0.1, 2)
         old = by_name.get(fn)
         if old is None or cand["score"] > old["score"]:
             # при перезаписи сохраняем осмысленную категорию, если у победителя она "misc"
@@ -326,13 +252,13 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
             by_name[fn] = cand
 
     # источник 1 — Search API, категория берётся из ЗАПРОСА (не keyword-угадайка)
-    for q in load_queries():
+    for q in load_queries(needs):
         time.sleep(2.5)  # антидот вторичному rate-limit Search API
         cat = str(q.get("category") or "misc")
         for repo in search_github(str(q["query"]).strip(), per_page=max_per_query,
                                   sort=sort, qualifier=qualifier):
             fn = str(repo.get("full_name") or "")
-            if not fn or not is_relevant(repo):
+            if not fn:
                 continue
             stars = int(repo.get("stargazers_count") or 0)
             consider({
@@ -340,6 +266,7 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
                 "html_url": repo.get("html_url", ""),
                 "description": repo.get("description", ""),
                 "language": repo.get("language", ""),
+                "topics": repo.get("topics") or [],
                 "stars": stars,
                 "category": cat,
                 "score": velocity_score(stars, 0, str(repo.get("pushed_at") or "")),
@@ -348,15 +275,13 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
 
     # источник 2 — trending (velocity), фильтр релевантности + категория по ключевым словам
     for repo in fetch_trending(TRENDING_LANGS, since="daily"):
-        if not is_relevant(repo):
-            continue
         consider({
             "full_name": repo["full_name"],
             "html_url": repo["html_url"],
             "description": repo["description"],
             "language": repo["language"],
             "stars": repo["stars"],
-            "category": categorize(repo),
+            "category": "misc",  # CurrentNeeds overwrites this after evidence matching.
             "score": velocity_score(repo["stars"], repo["period_stars"], ""),
             "source": "trending",
         })
@@ -365,6 +290,7 @@ def build_candidates(max_per_query: int = 8, excluded_names: set[str] | None = N
     out.sort(key=lambda x: (x["score"], x["stars"]), reverse=True)
     print(f"[scout] отсеяно как насыщенная тема (шлюзы/агенты/пентест): {dropped['saturated']}")
     print(f"[scout] отсеяно ledger/seen до shortlist+LLM: {dropped['lifecycle']}")
+    print(f"[scout] отсеяно current-needs/evidence до shortlist+LLM: {dropped['needs']}")
     return out
 
 
@@ -440,16 +366,21 @@ def enrich_with_llm(items: list[dict]) -> None:
             "stars": it["stars"],
             "language": it.get("language") or "",
             "description": (it.get("description") or "")[:300],
+            "need": it.get("need_id"),
+            "gap": it.get("gap"),
+            "evidence": it.get("evidence"),
+            "integration_cost": it.get("integration_cost"),
+            "duplicate_risk": it.get("duplicate_risk"),
         }
         for it in items
     ]
     prompt = (
         f"{PROJECT_CONTEXT}\n\n"
-        "Ниже список GitHub-репозиториев (имя, звёзды, язык, описание). Описания бывают "
-        "обрезанными или не на русском — додумай по названию и контексту.\n"
+        "Ниже список GitHub-репозиториев, уже прошедших детерминированный current-needs gate. "
+        "Не додумывай функции, которых нет в переданных evidence/описании.\n"
         "Для КАЖДОГО репо напиши короткое объяснение простым русским языком: "
-        "(1) что он автоматизирует/делает, (2) чем конкретно может быть полезен нашему проекту "
-        "(или честно: 'для проекта вряд ли пригодится — <почему>', если связи нет).\n"
+        "(1) что он делает по evidence, (2) как закрывает указанный gap, "
+        "(3) оправдана ли цена интеграции с учётом duplicate-risk.\n"
         "2–3 предложения, без воды и маркетинга, без markdown.\n"
         "Верни СТРОГО JSON-массив объектов {\"full_name\":..., \"blurb\":...} в том же порядке, "
         "без обёрток и пояснений.\n\n"
@@ -484,6 +415,9 @@ def build_digest(new_items: list[dict], total: int) -> str:
     lines = [f"🔭 GitHub scout: {len(new_items)} новых репо для проекта\n"]
     for it in new_items[:12]:
         lines.append(f"⭐ {it['stars']}  {it['full_name']}")
+        lines.append(f"🎯 gap: {it.get('need_id')} — {it.get('gap')}")
+        lines.append(f"🔎 evidence: {', '.join(it.get('evidence') or [])}")
+        lines.append(f"🧩 интеграция: {it.get('integration_cost')} · дубль-риск: {it.get('duplicate_risk')}")
         blurb = it.get("blurb") or (it.get("description") or "")[:140]
         if blurb:
             lines.append(f"{blurb}")
@@ -495,7 +429,11 @@ def write_report(items: list[dict]):
     lines = [f"# Repo Scout — {datetime.now().isoformat()}", "", f"Всего в шортлисте: {len(items)}", ""]
     for it in items:
         lines += [f"- **{it['full_name']}** ⭐{it['stars']} [{it['category']}]",
-                  f"  - {it['html_url']}"]
+                  f"  - {it['html_url']}",
+                  f"  - 🎯 gap `{it.get('need_id')}` (priority {it.get('priority')}): {it.get('gap')}",
+                  f"  - 🔎 evidence: {', '.join(it.get('evidence') or [])}",
+                  f"  - 🧩 integration cost: {it.get('integration_cost')}",
+                  f"  - ♻ duplicate-risk: {it.get('duplicate_risk')}"]
         if it.get("blurb"):
             lines.append(f"  - 💡 {it['blurb']}")
         lines.append(f"  - 📄 {(it.get('description') or '')[:160]}")
@@ -531,13 +469,15 @@ def main():
     args = ap.parse_args()
 
     ledger, excluded = load_excluded_names(LEDGER_FILE, SEEN_FILE)
+    needs = CurrentNeeds(NEEDS_FILE)
     by_status: dict[str, int] = defaultdict(int)
     for entry in ledger.repos.values():
         by_status[entry["status"]] += 1
     print(f"[scout] ledger={len(ledger.repos)} {dict(sorted(by_status.items()))}; "
           f"legacy seen={len(load_seen())}; deny-set={len(excluded)}")
 
-    candidates = build_candidates(excluded_names=excluded)
+    print(f"[scout] current-needs v1: {len(needs.needs)} gaps, {len(needs.queries())} queries")
+    candidates = build_candidates(excluded_names=excluded, needs=needs)
     items = diversify(candidates, total=max(1, args.top), per_cat=4)
     print(f"[scout] кандидатов {len(candidates)} → шортлист {len(items)} (round-robin по категориям)")
 

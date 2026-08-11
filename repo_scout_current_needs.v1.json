@@ -1,0 +1,184 @@
+{
+  "schema": "repo-scout-current-needs/v1",
+  "version": 1,
+  "updated": "2026-08-11",
+  "global_negative_terms": [
+    "free llm",
+    "llm gateway",
+    "coding agent",
+    "agent framework",
+    "multi-agent",
+    "social media scheduler",
+    "autopost platform",
+    "comfyui",
+    "stable video diffusion",
+    "self-hosted image to video",
+    "local image to video model",
+    "cuda video generation",
+    "procedural full-frame",
+    "generative full-frame animation",
+    "motion canvas",
+    "datamosh",
+    "glitch art",
+    "vinyl visualizer",
+    "neon visualizer"
+  ],
+  "integration_cost_terms": {
+    "high": ["cuda", "gpu", "electron", "desktop app", "webui", "web ui", "kubernetes"],
+    "medium": ["node.js", "typescript", "rust", "headless browser", "playwright", "server"],
+    "low": ["ffmpeg", "python", "bash", "cli", "json", "single binary", "cpu"]
+  },
+  "needs": [
+    {
+      "id": "organic_transitions",
+      "category": "video",
+      "priority": 10,
+      "gap": "Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.",
+      "queries": [
+        "ffmpeg xfade transition",
+        "film dissolve ffmpeg"
+      ],
+      "positive_terms": [
+        "xfade easing",
+        "transition easing",
+        "ffmpeg transition",
+        "film dissolve",
+        "crossfade expression",
+        "dissolve transition"
+      ],
+      "negative_terms": ["glitch", "pixelize", "neon", "vinyl"],
+      "integration_cost": "low",
+      "duplicate_risk": "medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive"
+    },
+    {
+      "id": "timeline_review",
+      "category": "video",
+      "priority": 9,
+      "gap": "Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.",
+      "queries": [
+        "video contact sheet",
+        "video timeline transcript"
+      ],
+      "positive_terms": [
+        "timeline view",
+        "timeline png",
+        "video contact sheet",
+        "storyboard contact sheet",
+        "packed transcript",
+        "transcript based video editing",
+        "waveform timeline"
+      ],
+      "negative_terms": ["talking head", "podcast generator", "avatar"],
+      "integration_cost": "low",
+      "duplicate_risk": "medium — WhisperX и EDL уже есть; ценен только компактный review surface"
+    },
+    {
+      "id": "motion_continuity_qc",
+      "category": "vision",
+      "priority": 9,
+      "gap": "Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.",
+      "queries": [
+        "freeze detection video",
+        "duplicate frame detection video"
+      ],
+      "positive_terms": [
+        "freeze detection",
+        "duplicate frame detection",
+        "motion continuity",
+        "optical flow quality",
+        "video quality assessment",
+        "frame difference",
+        "shot continuity"
+      ],
+      "negative_terms": ["face recognition", "surveillance", "upscaler", "sharpening"],
+      "integration_cost": "medium",
+      "duplicate_risk": "medium — scene-count QC существует, но не проверяет органичность моторики"
+    },
+    {
+      "id": "camera_prompt_contracts",
+      "category": "craft",
+      "priority": 8,
+      "gap": "Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.",
+      "queries": [
+        "camera movement prompt",
+        "cinematography prompt"
+      ],
+      "positive_terms": [
+        "camera movement prompt",
+        "cinematography prompt",
+        "shot prompt schema",
+        "camera motion vocabulary",
+        "directing prompt",
+        "camera move library"
+      ],
+      "negative_terms": ["model weights", "checkpoint", "comfyui", "cuda", "training"],
+      "integration_cost": "low",
+      "duplicate_risk": "high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки"
+    },
+    {
+      "id": "filmic_overlays",
+      "category": "craft",
+      "priority": 7,
+      "gap": "Лицензионно чистые filmic overlays: halation, gate weave, dust, scratches и light leaks для screen-blend.",
+      "queries": [
+        "film halation ffmpeg",
+        "light leak overlay video"
+      ],
+      "positive_terms": [
+        "film halation",
+        "gate weave",
+        "light leak",
+        "film dust overlay",
+        "film scratch overlay",
+        "light leak overlay",
+        "film burn overlay",
+        "screen blend overlay"
+      ],
+      "negative_terms": ["vinyl", "glitch", "neon", "full frame animation"],
+      "integration_cost": "low",
+      "duplicate_risk": "high — overlay-каталог уже есть; нужен новый лицензированный материал или лучший primitive"
+    },
+    {
+      "id": "stock_source_adapters",
+      "category": "source",
+      "priority": 7,
+      "gap": "Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.",
+      "queries": [
+        "stock video api",
+        "creative commons video downloader"
+      ],
+      "positive_terms": [
+        "stock video api",
+        "creative commons video",
+        "royalty free video",
+        "video license metadata",
+        "stock footage downloader",
+        "media provenance"
+      ],
+      "negative_terms": ["scrape instagram", "tiktok downloader", "youtube reupload", "watermark removal"],
+      "integration_cost": "low",
+      "duplicate_risk": "high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance"
+    },
+    {
+      "id": "render_reproducibility",
+      "category": "video",
+      "priority": 6,
+      "gap": "Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.",
+      "queries": [
+        "render manifest ffmpeg",
+        "deterministic video render"
+      ],
+      "positive_terms": [
+        "render receipt",
+        "render manifest",
+        "deterministic video render",
+        "resumable video render",
+        "ffmpeg chunk cache",
+        "video render provenance"
+      ],
+      "negative_terms": ["render farm", "paid cloud", "kubernetes", "gpu"],
+      "integration_cost": "low",
+      "duplicate_risk": "high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail"
+    }
+  ]
+}

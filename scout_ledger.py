@@ -13,6 +13,7 @@ edited and reviewed like any other repository state file.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -53,7 +54,9 @@ def github_full_name(url: str) -> str | None:
         return None
     if repo.casefold().endswith(".git"):
         repo = repo[:-4]
-    if not owner or not repo:
+    if (not owner or not repo or
+            not re.fullmatch(r"[A-Za-z0-9_.-]+", owner) or
+            not re.fullmatch(r"[A-Za-z0-9_.-]+", repo)):
         return None
     return f"{owner}/{repo}"
 

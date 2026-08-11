@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from scout_filters import NoveltyIndex, is_saturated  # noqa: E402
 from scout_ledger import canonical_name, github_full_name, load_excluded_names  # noqa: E402
+from scout_needs import CurrentNeeds  # noqa: E402
 
 YD = "ydrive:Content factory"
 QUEUE = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
@@ -34,6 +35,7 @@ GH_TOKEN = os.environ.get("GH_DISPATCH_TOKEN") or os.environ.get("GITHUB_TOKEN",
 HERE = Path(__file__).resolve().parent
 LEDGER_FILE = HERE / "repo_scout_ledger.json"
 SEEN_FILE = HERE / "repo_scout_seen.json"
+NEEDS_FILE = HERE / "repo_scout_current_needs.v1.json"
 
 
 def filter_lifecycle_urls(urls: list[str], excluded_names: set[str]) -> tuple[list[str], list[str]]:
@@ -55,7 +57,24 @@ def filter_lifecycle_urls(urls: list[str], excluded_names: set[str]) -> tuple[li
     return kept, dropped
 
 
-def grok_signals():
+def assess_grok_github_item(item: dict, needs: CurrentNeeds) -> dict | None:
+    """Apply the same mandatory-evidence gate to a Grok GitHub finding.
+
+    Grok's grounded ``what/why_us/proof`` fields are the metadata available before
+    analyst cloning. Non-GitHub links return ``None`` because they belong to the
+    deep-web digest or the analyst's generic URL path, not Repo Scout needs.
+    """
+    link = str(item.get("source_link") or "")
+    full_name = github_full_name(link)
+    if not full_name:
+        return None
+    return needs.assess({
+        "full_name": full_name,
+        "description": " ".join(str(item.get(key) or "") for key in ("what", "why_us", "proof")),
+    })
+
+
+def grok_signals(needs: CurrentNeeds | None = None):
     """Кандидаты из свежего grok_*.json. Возвращает (в_анализатор, в_дайджест).
 
     🔴 Правка 07.08 (задание yaromat «пусть грок тащит не репо с гитхаба, а глубинный интернет —
@@ -81,7 +100,7 @@ def grok_signals():
             headers={"Authorization": f"token {GH_TOKEN}", "User-Agent": "curl/8.0"})
         doc = json.loads(base64.b64decode(json.load(urllib.request.urlopen(req2, timeout=30))["content"]))
         items = doc.get("candidates") or doc.get("items") or []
-        to_analyst, to_digest, sat = [], [], 0
+        to_analyst, to_digest, sat, needs_drop = [], [], 0, 0
         for it in items:
             link = str(it.get("source_link", ""))
             if not link.startswith("http"):
@@ -94,12 +113,19 @@ def grok_signals():
                 sat += 1
                 continue
             kind = str(it.get("type", "")).lower()
-            if kind in ("tool", "repo") or link.startswith("https://github.com/"):
+            github_assessment = assess_grok_github_item(it, needs) if needs else None
+            if github_assessment is not None and not github_assessment["accepted"]:
+                needs_drop += 1
+                continue
+            if github_assessment is not None:
+                print(f"  [needs] {github_full_name(link)} → {github_assessment['need_id']} "
+                      f"evidence={github_assessment['evidence']}")
+            if kind in ("tool", "repo") or github_full_name(link):
                 to_analyst.append(link)
             else:
                 to_digest.append(it)
         print(f"[мост] {latest}: в анализатор {len(to_analyst)}, в дайджест {len(to_digest)}, "
-              f"отсеяно как насыщенная тема {sat}")
+              f"отсеяно как насыщенная тема {sat}, без current-needs evidence {needs_drop}")
         return to_analyst, to_digest
     except Exception as e:
         print(f"[мост] fail: {str(e)[:140]}")
@@ -162,7 +188,8 @@ def slug(u):
 
 
 def main():
-    analyst_urls, digest_items = grok_signals()
+    needs = CurrentNeeds(NEEDS_FILE)
+    analyst_urls, digest_items = grok_signals(needs)
 
     # Repo Scout и Grok — два входа в ОДНУ analyst queue. Поэтому lifecycle должен
     # применяться к обоим: иначе adopted/rejected/park/pilot или просто уже показанное

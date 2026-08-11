@@ -51,15 +51,15 @@ def test_repo_scout_excludes_before_shortlist() -> None:
     old_trending = repo_scout.fetch_trending
     old_sleep = repo_scout.time.sleep
     try:
-        repo_scout.load_queries = lambda: [
+        repo_scout.load_queries = lambda *_: [
             {"query": "video", "category": "video", "label": "test"}
         ]
         repo_scout.search_github = lambda *args, **kwargs: [
             {"full_name": "Owner/Adopted", "html_url": "https://github.com/Owner/Adopted",
-             "description": "video render", "language": "Python", "stargazers_count": 10,
+             "description": "FFmpeg transition with xfade easing", "language": "Python", "stargazers_count": 10,
              "pushed_at": ""},
             {"full_name": "Owner/Fresh", "html_url": "https://github.com/Owner/Fresh",
-             "description": "video render", "language": "Python", "stargazers_count": 5,
+             "description": "FFmpeg transition with xfade easing", "language": "Python", "stargazers_count": 5,
              "pushed_at": ""},
         ]
         repo_scout.fetch_trending = lambda *args, **kwargs: []

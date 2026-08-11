@@ -1,27 +1,5 @@
-[
-  {"label": "camera move i2v prompt library", "category": "craft", "query": "camera movement prompt library image to video cinematic"},
-  {"label": "film emulation LUT color grade", "category": "craft", "query": "film emulation LUT color grade analog cinematic look"},
-  {"label": "film grain halation overlay", "category": "craft", "query": "film grain halation light leak gate weave overlay video"},
-  {"label": "music visualizer audio reactive", "category": "craft", "query": "music visualizer audio reactive generative video"},
-  {"label": "shorts reels formula deconstruct", "category": "craft", "query": "shorts reels hook formula analysis viral deconstruct"},
-  {"label": "parallax 2.5D depth animation", "category": "craft", "query": "parallax 2.5d depth map animation image motion"},
-
-  {"label": "ffmpeg filter automation", "category": "video", "query": "ffmpeg filter automation pipeline cli"},
-  {"label": "glsl shader video transition", "category": "video", "query": "glsl shader video transition ffmpeg opengl"},
-  {"label": "procedural motion graphics code", "category": "video", "query": "procedural motion graphics generative animation render code"},
-  {"label": "shot scene detection cpu", "category": "video", "query": "shot boundary scene detection python cpu"},
-
-  {"label": "open image to video model", "category": "aigen", "query": "image to video diffusion open source model i2v"},
-  {"label": "free text to image endpoint", "category": "aigen", "query": "free text to image api flux sdxl self hosted"},
-
-  {"label": "beat onset tempo detection", "category": "audio", "query": "beat onset tempo detection librosa aubio python"},
-  {"label": "audio processing cli", "category": "audio", "query": "audio processing python pydub pedalboard cli"},
-
-  {"label": "image aesthetic scoring cpu", "category": "vision", "query": "image aesthetic quality scoring predictor cpu"},
-  {"label": "watermark text detection frame", "category": "vision", "query": "watermark text logo detection removal image video"},
-
-  {"label": "free llm openai compatible gateway", "category": "orchestration", "query": "free LLM api openai compatible gateway no key"},
-  {"label": "headless coding agent cli", "category": "orchestration", "query": "headless llm coding agent cli free vision"},
-
-  {"label": "self-hosted social scheduler", "category": "publishing", "query": "self hosted social media scheduler autopost open source"}
-]
+{
+  "deprecated": true,
+  "replaced_by": "repo_scout_current_needs.v1.json",
+  "note": "Legacy compatibility marker; Repo Scout no longer reads this file."
+}

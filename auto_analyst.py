@@ -11,7 +11,7 @@ auto_analyst.py — автономный анализ-тест репо/сайт
   4. routing      — hard-reject → skip; инстр.скор>=порог → smoke-test; concept>=порог → концепт-заметка
   5. Stage B      — smoke-test в песочнице (детект экосистемы → install → smoke), best-effort
   6. outputs      — verified_tools/<slug>/README.md + report.json на ЯД (НЕ теряется)
-  7. board        — ADOPTION_BOARD.md: строка PENDING (висит как задача на внедрение)
+  7. board        — ADOPTION_BOARD.md: view из report.json + repo_scout_ledger.json
   8. TG-отчёт     — в тред 634 (STYLE SCOUT): вердикт + что вытащить/выкинуть +
                     РИСКИ (перегруз связей с архитектурой + устойчивость) + автономность.
                     Финал «внедряем/нет» — за yaromat.
@@ -31,6 +31,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -46,6 +47,9 @@ except Exception:
 HERE = Path(__file__).resolve().parent
 RUBRIC_PATH = HERE / "analyst_rubric.yaml"
 QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"   # [2026-07-27] mimo free снят → Qwen-чат (текст)
+LEDGER_PATH = HERE / "repo_scout_ledger.json"
+
+from scout_ledger import ScoutLedger, github_full_name  # noqa: E402
 
 YD = "ydrive:Content factory"
 YD_QUEUE_PENDING = f"{YD}/cloud_io/CreativeLab/analyst_queue/pending"
@@ -62,6 +66,13 @@ TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("SCOUT_CHAT_ID", "")
 TG_THREAD = os.environ.get("SCOUT_THREAD", "1653")  # тред задаётся диспатчером: 1653=GROK SCOUT, 1699=REPO SCOUT
 GH_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+
+BOARD_STATUS = {
+    "adopted": "✅ ADOPTED",
+    "rejected": "❌ REJECTED",
+    "park": "🅿 PARK",
+    "pilot": "🧪 PILOT",
+}
 
 
 def log(m): print(f"[{datetime.now():%H:%M:%S}] {m}", flush=True)
@@ -131,6 +142,51 @@ def load_rubric() -> dict:
 
 # ── цели ─────────────────────────────────────────────────────────────────────────
 
+def normalize_analyst_target(raw: str) -> str | None:
+    """Return a canonical analyst target or reject malformed/non-repo GitHub pages.
+
+    External HTTP(S) tools/articles are a valid separate analyst route and keep their
+    URL. GitHub is stricter: root/search/topics/org/mentions-like pages are not repos;
+    deep repository links normalize to one ``https://github.com/owner/repo`` target.
+    """
+    value = str(raw or "").strip()
+    try:
+        parsed = urllib.parse.urlparse(value)
+    except ValueError:
+        return None
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        return None
+    if parsed.netloc.casefold() in ("github.com", "www.github.com"):
+        full_name = github_full_name(value)
+        return f"https://github.com/{full_name}" if full_name else None
+    return value.rstrip("/")
+
+
+def lifecycle_status(url: str, ledger: ScoutLedger) -> str:
+    full_name = github_full_name(url)
+    entry = ledger.entry(full_name) if full_name else None
+    return BOARD_STATUS[entry["status"]] if entry else "PENDING"
+
+
+def board_rows_from_reports(reports: list[dict], ledger: ScoutLedger) -> tuple[list[dict], int]:
+    """Pure board projection. Ledger is source of truth; invalid targets are omitted."""
+    rows, dropped = [], 0
+    for report in reports:
+        raw_url = report.get("url", "")
+        url = normalize_analyst_target(raw_url)
+        if not url:
+            dropped += 1
+            continue
+        rows.append({
+            "url": url,
+            "slug": report.get("slug") or slug_of(url),
+            "score": report.get("score", 0),
+            "route": report.get("route", "?"),
+            "status": lifecycle_status(url, ledger),
+        })
+    rows.sort(key=lambda x: x["score"], reverse=True)
+    return rows, dropped
+
 def collect_targets(args) -> list[str]:
     targets = []
     if args.targets:
@@ -153,12 +209,23 @@ def collect_targets(args) -> list[str]:
             for u in urls:
                 if slug_of(u) not in already:
                     targets.append(u)
-    # уникализируем, чистим
+    # Уникализируем и валидируем ДО matrix/Qwen. Ledger — source of truth решений:
+    # adopted/rejected/park/pilot повторно не анализируем. Legacy seen здесь намеренно
+    # не используем: свежая находка Repo Scout уже записана в seen перед первым анализом.
+    ledger = ScoutLedger(LEDGER_PATH)
     seen, out = set(), []
-    for t in targets:
-        t = t.rstrip("/")
-        if t and t not in seen:
-            seen.add(t); out.append(t)
+    for raw in targets:
+        target = normalize_analyst_target(raw)
+        if not target:
+            log(f"target rejected (invalid/non-repo GitHub): {str(raw)[:120]}")
+            continue
+        full_name = github_full_name(target)
+        if full_name and ledger.contains(full_name):
+            log(f"target excluded by scout ledger: {full_name} [{ledger.entry(full_name)['status']}]")
+            continue
+        key = target.casefold() if full_name else target
+        if key not in seen:
+            seen.add(key); out.append(target)
     return out
 
 
@@ -394,39 +461,37 @@ def make_readme(ctx, a, score, route, smoke) -> str:
 {json.dumps(ctx['meta'], ensure_ascii=False, indent=2)}
 
 ---
-> Статус внедрения: **PENDING** — решение за yaromat. Внедряем/нет?
+> Lifecycle хранится в `repo_scout_ledger.json`; `ADOPTION_BOARD.md` — только представление.
 """
 
 
 def rebuild_board():
-    """Пересобрать ADOPTION_BOARD.md из ВСЕХ report.json на ЯД (идемпотентно, без гонки).
+    """Пересобрать ADOPTION_BOARD.md из report.json + scout ledger (идемпотентно).
 
     Параллельные matrix-джобы пишут только свои report.json; доску собирает ОДНА финальная
-    джоба этим вызовом. Сохраняет уже проставленные финалы (✅ ADOPTED / ❌ REJECTED).
+    джоба этим вызовом. Ledger — единственный source of truth lifecycle; доска — view.
     """
-    # уже принятые/отклонённые решения — не перетирать (читаем старую доску)
-    old = rclone("cat", YD_BOARD).stdout
-    decided = {}
-    for ln in old.splitlines():
-        if ln.startswith("| ") and ("ADOPTED" in ln or "REJECTED" in ln):
-            cells = [c.strip() for c in ln.strip("|").split("|")]
-            if cells: decided[cells[0]] = cells[4] if len(cells) > 4 else "PENDING"
+    ledger = ScoutLedger(LEDGER_PATH)
+    reports = []
+    # One remote traversal instead of 1 + N separate rclone processes. With hundreds
+    # of reports the old loop spent minutes on connection/setup latency alone.
+    with tempfile.TemporaryDirectory(prefix="analyst-board-") as td:
+        copied = rclone("copy", YD_TOOLS, td, "--include", "*/report.json")
+        if copied.returncode != 0:
+            raise RuntimeError(f"cannot download analyst reports: {copied.stderr[-300:]}")
+        for path in Path(td).rglob("report.json"):
+            try:
+                j = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            j.setdefault("slug", path.parent.name)
+            reports.append(j)
+    rows, dropped = board_rows_from_reports(reports, ledger)
 
-    r = rclone("lsf", YD_TOOLS, "--dirs-only")
-    rows = []
-    for d in [x.strip().rstrip("/") for x in r.stdout.splitlines() if x.strip()]:
-        rep = rclone("cat", f"{YD_TOOLS}/{d}/report.json").stdout
-        try:
-            j = json.loads(rep)
-        except Exception:
-            continue
-        url = j.get("url", d)
-        rows.append({"url": url, "slug": j.get("slug", d), "score": j.get("score", 0),
-                     "route": j.get("route", "?"), "status": decided.get(url, "PENDING")})
-    rows.sort(key=lambda x: x["score"], reverse=True)
-
-    board = ("# ADOPTION BOARD — проверенные инструменты (задачи на внедрение)\n\n"
-             "> PENDING висит как задача, пока yaromat не решит. Финал: ✅ ADOPTED / ❌ REJECTED.\n"
+    board = ("# ADOPTION BOARD — представление проверенных инструментов\n\n"
+             "> Source of truth lifecycle: `repo_scout_ledger.json`. Эта доска пересобирается и не хранит решения.\n"
+             "> Статусы: ✅ ADOPTED · ❌ REJECTED · 🅿 PARK · 🧪 PILOT · PENDING.\n"
+             "> Внешние non-GitHub инструменты/статьи сохраняются как отдельный analyst route.\n"
              f"> Обновлено: {datetime.now(timezone.utc):%Y-%m-%d %H:%M UTC}\n\n"
              "| Инструмент | Скор | Роут | Статус | Папка |\n"
              "|---|---|---|---|---|\n")
@@ -438,8 +503,9 @@ def rebuild_board():
     rclone("copyto", str(tmp), YD_BOARD)
     pending = sum(1 for r in rows if r["status"] == "PENDING")
     tg(f"🏁 <b>Авто-анализатор</b> — доска обновлена: {len(rows)} инструментов, {pending} PENDING.\n"
-       f"Решай внедрение: verified_tools/ADOPTION_BOARD.md", thread=SERVICE_THREAD)
-    log(f"board rebuilt: {len(rows)} rows, {pending} pending")
+       f"Решения: repo_scout_ledger.json; view: verified_tools/ADOPTION_BOARD.md",
+       thread=SERVICE_THREAD)
+    log(f"board rebuilt: {len(rows)} rows, {pending} pending, {dropped} invalid targets dropped")
 
 
 # ── главный цикл ────────────────────────────────────────────────────────────────────
@@ -512,7 +578,7 @@ def process(url, rubric) -> dict:
         f"⚠️ Риск связей: {a.get('risk_architecture','?')[:250]}\n"
         f"⚠️ Устойчивость: {a.get('risk_stability','?')[:250]}\n"
         f"🤖 Автономность: {a.get('autonomy','?')[:250]}{smoke_line}\n\n"
-        f"📁 verified_tools/{slug}/ — статус PENDING. Внедряем?"
+        f"📁 verified_tools/{slug}/ — решение фиксируется в repo_scout_ledger.json"
     )
     return {"url": url, "slug": slug, "score": score, "route": route}
 
