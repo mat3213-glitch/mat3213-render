@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 jobs:
   scout:
@@ -25,7 +26,8 @@ jobs:
 
       - name: Run scout
         env:
-          GITHUB_TOKEN: ${{ secrets.SCOUT_PAT }}
+          # Repo-scoped, short-lived token: enough for Search API and state push.
+          GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SCOUT_CHAT_ID: ${{ secrets.SCOUT_CHAT_ID }}
@@ -48,7 +50,9 @@ jobs:
 
       - name: Send finds to analyst sandbox (REPO SCOUT thread 1699)
         env:
-          GH_DISPATCH_TOKEN: ${{ secrets.GH_MODELS_TOKEN }}
+          # workflow_dispatch is explicitly allowed to trigger another run when
+          # authenticated with the repository GITHUB_TOKEN.
+          GH_DISPATCH_TOKEN: ${{ github.token }}
         run: |
           URLS=$(grep -oE "https://github.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+" repo_scout_latest.md 2>/dev/null | sort -u | head -15 | tr '\n' ' ')
           if [ -z "$URLS" ]; then echo "нет новых находок для анализа"; exit 0; fi
