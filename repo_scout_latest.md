@@ -1,74 +1,74 @@
-# Repo Scout — 2026-08-11T10:33:42.252191
+# Repo Scout — 2026-08-11T10:50:01.800130
 Всего в шортлисте: 8
-- **agentino-os/agentino-skill-video-slideshow** ⭐0 [video]
-  - https://github.com/agentino-os/agentino-skill-video-slideshow
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
-  - 🔎 evidence: query matched: ffmpeg xfade transition
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
-  - 💡 Создает слайдшоу из изображений и аудио с помощью FFmpeg, закрывает gap органичных стыков, интеграция оправдана из-за низкой стоимости
-  - 📄 Images + optional audio → MP4 slideshow with Ken Burns zoom and xfade transitions. Pure ffmpeg.
-- **sakthivelj/video2image** ⭐8 [vision]
-  - https://github.com/sakthivelj/video2image
+- **anilkumard0721-cyber/Automatic-fish-detection-using-deepl-learning** ⭐0 [vision]
+  - https://github.com/anilkumard0721-cyber/Automatic-fish-detection-using-deepl-learning
   - ⚠️ fallback: query-grounded
   - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
   - 🔎 evidence: query matched: duplicate frame detection video
   - 🧩 integration cost: medium
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Экстрактор кадров из видео, помогает в QC фризов и дубликатов, интеграция имеет среднюю стоимость и высокий риск дублирования
-  - 📄 Video2Image is a Python desktop GUI for extracting frames from single or multiple video files and saving them as images. It supports batch processing, key-frame
-- **ellmos-ai/ai-media-editor** ⭐6 [video]
-  - https://github.com/ellmos-ai/ai-media-editor
+  - 💡 Делает детекцию рыбы на видео, может помочь с задачей обнаружения дубликатов кадров и фризов. Закрывает gap детерминированного CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения. Цена интеграции средняя, риск дублирования высокий.
+  - 📄 The project uses YOLOv8n for fast and accurate fish detection. It identifies fish in each frame by drawing bounding boxes and assigning confidence scores. Deep 
+- **OMPSHUNYAYA/STRUMER** ⭐0 [video]
+  - https://github.com/OMPSHUNYAYA/STRUMER
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: video timeline waveform
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Генерирует медиа напрямую из структуры, может помочь с задачей компактного представления timeline для ревью режиссуры. Закрывает gap компактного timeline-представления для дешёвого ревью режиссуры. Цена интеграции низкая, риск дублирования высокий.
+  - 📄 What if video, audio, and diagrams didn’t need editing or drawing? STRUMER generates deterministic media directly from structure—no timelines, waveform tuning, 
+- **takee-22/Dataset_Generator** ⭐0 [vision]
+  - https://github.com/takee-22/Dataset_Generator
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: duplicate frame detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Делает прогрессивную генерацию датасета для реального видео трафика, может помочь с задачей обнаружения дубликатов кадров и фризов. Закрывает gap детерминированного CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения. Цена интеграции средняя, риск дублирования высокий.
+  - 📄 A progressive YOLO dataset generation pipeline built for real-world traffic video. Evolved from basic frame capture to a fully automated system with ROI filteri
+- **AnthonyJustinDuong/AVSyncer** ⭐1 [video]
+  - https://github.com/AnthonyJustinDuong/AVSyncer
   - ⚠️ fallback: query-grounded
   - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
   - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Местный AI-редактор мультимедиа, предоставляет компактное представление timeline и transcript, интеграция имеет низкую стоимость, но высокий риск дублирования
-  - 📄 Local AI media editor for video, audio and podcasts with local transcription, transcript-based cuts, Hyperframes motion graphics and agent-driven edits
-- **SolFlourishes/VideoText** ⭐0 [vision]
-  - https://github.com/SolFlourishes/VideoText
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: duplicate frame detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Преобразует видео в редактируемый текст, помогает в QC фризов и дубликатов, интеграция имеет среднюю стоимость и высокий риск дублирования
-  - 📄 Convert presentation and lecture videos into structured, editable text using stable-frame detection, OCR, layout reconstruction, and duplicate consolidation.
-- **edzzn/autovideo** ⭐1 [video]
-  - https://github.com/edzzn/autovideo
+  - 💡 Синхронизирует аудио и видео, может помочь с задачей компактного представления timeline для ревью режиссуры. Закрывает gap компактного timeline-представления для дешёвого ревью режиссуры. Цена интеграции низкая, риск дублирования высокий.
+  - 📄 Video editing software that syncs distinct audio sources and includes an editor to easily select the best take based on the transcript.
+- **msnodderly/vcut** ⭐2 [video]
+  - https://github.com/msnodderly/vcut
   - ⚠️ fallback: query-grounded
   - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
   - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Текстовый видео-редактор, позволяет редактировать видео по транскрипту, интеграция имеет низкую стоимость, но высокий риск дублирования
-  - 📄 Text-based video editor for macOS - Cut videos by editing transcript
-- **baheesa/inter_frame_forgery_detection** ⭐0 [vision]
-  - https://github.com/baheesa/inter_frame_forgery_detection
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: duplicate frame detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Обнаруживает манипуляции с видео, включая вставку, удаление и дублирование кадров, интеграция имеет среднюю стоимость и высокий риск дублирования
-  - 📄 Python code for inter-frame video forgery detection using TCN and stacking ensemble — frame insertion, deletion & duplication; digital video forensics (Springer
-- **preston176/openscript** ⭐18 [video]
-  - https://github.com/preston176/openscript
+  - 💡 Редактирует видео через редактирование транскрипта, может помочь с задачей компактного представления timeline для ревью режиссуры. Закрывает gap компактного timeline-представления для дешёвого ревью режиссуры. Цена интеграции низкая, риск дублирования высокий.
+  - 📄 Text-based video editor — edit video by editing a transcript
+- **ashika-verma/yap-editor** ⭐1 [video]
+  - https://github.com/ashika-verma/yap-editor
   - ⚠️ fallback: query-grounded
   - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
   - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Местный видео-редактор с текстовым редактированием, предоставляет компактное представление timeline и transcript, интеграция имеет низкую стоимость, но высокий риск дублирования
-  - 📄 Local-first, open-source video editor with text-based editing. Edit videos by editing the transcript.
-- **charan-ravikumar/Image-Size-Reducer** ⭐0 [vision]
-  - https://github.com/charan-ravikumar/Image-Size-Reducer
+  - 💡 Редактирует видео на основе транскрипта с помощью ИИ, может помочь с задачей компактного представления timeline для ревью режиссуры. Закрывает gap компактного timeline-представления для дешёвого ревью режиссуры. Цена интеграции низкая, риск дублирования высокий.
+  - 📄 Transcript-based AI video editor: upload a video, AI transcribes and plans cuts, export edited MP4
+- **mfahsold/montage-ai** ⭐40 [video]
+  - https://github.com/mfahsold/montage-ai
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: duplicate frame detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Инструмент для уменьшения размера изображений и видео, также обнаруживает дубликаты, интеграция имеет среднюю стоимость и высокий риск дублирования
-  - 📄 A highly optimized Python/Jupyter tool for batch reducing image & video sizes with binary search compression, EXIF metadata retention, duplicate detection, and 
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Редактирует видео на основе транскрипта с помощью ИИ, может помочь с задачей компактного представления timeline для ревью режиссуры. Закрывает gap компактного timeline-представления для дешёвого ревью режиссуры. Цена интеграции низкая, риск дублирования высокий.
+  - 📄 Open-source local-first AI video editor: transcript-based editing, beat-synced cuts, OTIO/EDL export for Premiere/Resolve, Shorts workflows.
+- **mbeato/stitch** ⭐1 [video]
+  - https://github.com/mbeato/stitch
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Редактирует видео в браузере через редактирование транскрипта, может помочь с задачей компактного представления timeline для ревью режиссуры. Закрывает gap компактного timeline-представления для дешёвого ревью режиссуры. Цена интеграции низкая, риск дублирования высокий.
+  - 📄 Browser-based video editor — edit by editing the transcript. Local Whisper, WebGL2 shaders, face-tracked reframe, multi-track timeline, all client-side.
