@@ -6,7 +6,12 @@ from pathlib import Path
 from unittest import mock
 
 import auto_analyst
-from auto_analyst import board_rows_from_reports, normalize_analyst_target, process_targets
+from auto_analyst import (
+    board_rows_from_reports,
+    normalize_analyst_target,
+    process_targets,
+    verify_remote_json,
+)
 from scout_ledger import ScoutLedger
 
 
@@ -64,8 +69,29 @@ def test_target_failure_cannot_be_reported_as_success() -> None:
             raise AssertionError("missing report must fail the analyst job")
 
 
+def test_remote_report_requires_matching_readback() -> None:
+    ok = mock.Mock(returncode=0, stdout=json.dumps({
+        "url": "https://example.com/tool", "slug": "tool"
+    }))
+    with mock.patch.object(auto_analyst, "rclone", return_value=ok):
+        verify_remote_json("remote/report.json", url="https://example.com/tool", slug="tool")
+
+    wrong = mock.Mock(returncode=0, stdout=json.dumps({
+        "url": "https://example.com/other", "slug": "other"
+    }))
+    with mock.patch.object(auto_analyst, "rclone", return_value=wrong), \
+         mock.patch.object(auto_analyst.time, "sleep"):
+        try:
+            verify_remote_json("remote/report.json", url="https://example.com/tool", slug="tool")
+        except RuntimeError as exc:
+            assert "remote report verification failed" in str(exc)
+        else:
+            raise AssertionError("mismatched remote report must fail")
+
+
 if __name__ == "__main__":
     test_target_validation_preserves_external_route()
     test_board_is_ledger_view_and_drops_github_garbage()
     test_target_failure_cannot_be_reported_as_success()
+    test_remote_report_requires_matching_readback()
     print("auto analyst board lifecycle: all tests passed")

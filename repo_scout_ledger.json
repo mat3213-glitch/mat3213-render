@@ -57,9 +57,9 @@
       "reason": "ADOPT-PATTERN only: snapshot/contact-sheet/JSON-error verification contract. Do not add the Rust motion renderer; it duplicates FFmpeg/Remotion and conflicts with the no-procedural-full-frame boundary."
     },
     "clipcurator/ai-storyboard-prompt-shot-continuity-map": {
-      "status": "park",
+      "status": "adopted",
       "decided_at": "2026-08-11",
-      "reason": "CONCEPT only: entry/exit shot state and deterministic handoff-risk may strengthen the local storyboard schema; the tiny prompt repository itself is not a dependency."
+      "reason": "ADOPT-PATTERN only: entry/exit shot state and deterministic handoff-risk are implemented in director.py, screenplay_pipeline/shot_continuity.py and prompt_writer.py; the tiny prompt repository itself is not a dependency."
     },
     "capycappy/FPS-RePlayer": {
       "status": "rejected",

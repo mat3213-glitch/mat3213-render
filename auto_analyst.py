@@ -94,6 +94,33 @@ def rclone(*args):
     return subprocess.run(["rclone"] + list(args), capture_output=True, text=True)
 
 
+def verify_remote_json(remote: str, *, url: str, slug: str, attempts: int = 3) -> None:
+    """Read-after-write contract for analyst reports on Yandex Disk."""
+    for attempt in range(attempts):
+        fetched = rclone("cat", remote)
+        if fetched.returncode == 0:
+            try:
+                payload = json.loads(fetched.stdout)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict) and payload.get("url") == url and payload.get("slug") == slug:
+                return
+        if attempt + 1 < attempts:
+            time.sleep(attempt + 1)
+    raise RuntimeError("remote report verification failed")
+
+
+def verify_remote_text(remote: str, expected: str, attempts: int = 3) -> None:
+    """Read-after-write contract for the generated board."""
+    for attempt in range(attempts):
+        fetched = rclone("cat", remote)
+        if fetched.returncode == 0 and fetched.stdout == expected:
+            return
+        if attempt + 1 < attempts:
+            time.sleep(attempt + 1)
+    raise RuntimeError("remote board verification failed")
+
+
 SERVICE_THREAD = "2182"   # «🔧 сервис · логи» — статус-пинги, не курируемый скаут-тред
 
 def _tg_one(text: str, thread: str | None = None):
@@ -503,6 +530,7 @@ def rebuild_board():
     uploaded = rclone("copyto", str(tmp), YD_BOARD)
     if uploaded.returncode != 0:
         raise RuntimeError(f"cannot upload adoption board: {uploaded.stderr[-300:]}")
+    verify_remote_text(YD_BOARD, board)
     pending = sum(1 for r in rows if r["status"] == "PENDING")
     tg(f"🏁 <b>Авто-анализатор</b> — доска обновлена: {len(rows)} инструментов, {pending} PENDING.\n"
        f"Решения: repo_scout_ledger.json; view: verified_tools/ADOPTION_BOARD.md",
@@ -555,6 +583,7 @@ def process(url, rubric) -> dict:
     uploaded = rclone("copy", str(out), f"{YD_TOOLS}/{slug}")
     if uploaded.returncode != 0:
         raise RuntimeError(f"report upload failed: {uploaded.stderr[-200:]}")
+    verify_remote_json(f"{YD_TOOLS}/{slug}/report.json", url=url, slug=slug)
 
     # TG-отчёт
     smoke_line = ""
