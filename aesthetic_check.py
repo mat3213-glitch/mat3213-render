@@ -18,11 +18,11 @@ YD = "ydrive:Content factory/cloud_io/plastic_aesthetic"
 WORK = tempfile.mkdtemp(prefix="aest_")
 FRAMES = os.path.join(WORK, "frames")
 
-def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True)
+def sh(c): return subprocess.run(c, capture_output=True, text=True)
 
 # ── 1. забрать данные с ЯД ──
-sh(f'rclone copy "{YD}/frames" "{FRAMES}" --transfers 8')
-sh(f'rclone copyto "{YD}/labels.csv" "{WORK}/labels.csv"')
+sh(["rclone", "copy", f"{YD}/frames", FRAMES, "--transfers", "8"])
+sh(["rclone", "copyto", f"{YD}/labels.csv", f"{WORK}/labels.csv"])
 labels = {}
 with open(f"{WORK}/labels.csv") as fh:
     for row in csv.DictReader(fh):
@@ -47,7 +47,9 @@ class MLP(nn.Module):
 
 WEIGHTS = "sac+logos+ava1-l14-linearMSE.pth"
 if not os.path.exists(WEIGHTS):
-    sh(f'wget -q "https://github.com/christophschuhmann/improved-aesthetic-predictor/raw/main/{WEIGHTS}" -O "{WEIGHTS}"')
+    sh(["wget", "-q",
+        f"https://github.com/christophschuhmann/improved-aesthetic-predictor/raw/main/{WEIGHTS}",
+        "-O", WEIGHTS])
 
 mlp = MLP(768)
 mlp.load_state_dict(torch.load(WEIGHTS, map_location="cpu"))
@@ -133,6 +135,6 @@ summ = "\n".join(L)
 sp_p = os.path.join(WORK, "summary.md")
 open(sp_p, "w").write(summ)
 print("\n"+summ)
-sh(f'rclone copy "{csv_p}" "{YD}/result/"')
-sh(f'rclone copy "{sp_p}" "{YD}/result/"')
+sh(["rclone", "copy", csv_p, f"{YD}/result/"])
+sh(["rclone", "copy", sp_p, f"{YD}/result/"])
 print(f"\n✓ результат → {YD}/result/")

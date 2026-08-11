@@ -39,7 +39,7 @@ SYS = (
     "Верни СТРОГО один JSON: {\"plastic\": <0-100>, \"reason\": \"<главный артефакт или 'правдоподобно'>\"}."
 )
 
-def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True)
+def sh(c): return subprocess.run(c, capture_output=True, text=True)
 
 def ask(b64s):
     global _ki
@@ -75,8 +75,8 @@ def parse(txt):
     return v, (rm.group(1)[:70] if rm else "")
 
 # данные
-sh(f'rclone copy "{YD}/frames3" "{FR}" --transfers 8')
-sh(f'rclone copyto "{YD}/labels.csv" "{WORK}/labels.csv"')
+sh(["rclone", "copy", f"{YD}/frames3", FR, "--transfers", "8"])
+sh(["rclone", "copyto", f"{YD}/labels.csv", f"{WORK}/labels.csv"])
 labels = {}
 with open(f"{WORK}/labels.csv") as fh:
     for row in csv.DictReader(fh):
@@ -143,6 +143,6 @@ L.append(f"\n## Вывод\n**{verdict}**")
 summ="\n".join([x for x in L if x!=""])
 open(os.path.join(WORK,"summary.md"),"w").write(summ)
 print("\n"+summ)
-sh(f'rclone copy "{csv_p}" "{YD}/result_gemini/"')
-sh(f'rclone copy "{os.path.join(WORK,"summary.md")}" "{YD}/result_gemini/"')
+sh(["rclone", "copy", csv_p, f"{YD}/result_gemini/"])
+sh(["rclone", "copy", os.path.join(WORK, "summary.md"), f"{YD}/result_gemini/"])
 print(f"\n✓ → {YD}/result_gemini/")

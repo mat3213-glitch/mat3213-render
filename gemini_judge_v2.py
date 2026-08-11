@@ -51,7 +51,7 @@ ANCHORS = [
 ]
 ANCHOR_NAMES = {a[0] for a in ANCHORS}
 
-def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True)
+def sh(c): return subprocess.run(c, capture_output=True, text=True)
 
 def b64(name, i):
     p = os.path.join(FR, f"{name}_{i}.jpg")
@@ -113,8 +113,8 @@ def parse(txt):
     return v, (rm.group(1)[:70] if rm else "")
 
 # данные
-sh(f'rclone copy "{YD}/frames3" "{FR}" --transfers 8')
-sh(f'rclone copyto "{YD}/labels.csv" "{WORK}/labels.csv"')
+sh(["rclone", "copy", f"{YD}/frames3", FR, "--transfers", "8"])
+sh(["rclone", "copyto", f"{YD}/labels.csv", f"{WORK}/labels.csv"])
 labels = {}
 with open(f"{WORK}/labels.csv") as fh:
     for row in csv.DictReader(fh):
@@ -172,6 +172,6 @@ L.append(f"\n## Вывод\n**{verdict}**")
 summ="\n".join([x for x in L if x!=""])
 open(os.path.join(WORK,"summary.md"),"w").write(summ)
 print("\n"+summ)
-sh(f'rclone copy "{csv_p}" "{YD}/result_gemini_v2/"')
-sh(f'rclone copy "{os.path.join(WORK,"summary.md")}" "{YD}/result_gemini_v2/"')
+sh(["rclone", "copy", csv_p, f"{YD}/result_gemini_v2/"])
+sh(["rclone", "copy", os.path.join(WORK, "summary.md"), f"{YD}/result_gemini_v2/"])
 print(f"\n✓ → {YD}/result_gemini_v2/")

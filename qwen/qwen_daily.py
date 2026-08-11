@@ -12,7 +12,7 @@ qwen_daily.py — ежедневный авто-генератор картин�
   N_IMG=6 N_VID=1 RATIO=9:16 python3 qwen_daily.py
 
 # === crontab (ежедневно 04:00, nice -n 15) ===
-# 0 4 * * * nice -n 15 /usr/bin/python3 /home/yaro/content_factory/Instrument/Qwen/qwen_daily.py >> /home/yaro/content_factory/logs/qwen_daily.log 2>&1
+# 0 4 * * * cd /path/to/content_factory && nice -n 15 /usr/bin/python3 github_actions_clips/qwen/qwen_daily.py >> logs/qwen_daily.log 2>&1
 """
 import os
 import sys
@@ -99,8 +99,8 @@ VIDEO_PROMPTS = [
 
 def load_env():
     """Читаем .env если переменные не в окружении."""
-    env_path = Path("/home/yaro/content_factory/.env")
-    if not env_path.exists():
+    env_path = next((parent / ".env" for parent in _here.parents if (parent / ".env").is_file()), None)
+    if env_path is None:
         return
     for line in env_path.read_text().splitlines():
         line = line.strip()

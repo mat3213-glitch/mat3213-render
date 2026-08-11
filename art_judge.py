@@ -152,7 +152,7 @@ note — одна короткая фраза по-русски: что в ка�
 
 
 def sh(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 def extract_json(txt):
@@ -305,8 +305,8 @@ def to_jpeg_b64(path):
     except Exception:
         pass
     tmp = tempfile.mktemp(suffix=".jpg")
-    r = sh(f'ffmpeg -y -loglevel error -i "{path}" -vf '
-           f'"scale=\'min({MAX_SIDE},iw)\':-2" -q:v 4 "{tmp}"')
+    r = sh(["ffmpeg", "-y", "-loglevel", "error", "-i", path, "-vf",
+            f"scale='min({MAX_SIDE},iw)':-2", "-q:v", "4", tmp])
     if r.returncode == 0 and os.path.exists(tmp):
         b = open(tmp, "rb").read()
         os.unlink(tmp)
@@ -503,8 +503,8 @@ def main():
         frames = os.path.join(work, "frames")
         os.makedirs(frames, exist_ok=True)
         print(f"качаю арты из {args.src}")
-        sh(f'rclone copy "{args.src}" "{frames}" --include "*.png" --include "*.jpg" '
-           f'--include "*.jpeg" --transfers 8')
+        sh(["rclone", "copy", args.src, frames, "--include", "*.png", "--include", "*.jpg",
+            "--include", "*.jpeg", "--transfers", "8"])
 
     files = []
     for root, _, names in os.walk(frames):
@@ -619,7 +619,7 @@ def main():
     print("\n" + summary)
 
     for f in (csv_p, json_p, sum_p):
-        sh(f'rclone copy "{f}" "{args.out}/"')
+        sh(["rclone", "copy", f, f"{args.out}/"])
     print(f"\n✓ результат → {args.out}/")
     if not args.local:
         shutil.rmtree(work, ignore_errors=True)

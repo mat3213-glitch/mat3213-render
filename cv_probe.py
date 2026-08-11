@@ -52,7 +52,7 @@ SHOT_ANCHORS = {
 
 
 def sh(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 def load_labels(manifest: Path) -> dict:
@@ -85,9 +85,10 @@ def main() -> int:
     work = Path("cv_probe_work")
     work.mkdir(exist_ok=True)
     for sub in ("ok", "rejected"):
-        sh(f'rclone copy "{args.src}/{sub}" "{work}/{sub}" --include "*.jpg" --include "*.png"')
+        sh(["rclone", "copy", f"{args.src}/{sub}", str(work / sub),
+            "--include", "*.jpg", "--include", "*.png"])
     if args.manifest:
-        sh(f'rclone copyto "{args.manifest}" "{work}/MANIFEST.json"')
+        sh(["rclone", "copyto", args.manifest, str(work / "MANIFEST.json")])
     labels = load_labels(work / "MANIFEST.json") if (work / "MANIFEST.json").exists() else {}
 
     frames = sorted([p for sub in ("ok", "rejected") for p in (work / sub).glob("*")
@@ -162,7 +163,7 @@ def main() -> int:
     print(f"  совпало {hit}/{tot}")
 
     if args.out:
-        sh(f'rclone copyto "{csv_path}" "{args.out}/cv_probe.csv"')
+        sh(["rclone", "copyto", str(csv_path), f"{args.out}/cv_probe.csv"])
         print(f"\nCSV → {args.out}/cv_probe.csv")
     return 0
 

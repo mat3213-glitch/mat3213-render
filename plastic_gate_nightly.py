@@ -23,17 +23,18 @@ YD = "ydrive:Content factory"
 today = datetime.datetime.utcnow().date()
 DATES = [today.isoformat(), (today - datetime.timedelta(days=1)).isoformat()]
 
-def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True)
+def sh(c): return subprocess.run(c, capture_output=True, text=True)
 
 def exists(rel):
-    r = sh(f'rclone lsf "{YD}/{rel}/" --max-depth 1')
+    r = sh(["rclone", "lsf", f"{YD}/{rel}/", "--max-depth", "1"])
     return r.returncode == 0 and r.stdout.strip() != ""
 
 def has_report(rel):
-    return sh(f'rclone lsf "{YD}/{rel}/gate_report.json"').stdout.strip() != ""
+    return sh(["rclone", "lsf", f"{YD}/{rel}/gate_report.json"]).stdout.strip() != ""
 
 def media_count(rel):
-    r = sh(f'rclone lsf "{YD}/{rel}/" --max-depth 1 --include "*.mp4" --include "*.png" --include "*.jpg"')
+    r = sh(["rclone", "lsf", f"{YD}/{rel}/", "--max-depth", "1", "--include", "*.mp4",
+            "--include", "*.png", "--include", "*.jpg"])
     return len([x for x in r.stdout.splitlines() if x.strip()])
 
 def report_is_stale(rel):
@@ -41,7 +42,8 @@ def report_is_stale(rel):
     версию папки. Баг живьём 2026-07-04: veofree_daily.py теперь бьёт раз/час (24/день), а
     этот гейт — раз/сутки (13:00 NSK). Успешный клип часто прилетает ПОСЛЕ разового гейта
     и без этой проверки никогда больше не гейтится (has_report() навечно считает пул готовым)."""
-    r = sh(f'rclone lsjson "{YD}/{rel}/" --max-depth 1 --include "*.mp4" --include "*.png" --include "*.jpg"')
+    r = sh(["rclone", "lsjson", f"{YD}/{rel}/", "--max-depth", "1", "--include", "*.mp4",
+            "--include", "*.png", "--include", "*.jpg"])
     try:
         items = json.loads(r.stdout)
     except Exception:
@@ -49,7 +51,7 @@ def report_is_stale(rel):
     if not items:
         return False
     media_mtime = max(it["ModTime"] for it in items)
-    r2 = sh(f'rclone lsjson "{YD}/{rel}/gate_report.json"')
+    r2 = sh(["rclone", "lsjson", f"{YD}/{rel}/gate_report.json"])
     try:
         report_mtime = json.loads(r2.stdout)[0]["ModTime"]
     except Exception:
@@ -75,7 +77,7 @@ for pool in POOLS:
         env = dict(os.environ, POOL=rel, THRESHOLD=THRESHOLD, ENFORCE="1")
         r = subprocess.run(["python", "-u", GATE], env=env)
         # прочитать отчёт
-        rep = sh(f'rclone cat "{YD}/{rel}/gate_report.json"').stdout
+        rep = sh(["rclone", "cat", f"{YD}/{rel}/gate_report.json"]).stdout
         try:
             j = json.loads(rep)
             summary.append(f"✅ {pool}/{d}: всего {j['total']}, pass {j['passed']}, REJECT {j['rejected']}")

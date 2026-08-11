@@ -69,8 +69,8 @@ VIDEO_PROMPTS = [
 
 def load_env():
     """Читаем .env если переменные не в окружении."""
-    env_path = Path("/home/yaro/content_factory/.env")
-    if not env_path.exists():
+    env_path = next((parent / ".env" for parent in _here.parents if (parent / ".env").is_file()), None)
+    if env_path is None:
         return
     for line in env_path.read_text().splitlines():
         line = line.strip()

@@ -43,7 +43,7 @@ CALIB_SET = [
 ]
 
 def sh(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 def pull_group(entry):
     """Скачивает файлы группы локально, возвращает список локальных путей к КАДРАМ (png).
@@ -51,7 +51,7 @@ def pull_group(entry):
     src = f"{YD}/{entry['dir']}"
     local = os.path.join(WORK, entry["dir"].replace("/", "__"))
     os.makedirs(local, exist_ok=True)
-    r = sh(f'rclone copy "{src}" "{local}" --include "{entry["glob"]}" --transfers 6')
+    r = sh(["rclone", "copy", src, local, "--include", entry["glob"], "--transfers", "6"])
     if r.returncode != 0:
         print(f"  ! rclone copy fail {src}: {r.stderr[:200]}")
     found = sorted(glob.glob(os.path.join(local, entry["glob"])))
@@ -65,13 +65,15 @@ def pull_group(entry):
             for pct in (0.2, 0.5, 0.8):
                 t = max(0.0, dur * pct)
                 out = os.path.join(FRAMES, f"{entry['source']}__{base}__{int(pct*100)}.png")
-                rr = sh(f'ffmpeg -nostdin -y -ss {t:.2f} -i "{f}" -frames:v 1 -q:v 2 "{out}" 2>/dev/null')
+                rr = sh(["ffmpeg", "-nostdin", "-y", "-ss", f"{t:.2f}", "-i", f,
+                         "-frames:v", "1", "-q:v", "2", out])
                 if os.path.exists(out):
                     frames.append(out)
     return frames
 
 def video_duration(path):
-    r = sh(f'ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"')
+    r = sh(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=nw=1:nk=1", path])
     try:
         return float(r.stdout.strip())
     except Exception:
@@ -299,8 +301,8 @@ def main():
     print("\n"+summary)
 
     # залить на ЯД
-    sh(f'rclone copy "{csv_path}" "{OUT_YD}/"')
-    sh(f'rclone copy "{sum_path}" "{OUT_YD}/"')
+    sh(["rclone", "copy", csv_path, f"{OUT_YD}/"])
+    sh(["rclone", "copy", sum_path, f"{OUT_YD}/"])
     print(f"\n✓ Результаты на ЯД: {OUT_YD}/ (metrics.csv + summary.md)")
 
 def mean(vals):

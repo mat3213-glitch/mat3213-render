@@ -39,7 +39,7 @@ RUBRIC = (
     "Ответь СТРОГО одним JSON: {\"plastic\": <0-100>, \"reason\": \"<кратко>\"}. Только JSON."
 )
 
-def sh(c): return subprocess.run(c, shell=True, capture_output=True, text=True)
+def sh(c): return subprocess.run(c, capture_output=True, text=True)
 def strip_ansi(t): return re.sub(r'\x1B\[[0-9;]*[A-Za-z]', '', t)
 
 def extract_json(t):
@@ -59,14 +59,16 @@ def frames_of(path):
     """png → [сам файл]; mp4 → 3 извлечённых кадра (20/50/80%)."""
     ext=os.path.splitext(path)[1].lower()
     if ext in (".png",".jpg",".jpeg"): return [path]
-    dur=sh(f'ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"').stdout.strip()
+    dur=sh(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "default=nw=1:nk=1", path]).stdout.strip()
     try: dur=float(dur)
     except Exception: dur=6.0
     out=[]
     base=os.path.splitext(os.path.basename(path))[0]
     for k,pct in enumerate((0.2,0.5,0.8),1):
         f=os.path.join(STRIPS,f"{base}_{k}.jpg")
-        sh(f'ffmpeg -nostdin -y -ss {dur*pct:.2f} -i "{path}" -frames:v 1 -q:v 3 -vf scale=512:-1 "{f}"')
+        sh(["ffmpeg", "-nostdin", "-y", "-ss", f"{dur*pct:.2f}", "-i", path,
+            "-frames:v", "1", "-q:v", "3", "-vf", "scale=512:-1", f])
         if os.path.exists(f): out.append(f)
     return out
 
@@ -101,7 +103,8 @@ def judge(strip, timeout=180):
     return round(sum(votes) / len(votes), 1), " | ".join(reasons)[:160]
 
 # скачать пул (медиа)
-sh(f'rclone copy "{POOL_YD}" "{LOCAL}" --include "*.mp4" --include "*.png" --include "*.jpg" --include "*.jpeg" --transfers 6 --max-depth 1')
+sh(["rclone", "copy", POOL_YD, LOCAL, "--include", "*.mp4", "--include", "*.png",
+    "--include", "*.jpg", "--include", "*.jpeg", "--transfers", "6", "--max-depth", "1"])
 media=sorted([f for f in glob.glob(LOCAL+"/*") if os.path.splitext(f)[1].lower() in (".mp4",".png",".jpg",".jpeg")])
 print(f"ГЕЙТ пула {POOL} — медиа: {len(media)}, порог reject>= {THRESHOLD}, enforce={ENFORCE}")
 
@@ -122,12 +125,12 @@ report={"pool":POOL,"threshold":THRESHOLD,"enforce":ENFORCE,"detector":"cf+openr
         "total":len(results),"passed":len(passed),"rejected":len(rejected),"skipped":len(results)-len(passed)-len(rejected),
         "items":results}
 rp=os.path.join(WORK,"gate_report.json"); open(rp,"w").write(json.dumps(report,ensure_ascii=False,indent=2))
-sh(f'rclone copyto "{rp}" "{POOL_YD}/gate_report.json"')
+sh(["rclone", "copyto", rp, f"{POOL_YD}/gate_report.json"])
 
 print(f"\n=== ИТОГ: pass={len(passed)} reject={len(rejected)} skip={report['skipped']} ===")
 if ENFORCE and rejected:
     for r in rejected:
-        sh(f'rclone moveto "{POOL_YD}/{r["file"]}" "{POOL_YD}/_rejected/{r["file"]}"')
+        sh(["rclone", "moveto", f"{POOL_YD}/{r['file']}", f"{POOL_YD}/_rejected/{r['file']}"])
     print(f"ENFORCE: {len(rejected)} отбракованных → {POOL_YD}/_rejected/ (обратимо)")
 elif rejected:
     print(f"DRY-RUN: {len(rejected)} помечены REJECT (не двигаю). Запусти с ENFORCE=1 чтобы переместить.")

@@ -34,7 +34,7 @@ RUBRIC = (
 
 
 def sh(c):
-    return subprocess.run(c, shell=True, capture_output=True, text=True)
+    return subprocess.run(c, capture_output=True, text=True)
 
 
 def strip_ansi(t):
@@ -65,7 +65,8 @@ def frames_of(path, strips_dir):
     ext = os.path.splitext(path)[1].lower()
     if ext in (".png", ".jpg", ".jpeg"):
         return [path]
-    dur = sh(f'ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "{path}"').stdout.strip()
+    dur = sh(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+              "-of", "default=nw=1:nk=1", path]).stdout.strip()
     try:
         dur = float(dur)
     except Exception:
@@ -74,7 +75,8 @@ def frames_of(path, strips_dir):
     base = os.path.splitext(os.path.basename(path))[0]
     for k, pct in enumerate((0.2, 0.5, 0.8), 1):
         f = os.path.join(strips_dir, f"{base}_{k}.jpg")
-        sh(f'ffmpeg -nostdin -y -ss {dur*pct:.2f} -i "{path}" -frames:v 1 -q:v 3 -vf scale=512:-1 "{f}"')
+        sh(["ffmpeg", "-nostdin", "-y", "-ss", f"{dur*pct:.2f}", "-i", path,
+            "-frames:v", "1", "-q:v", "3", "-vf", "scale=512:-1", f])
         if os.path.exists(f):
             out.append(f)
     return out

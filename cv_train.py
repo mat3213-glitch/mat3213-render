@@ -30,7 +30,7 @@ NEG_GENRES = {"landscape", "cityscape", "still_life", "abstract_painting"}   # �
 
 
 def sh(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True)
 
 
 def _rss_mb() -> float:
@@ -188,7 +188,8 @@ def main() -> int:
     # Веса заливаем СРАЗУ: прогон 05.08 умер на работе с пулами и потерял всё обучение.
     np.savez(work / "head_face_painting.npz", w=w.astype(np.float32), b=np.float32(b),
              model=args.model, pretrained=args.pretrained, holdout_acc=acc, threshold=thr)
-    sh(f'rclone copyto "{work / "head_face_painting.npz"}" "{args.out}/head_face_painting.npz"')
+    sh(["rclone", "copyto", str(work / "head_face_painting.npz"),
+        f"{args.out}/head_face_painting.npz"])
     print(f"веса залиты заранее → {args.out}/head_face_painting.npz", flush=True)
     ours: list[Path] = []
     for i, pool in enumerate([p.strip() for p in args.pools.split(";") if p.strip()]):
@@ -196,7 +197,7 @@ def main() -> int:
         dst.mkdir(exist_ok=True)
         # Без ограничения глубины: арты пулов лежат в подпапках set_1…set_7, и с
         # `--max-depth 2` прогон 05.08 забрал только плоские папки (43 из 133 кадров).
-        sh(f'rclone copy "{pool}" "{dst}" --include "*.jpg" --include "*.png"')
+        sh(["rclone", "copy", pool, str(dst), "--include", "*.jpg", "--include", "*.png"])
         ours += sorted(dst.rglob("*.jpg")) + sorted(dst.rglob("*.png"))
     print(f"\nнаших кадров: {len(ours)}", flush=True)
 
@@ -228,7 +229,7 @@ def main() -> int:
 
     for f in ("head_face_painting.npz", "ours_embeddings.npz", "REPORT.json"):
         if (work / f).exists():
-            sh(f'rclone copyto "{work / f}" "{args.out}/{f}"')
+            sh(["rclone", "copyto", str(work / f), f"{args.out}/{f}"])
     print(f"\nвеса и эмбеддинги → {args.out}")
     return 0
 
