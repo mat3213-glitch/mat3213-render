@@ -3,8 +3,10 @@
 import json
 import tempfile
 from pathlib import Path
+from unittest import mock
 
-from auto_analyst import board_rows_from_reports, normalize_analyst_target
+import auto_analyst
+from auto_analyst import board_rows_from_reports, normalize_analyst_target, process_targets
 from scout_ledger import ScoutLedger
 
 
@@ -51,7 +53,19 @@ def test_board_is_ledger_view_and_drops_github_garbage() -> None:
         assert by_url["https://example.com/article"]["status"] == "PENDING"
 
 
+def test_target_failure_cannot_be_reported_as_success() -> None:
+    with mock.patch.object(auto_analyst, "process", side_effect=RuntimeError("no report")), \
+         mock.patch.object(auto_analyst, "tg"):
+        try:
+            process_targets(["https://example.com/broken"], {})
+        except RuntimeError as exc:
+            assert "failed to produce a verified report" in str(exc)
+        else:
+            raise AssertionError("missing report must fail the analyst job")
+
+
 if __name__ == "__main__":
     test_target_validation_preserves_external_route()
     test_board_is_ledger_view_and_drops_github_garbage()
+    test_target_failure_cannot_be_reported_as_success()
     print("auto analyst board lifecycle: all tests passed")

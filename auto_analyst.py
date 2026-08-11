@@ -500,7 +500,9 @@ def rebuild_board():
         for r in rows)
     tmp = OUTDIR / "ADOPTION_BOARD.md"
     tmp.write_text(board, encoding="utf-8")
-    rclone("copyto", str(tmp), YD_BOARD)
+    uploaded = rclone("copyto", str(tmp), YD_BOARD)
+    if uploaded.returncode != 0:
+        raise RuntimeError(f"cannot upload adoption board: {uploaded.stderr[-300:]}")
     pending = sum(1 for r in rows if r["status"] == "PENDING")
     tg(f"🏁 <b>Авто-анализатор</b> — доска обновлена: {len(rows)} инструментов, {pending} PENDING.\n"
        f"Решения: repo_scout_ledger.json; view: verified_tools/ADOPTION_BOARD.md",
@@ -533,7 +535,7 @@ def process(url, rubric) -> dict:
     a = analyze(ctx, rubric)
     if "_error" in a:
         tg(f"❌ <b>Анализатор</b>: {url}\nОшибка анализа: {a['_error'][:300]}")
-        return {"url": url, "slug": slug, "score": 0, "route": "ERROR", "error": a["_error"]}
+        raise RuntimeError("analysis did not produce a valid report")
     score = weighted_score(a.get("scores", {}), rubric)
     route = route_of(a, score, rubric)
 
@@ -550,7 +552,9 @@ def process(url, rubric) -> dict:
         {"url": url, "slug": slug, "score": score, "route": route,
          "analysis": a, "smoke": smoke, "meta": ctx["meta"]},
         ensure_ascii=False, indent=2), encoding="utf-8")
-    rclone("copy", str(out), f"{YD_TOOLS}/{slug}")
+    uploaded = rclone("copy", str(out), f"{YD_TOOLS}/{slug}")
+    if uploaded.returncode != 0:
+        raise RuntimeError(f"report upload failed: {uploaded.stderr[-200:]}")
 
     # TG-отчёт
     smoke_line = ""
@@ -581,6 +585,20 @@ def process(url, rubric) -> dict:
         f"📁 verified_tools/{slug}/ — решение фиксируется в repo_scout_ledger.json"
     )
     return {"url": url, "slug": slug, "score": score, "route": route}
+
+
+def process_targets(targets: list[str], rubric: dict) -> None:
+    """Process every target but fail the job if any target produced no report."""
+    failed = []
+    for url in targets:
+        try:
+            process(url, rubric)
+        except Exception as exc:
+            failed.append(url)
+            log(f"  ERR {url}: {type(exc).__name__}: {exc}")
+            tg(f"❌ Анализатор упал на {url}: {str(exc)[:200]}")
+    if failed:
+        raise RuntimeError(f"{len(failed)} target(s) failed to produce a verified report")
 
 
 def list_targets_only(args):
@@ -615,12 +633,7 @@ def main():
 
     # ОБЫЧНЫЙ режим (одна джоба, несколько целей последовательно). В matrix-фан-ауте
     # каждая параллельная джоба зовёт скрипт с ОДНОЙ целью; доску собирает финальная джоба.
-    for url in targets:
-        try:
-            process(url, rubric)
-        except Exception as e:
-            log(f"  ERR {url}: {e}")
-            tg(f"❌ Анализатор упал на {url}: {str(e)[:200]}")
+    process_targets(targets, rubric)
     log("done (per-target)")
 
 

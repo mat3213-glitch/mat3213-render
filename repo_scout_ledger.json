@@ -55,6 +55,46 @@
       "status": "park",
       "decided_at": "2026-08-11",
       "reason": "ADOPT-PATTERN only: snapshot/contact-sheet/JSON-error verification contract. Do not add the Rust motion renderer; it duplicates FFmpeg/Remotion and conflicts with the no-procedural-full-frame boundary."
+    },
+    "clipcurator/ai-storyboard-prompt-shot-continuity-map": {
+      "status": "park",
+      "decided_at": "2026-08-11",
+      "reason": "CONCEPT only: entry/exit shot state and deterministic handoff-risk may strengthen the local storyboard schema; the tiny prompt repository itself is not a dependency."
+    },
+    "capycappy/FPS-RePlayer": {
+      "status": "rejected",
+      "decided_at": "2026-08-11",
+      "reason": "Windows PySide/PyAV replay GUI duplicates existing waveform, frame-step, export and render pipeline capabilities."
+    },
+    "ian9911007/CAMERA-MOVEMENT-PROMPT": {
+      "status": "rejected",
+      "decided_at": "2026-08-11",
+      "reason": "Unlicensed single-page motion dictionary duplicates camera_moves.json and prompt_writer.py."
+    },
+    "BluerAngala/cc-ffmpeg-xfade": {
+      "status": "rejected",
+      "decided_at": "2026-08-11",
+      "reason": "Unlicensed prebuilt FFmpeg fork duplicates the existing xfade router; page-curl and 3D-swap effects conflict with the project style."
+    },
+    "huihuihui-wq/cibeprompt": {
+      "status": "rejected",
+      "decided_at": "2026-08-11",
+      "reason": "Prompt skill largely duplicates camera_moves.json and prompt_writer.py and includes incompatible human/neon examples."
+    },
+    "MikeKemmerer/videokiosk2": {
+      "status": "rejected",
+      "decided_at": "2026-08-11",
+      "reason": "Raspberry Pi VLC kiosk/watchdog is unrelated to creative video rendering and duplicates runtime monitoring patterns."
+    },
+    "ar3mathe/vista-cue-timer": {
+      "status": "rejected",
+      "decided_at": "2026-08-11",
+      "reason": "Unlicensed manual lighting-cue UI duplicates beat and waveform analysis already present in vocal_sync and clip_producer."
+    },
+    "kacperkan/cutter": {
+      "status": "park",
+      "decided_at": "2026-08-11",
+      "reason": "Smart GOP-boundary cutting is at most a future ingest optimization; the creative render path re-encodes and VFR/HDR seam risks outweigh current value."
     }
   }
 }
