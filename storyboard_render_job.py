@@ -277,7 +277,8 @@ def main():
                 name, prev_slowmo=float(prev_sh.get("speed") or 1.0) < 1.0,
                 next_slowmo=float(cur_sh.get("speed") or 1.0) < 1.0)
             d = max(0.04, min(d, durs[k - 1] - 0.1, durs[k] - 0.1))  # не длиннее клипов
-            trans.append((_tr.xfade_name(name) or "fade", d))
+            xfade_name, xfade_expr = _tr.xfade_render_spec(name)
+            trans.append((xfade_name or "fade", d, xfade_expr))
             names_log.append(name)
         fc, label, total = _trn.build_xfade_chain(durs, trans)
         # DIAG: реальные длины отрендеренных клипов (rdur ожидается)

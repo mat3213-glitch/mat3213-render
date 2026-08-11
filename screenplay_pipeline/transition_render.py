@@ -14,8 +14,12 @@ FRAME = 0.04   # «hard-cut» = xfade в 1 кадр (однородная цеп
 
 
 def build_xfade_chain(durs: list[float], trans: list[tuple]):
-    """durs[i] = РЕНДЕРНАЯ длительность клипа i (уже с хвостом). trans[i]=(name,d) для
-    стыка, ВХОДЯЩЕГО в клип i (i>=1). Возвращает (filter_complex, финальный_label, total)."""
+    """durs[i] = РЕНДЕРНАЯ длительность клипа i (уже с хвостом).
+
+    ``trans[i]`` — ``(name, duration)`` либо ``(name, duration, expr)`` для стыка,
+    входящего в клип i (i>=1). Третий элемент сохраняет обратную совместимость и
+    позволяет штатному xfade=custom применить локальную easing-кривую.
+    """
     n = len(durs)
     # Нормализация КАЖДОГО входа перед xfade: settb+setpts+fps. Реальные клипы (-stream_loop
     # + trim) несут грязный PTS/таймбейз → xfade считает оффсет по PTS и схлопывает клипы
@@ -26,12 +30,20 @@ def build_xfade_chain(durs: list[float], trans: list[tuple]):
     label = "[p0]"
     acc = durs[0]
     for i in range(1, n):
-        name, d = trans[i]
+        item = trans[i]
+        if len(item) == 2:
+            name, d = item
+            expr = None
+        elif len(item) == 3:
+            name, d, expr = item
+        else:
+            raise ValueError("transition must be (name, duration[, expr])")
         d = max(d, FRAME)
         off = max(0.0, acc - d)
         out = f"[x{i}]"
+        expr_arg = f":expr={expr}" if expr else ""
         parts.append(f"{label}[p{i}]xfade=transition={name}:duration={d:.3f}:"
-                     f"offset={off:.3f}{out}")
+                     f"offset={off:.3f}{expr_arg}{out}")
         label = out
         acc = acc + durs[i] - d
     return ";".join(pre + parts), label, round(acc, 3)

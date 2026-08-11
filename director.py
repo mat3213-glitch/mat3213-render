@@ -38,6 +38,7 @@ except Exception:
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import asset_catalog  # pick / load
+from screenplay_pipeline.shot_continuity import annotate_handoffs
 
 GROQ_API_KEY   = os.environ.get("GROQ_API_KEY", "")
 GROQ_MODEL     = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
@@ -87,6 +88,12 @@ SYSTEM = """Ты — режиссёр-раскадровщик музыкаль�
   или {"kind":"generate","prompt":"<промпт Qwen/i2v>"}. Это фотографичный реальный футаж/генерация.
 - overlay_category: "overlay" (филмик-текстура поверх) | "soundwave" (на ритм/кульминацию) |
   "vinil" (если кадр про объект-винил) | null. Это слой из каталога, его подберёт код.
+- entry_state / exit_state: читаемое состояние первого/последнего кадра шота, только четыре поля:
+  {"camera_vector":"static|forward|backward|left|right|up|down|mixed",
+   "light":"краткая стабильная сигнатура света", "palette":"2-3 главных цвета",
+   "motif_position":"left|center|right|background|full_frame|absent"}.
+  Состояния описывают экран, НЕ лица/персонажей. На соседних шотах осознанно согласуй exit→entry;
+  если нужен контрастный разрыв, делай его намеренным через intent.
 
 МОТОРИКА — РАЗНООБРАЗИЕ (КРИТИЧНО, НЕ лепи один приём на весь клип):
 - Подбирай motion ПОД ЭНЕРГИЮ сегмента: low/intro → static, slow_push; medium/body → drift,
@@ -101,7 +108,10 @@ SYSTEM = """Ты — режиссёр-раскадровщик музыкаль�
 Верни СТРОГО JSON:
 {"shots":[{"seg":0,"section":"intro","scale":"wide","motion":"slow_push","transition":"crossfade",
            "intent":"...","base":{"kind":"search","query":"...","provider":"openverse"},
-           "overlay_category":"overlay"}], "notes":"один-два слова о замысле"}
+           "overlay_category":"overlay",
+           "entry_state":{"camera_vector":"forward","light":"cold window left","palette":"slate blue, grey","motif_position":"left"},
+           "exit_state":{"camera_vector":"forward","light":"cold window left","palette":"slate blue, grey","motif_position":"center"}}],
+ "notes":"один-два слова о замысле"}
 Кадров РОВНО столько, сколько сегментов. Только JSON."""
 
 
@@ -374,12 +384,20 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
             "intent": sh.get("intent", ""),
             "base": base,
             "overlay": overlay,
+            # Нормализация идёт после rebalance_motion: у legacy-шота camera_vector
+            # должен отражать финальную, а не первоначальную motion-моторику.
+            "entry_state": sh.get("entry_state"),
+            "exit_state": sh.get("exit_state"),
         })
 
     # детерминированная страховка разнообразия (LLM-промпт не всегда соблюдает кап)
     cap, changed = rebalance_motion(out_shots)
     print(f"[rebalance] motion-кап={cap} ({len(out_shots)} кадров), переписано {changed}",
           file=sys.stderr)
+
+    # Входящий риск лежит на принимающем шоте. Для старых LLM-ответов состояния
+    # достраиваются безопасно: известен только camera_vector, прочее не штрафуется.
+    annotate_handoffs(out_shots)
 
     return {
         "track": treatment.get("track") or "",

@@ -59,6 +59,12 @@ SCHEMA_RULES = """Ты — оператор-постановщик и prompt-eng
 один источник света, фотореализм (борьба с пластиком), без неона. НЕ начинай с запретов — негатив только в конце.
 Верни СТРОГО JSON: {"shots":[{"idx":<int>,"gen_prompt":"<english prompt>"}, ...]} для ВСЕХ шотов."""
 
+CONTINUITY_RULES = """CONTINUITY CONTRACT: у каждого шота могут быть entry_state и exit_state.
+Промт должен явно провести изображение от entry_state к exit_state: направление камеры в экранных
+координатах, один источник света, ограниченная палитра и позиция центрального мотива. handoff_risk
+описывает входящий стык с предыдущим шотом; при medium/high не маскируй разрыв новой случайной деталью,
+а удержи заданные состояния. Не добавляй continuity лиц или персонажей."""
+
 
 def _design_context(max_chars: int = 1800) -> str:
     """Бренд-контекст из корневого DESIGN.md (формат google-labs-code/design.md).
@@ -147,9 +153,13 @@ def build_prompt(storyboard, brief, refs):
             "intent": s.get("intent", ""),
             "imagery_cues": s.get("imagery_cues") or [],
             "hint_query": (s.get("base") or {}).get("query", ""),  # черновой запрос director'а — только как подсказка образа
+            "entry_state": s.get("entry_state"),
+            "exit_state": s.get("exit_state"),
+            "handoff_risk": s.get("handoff_risk"),
         })
     parts = [
         SCHEMA_RULES,
+        CONTINUITY_RULES,
         "",
         _design_context(),      # единый источник бренда: корневой DESIGN.md
         "",

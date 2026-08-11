@@ -13,6 +13,9 @@ router даёт ТОЛЬКО тип стыка; slowmo-сосед → длите
 Приёмы → рендер-примитивы (встроенный ffmpeg xfade, без кастом-билда gl-transitions):
   gl-dissolve → xfade=fade ; glitch → xfade=pixelize ; film-burn → xfade=fadegrays ;
   hard-cut → concat (без перехода). ffglitch/настоящий film-burn overlay — апгрейд позже.
+
+Для мягких fade/dissolve разрешён только локальный deterministic smoothstep. Он
+выражается через штатный xfade=custom и не требует стороннего FFmpeg/binary.
 """
 
 XFADE_MAP = {
@@ -25,6 +28,26 @@ XFADE_MAP = {
 TDUR = {"gl-dissolve": 0.7, "dip": 0.28, "film-burn": 0.6, "hard-cut": 0.0}
 DEFAULT_TDUR = 0.7
 SLOWMO_FACTOR = 1.5
+
+# Закрытый список примитивов, которым разрешено менять временную кривую. P в xfade
+# идёт от 1 (первый кадр) к 0 (второй), поэтому smoothstep(P) можно напрямую использовать
+# как вес A. Запятые в expr экранированы для синтаксиса filter_complex.
+_SMOOTHSTEP = "P*P*(3-2*P)"
+XFADE_EASING = {
+    "fade": {
+        "curve": "smoothstep",
+        "expr": f"A*({_SMOOTHSTEP})+B*(1-({_SMOOTHSTEP}))",
+    },
+    # Координатный hash фиксирован: один и тот же кадр/seed всегда даёт одинаковую маску.
+    # Порог движется по smoothstep, а не линейно; PLANE сохраняет независимость каналов.
+    "dissolve": {
+        "curve": "smoothstep",
+        "expr": (
+            "if(lte(abs(sin(X*12.9898+Y*78.233+PLANE*37.719))\\,"
+            f"{_SMOOTHSTEP})\\,A\\,B)"
+        ),
+    },
+}
 
 
 def lookup_transition(section: str, energy: str,
@@ -62,6 +85,19 @@ def transition_duration(ttype: str = None, base: float = None,
 def xfade_name(ttype: str) -> str | None:
     """ffmpeg xfade-имя для приёма (None = hard-cut/concat)."""
     return XFADE_MAP.get(ttype)
+
+
+def xfade_render_spec(ttype: str) -> tuple[str | None, str | None]:
+    """Возвращает ``(transition, expr)`` для рендера.
+
+    Easing fail-closed: custom expression доступен только для fade/dissolve из
+    XFADE_EASING. Все прочие приёмы сохраняют штатное имя и линейное поведение.
+    """
+    name = xfade_name(ttype)
+    profile = XFADE_EASING.get(name)
+    if profile is None:
+        return name, None
+    return "custom", profile["expr"]
 
 
 if __name__ == "__main__":
