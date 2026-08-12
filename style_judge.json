@@ -3,50 +3,50 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хороший холодный нуар, попадает в общую эстетику"
+      "reason": "Холодная приглушённая ночь, подходит под deep teal"
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": true,
       "score": 7.0,
-      "votes": "2/2",
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Приглушенный тон, но не хватает глубины teal"
+      "reason": "Нейтральные средние тона, холодный дым, соответствует бренду"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Чистый холодный тон, соответствует вайбу"
+      "reason": "Светлее ночная сцена, всё ещё холодно, подходит"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 8.0,
-      "votes": "2/2",
+      "score": 9.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Мягкий свет, отличная кинематографичная глубина"
+      "reason": "Мягкий свет ночи, холодные тона, элегантно"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хороший холодный градиент, без грязных оттенков"
+      "reason": "Мягкий свет, холодный оттенок, хороший баланс"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": true,
-      "score": 8.0,
-      "votes": "2/2",
+      "score": 7.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Идеальное попадание в целевой deep teal и атмосферу"
+      "reason": "Зелёный оттенок, мягкий, близок к deep teal"
     }
   ],
   "recommend_merge": [
@@ -58,6 +58,6 @@
     "scout_green_mid_soft"
   ],
   "disputed": [],
-  "_generated": "2026-08-11",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "_generated": "2026-08-12",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
