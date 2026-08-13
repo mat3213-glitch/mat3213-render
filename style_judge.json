@@ -3,61 +3,62 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
+      "score": 6.3,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Холодная приглушённая ночь, подходит под deep teal"
+      "reason": "Хороший холодный тон, соответствует эстетике даунтемпо"
     },
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Нейтральные средние тона, холодный дым, соответствует бренду"
+      "keep": false,
+      "score": 5.3,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Слишком много желтого, уходит в грязный зеленый"
     },
     {
       "name": "scout_neutral_night_muted_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Светлее ночная сцена, всё ещё холодно, подходит"
+      "keep": false,
+      "score": 5.3,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Близко к эталонному teal, глубокие холодные тени"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 9.0,
-      "votes": "1/1",
+      "score": 6.0,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Мягкий свет ночи, холодные тона, элегантно"
+      "reason": "Мягкий свет, правильная кинематографичная атмосфера"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Мягкий свет, холодный оттенок, хороший баланс"
+      "keep": false,
+      "score": 6.0,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Недостаточно глубокий teal, слишком серый и плоский"
     },
     {
-      "name": "scout_green_mid_soft",
+      "name": "scout_cool_mid_soft",
       "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
+      "score": 6.0,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Зелёный оттенок, мягкий, близок к deep teal"
+      "reason": "Идеальное попадание в целевую палитру deep teal"
     }
   ],
   "recommend_merge": [
     "scout_neutral_night_muted",
+    "scout_neutral_night_soft",
+    "scout_cool_mid_soft"
+  ],
+  "disputed": [
     "scout_neutral_mid_muted",
     "scout_neutral_night_muted_2",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
+    "scout_neutral_night_soft_2"
   ],
-  "disputed": [],
-  "_generated": "2026-08-12",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "_generated": "2026-08-13",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
