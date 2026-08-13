@@ -100,6 +100,7 @@
   "cirosantilli/china-dictatorship",
   "citrolabs/ego-lite",
   "clipcurator/ai-storyboard-camera-movement-continuity-qa-matrix",
+  "clipcurator/ai-storyboard-camera-movement-prompt-checklist",
   "clipcurator/ai-storyboard-prompt-shot-continuity-map",
   "cloudflare/computer",
   "comet-ml/opik",
@@ -154,6 +155,7 @@
   "linalinn/kicad-render",
   "linkwarden/linkwarden",
   "livekit/agents",
+  "luoshushua/cinematography-prompt-master",
   "lyogavin/airllm",
   "mattpocock/skills",
   "mbeato/stitch",
@@ -211,6 +213,7 @@
   "xbtlin/ai-berkshire",
   "y-t-bot/youtube-bot",
   "y-t-bot/youtube-view-bot",
+  "yinxiaowai/awesome-ai-video-camera-movement-prompts",
   "yt-dlp/yt-dlp",
   "zhaoxuya520/reverse-skill"
 ]

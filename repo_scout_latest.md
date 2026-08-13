@@ -1,9 +1,26 @@
-# Repo Scout — 2026-08-12T10:59:54.601245
-Всего в шортлисте: 1
-- **clipcurator/ai-storyboard-camera-movement-continuity-qa-matrix** ⭐0 [vision]
-  - https://github.com/clipcurator/ai-storyboard-camera-movement-continuity-qa-matrix
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: shot continuity
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: medium — scene-count QC существует, но не проверяет органичность моторики
-  - 📄 Matrix for AI storyboard camera movement, shot continuity, screen direction, visual anchors, prompt notes, and QA decisions.
+# Repo Scout — 2026-08-13T11:00:47.207781
+Всего в шортлисте: 3
+- **clipcurator/ai-storyboard-camera-movement-prompt-checklist** ⭐0 [craft]
+  - https://github.com/clipcurator/ai-storyboard-camera-movement-prompt-checklist
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики, закрывая gap в виде отсутствия таких словарей. Интеграция оправдана, несмотря на высокий риск дублирования, поскольку можно взять только новые проверяемые формулировки.
+  - 📄 Checklist for AI storyboard camera movement prompts, shot intent, framing continuity, motion cues, and revision notes.
+- **luoshushua/cinematography-prompt-master** ⭐0 [craft]
+  - https://github.com/luoshushua/cinematography-prompt-master
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предлагает проверяемые операторские словари и prompt-схемы, что помогает управлять i2v-моторикой через облачные генераторы. Интеграция имеет низкую стоимость, но высокий риск дублирования, поэтому следует брать только новые формулировки.
+  - 📄 
+- **yinxiaowai/awesome-ai-video-camera-movement-prompts** ⭐0 [craft]
+  - https://github.com/yinxiaowai/awesome-ai-video-camera-movement-prompts
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет галерею примеров камерных движений для AI-видео, что может помочь в управлении i2v-моторикой. Интеграция имеет низкую стоимость, но из-за высокого риска дублирования следует выбирать только уникальные проверяемые формулировки.
+  - 📄 AI video camera movement prompt gallery with playable examples
