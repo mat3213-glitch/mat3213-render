@@ -1,26 +1,74 @@
-# Repo Scout — 2026-08-13T11:00:47.207781
-Всего в шортлисте: 3
-- **clipcurator/ai-storyboard-camera-movement-prompt-checklist** ⭐0 [craft]
-  - https://github.com/clipcurator/ai-storyboard-camera-movement-prompt-checklist
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: camera movement prompt
+# Repo Scout — 2026-08-14T10:57:21.543229
+Всего в шортлисте: 8
+- **colin1suntao/minimax-h3-video-skill** ⭐0 [video]
+  - https://github.com/colin1suntao/minimax-h3-video-skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
+  - 🔎 evidence: query matched: ffmpeg xfade transition
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики, закрывая gap в виде отсутствия таких словарей. Интеграция оправдана, несмотря на высокий риск дублирования, поскольку можно взять только новые проверяемые формулировки.
-  - 📄 Checklist for AI storyboard camera movement prompts, shot intent, framing continuity, motion cues, and revision notes.
-- **luoshushua/cinematography-prompt-master** ⭐0 [craft]
-  - https://github.com/luoshushua/cinematography-prompt-master
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
+  - 💡 Создает органичные стыки поверх уже работающего FFmpeg xfade без дешевого цифрового glitch-визуала, закрывает gap органичных стыков, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 WorkBuddy skill: end-to-end MiniMax-H3 video studio — text/image-to-video generation, multi-shot storyboard batching, and ffmpeg post-processing (xfade transiti
+- **koryglenn/MV** ⭐0 [vision]
+  - https://github.com/koryglenn/MV
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: freeze detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Проводит детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения, закрывает gap детерминированного CPU-QC, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 Web-based ffmpeg video mosaic and signal monitoring — HLS, MPEG-DASH, EBU R128 audio, freeze/black detection
+- **rahmanef63/framepilot** ⭐8 [craft]
+  - https://github.com/rahmanef63/framepilot
+  - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: cinematography prompt
+  - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предлагает проверяемые операторские словари и prompt-схемы, что помогает управлять i2v-моторикой через облачные генераторы. Интеграция имеет низкую стоимость, но высокий риск дублирования, поэтому следует брать только новые формулировки.
-  - 📄 
-- **yinxiaowai/awesome-ai-video-camera-movement-prompts** ⭐0 [craft]
-  - https://github.com/yinxiaowai/awesome-ai-video-camera-movement-prompts
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 Browser-based 3D camera previsualization and shot planner — design scenes, frames, angles, lenses and moves, then export platform-tuned prompts for AI video mod
+- **JonnyBurger/remotion-studio-waveform-repro** ⭐2 [video]
+  - https://github.com/JonnyBurger/remotion-studio-waveform-repro
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: video timeline waveform
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Предоставляет компактное timeline/transcript-представление для дешевого ревью режиссуры без передачи видео целиком в LLM, закрывает gap компактного timeline-представления, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 Minimal repro: Remotion Studio timeline waveform Audio vs Video
+- **purehate/framebuffer** ⭐0 [vision]
+  - https://github.com/purehate/framebuffer
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: duplicate frame detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Проводит детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения, закрывает gap детерминированного CPU-QC, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 A web-based photo and video management system with automatic date-based organization, duplicate detection, thumbnail generation, and intelligent media browsing.
+- **haimian01/ai-video-director** ⭐1 [craft]
+  - https://github.com/haimian01/ai-video-director
+  - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: camera movement prompt
+  - 🔎 evidence: query matched: camera movement prompt
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предоставляет галерею примеров камерных движений для AI-видео, что может помочь в управлении i2v-моторикой. Интеграция имеет низкую стоимость, но из-за высокого риска дублирования следует выбирать только уникальные проверяемые формулировки.
-  - 📄 AI video camera movement prompt gallery with playable examples
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 AI video direction and prompt engineering skill for storyboards, camera movement, transitions, and artifact prevention.
+- **MuraliHFX/AI-Cinematography-Studio** ⭐0 [craft]
+  - https://github.com/MuraliHFX/AI-Cinematography-Studio
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 AI Visual prompt
+- **ai9app/AI-Cinematic-Prompt-Director** ⭐18 [craft]
+  - https://github.com/ai9app/AI-Cinematic-Prompt-Director
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
+  - 📄 250 AI Cinematic knowledge base of Master camera movements, 3D design, and video effects with this professional prompt engineering framework for AI video models
