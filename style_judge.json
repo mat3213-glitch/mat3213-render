@@ -3,61 +3,61 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 7.0,
-      "votes": "2/2",
+      "score": 7.7,
+      "votes": "3/3",
       "status": "принят",
       "reason": "Хороший холодный тон, соответствует эстетике даунтемпо"
     },
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 4.5,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Слишком много желтого, уходит в грязный зеленый"
+      "keep": true,
+      "score": 6.5,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Приглушенная палитра, но не хватает глубины teal"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 8.0,
-      "votes": "2/2",
+      "score": 7.5,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Близко к эталонному teal, глубокие холодные тени"
+      "reason": "Чистый холодный контраст, попадает в настроение"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
       "score": 7.5,
-      "votes": "2/2",
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Мягкий свет, правильная кинематографичная атмосфера"
+      "reason": "Мягкий свет, отличный переход в холодные тени"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
+      "keep": true,
       "score": 7.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Недостаточно глубокий teal, слишком серый и плоский"
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Хорошая глубина, соответствует фирменному стилю"
     },
     {
       "name": "scout_cool_mid_soft",
-      "keep": false,
-      "score": 7.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Идеальное попадание в целевую палитру deep teal"
+      "keep": true,
+      "score": 8.5,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Идеальное попадание в deep teal и холодный нуар"
     }
   ],
   "recommend_merge": [
     "scout_neutral_night_muted",
+    "scout_neutral_mid_muted",
     "scout_neutral_night_muted_2",
-    "scout_neutral_night_soft"
-  ],
-  "disputed": [
+    "scout_neutral_night_soft",
     "scout_neutral_night_soft_2",
     "scout_cool_mid_soft"
   ],
-  "_generated": "2026-08-14",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [],
+  "_generated": "2026-08-15",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
