@@ -1,74 +1,74 @@
-# Repo Scout — 2026-08-14T10:57:21.543229
+# Repo Scout — 2026-08-15T10:22:07.620282
 Всего в шортлисте: 8
-- **colin1suntao/minimax-h3-video-skill** ⭐0 [video]
-  - https://github.com/colin1suntao/minimax-h3-video-skill
+- **wheyblade693/ClipCaptionAI** ⭐0 [video]
+  - https://github.com/wheyblade693/ClipCaptionAI
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
-  - 🔎 evidence: query matched: ffmpeg xfade transition
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
-  - 💡 Создает органичные стыки поверх уже работающего FFmpeg xfade без дешевого цифрового glitch-визуала, закрывает gap органичных стыков, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 WorkBuddy skill: end-to-end MiniMax-H3 video studio — text/image-to-video generation, multi-shot storyboard batching, and ffmpeg post-processing (xfade transiti
-- **koryglenn/MV** ⭐0 [vision]
-  - https://github.com/koryglenn/MV
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: freeze detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Проводит детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения, закрывает gap детерминированного CPU-QC, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 Web-based ffmpeg video mosaic and signal monitoring — HLS, MPEG-DASH, EBU R128 audio, freeze/black detection
-- **rahmanef63/framepilot** ⭐8 [craft]
-  - https://github.com/rahmanef63/framepilot
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Позволяет автоматизировать короткометражное видеомонтажное редактирование с помощью ИИ-надписей, вставки B-роликов на основе транскрипта и рендеринга Remotion для вирусного контента на YouTube, TikTok и Reels. Закрывает пробел в компактном представлении таймлайна/транскрипта для дешевого обзора режиссуры. Интеграция оправдана, но риск дублирования высок.
+  - 📄 Automate short-form video editing with AI-powered captions, transcript-based B-roll insertion, and Remotion rendering for viral YouTube, TikTok, and Reels conte
+- **muchen1163179778-sudo/seedance-2.5-prompt-skill** ⭐0 [craft]
+  - https://github.com/muchen1163179778-sudo/seedance-2.5-prompt-skill
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 Browser-based 3D camera previsualization and shot planner — design scenes, frames, angles, lenses and moves, then export platform-tuned prompts for AI video mod
-- **JonnyBurger/remotion-studio-waveform-repro** ⭐2 [video]
-  - https://github.com/JonnyBurger/remotion-studio-waveform-repro
+  - 💡 Предоставляет навыки для генерации, оптимизации и редактирования видеопромптов Seedance 2.5 с многомодальными ссылками, раскадровками, рендерингом белой модели, ключевыми кадрами, видеомонтажом, расширением, переходами и контролем кинематографии. Закрывает пробел в проверяемых операторских словарях и схемах промптов для управляемой i2v-моторики. Интеграция оправдана, но риск дублирования высок.
+  - 📄 A standalone Claude Code skill for generating, optimizing, and editing Seedance 2.5 video prompts with multimodal references, storyboards, white-model rendering
+- **charlesbrandt/transcript** ⭐0 [video]
+  - https://github.com/charlesbrandt/transcript
   - ⚠️ fallback: query-grounded
   - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: video timeline waveform
+  - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Предоставляет компактное timeline/transcript-представление для дешевого ревью режиссуры без передачи видео целиком в LLM, закрывает gap компактного timeline-представления, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 Minimal repro: Remotion Studio timeline waveform Audio vs Video
-- **purehate/framebuffer** ⭐0 [vision]
-  - https://github.com/purehate/framebuffer
+  - 💡 Предоставляет инструменты для транскрибирования аудио/видеофайлов и редактирования на основе транскрипта. Закрывает пробел в компактном представлении таймлайна/транскрипта для дешевого обзора режиссуры. Интеграция оправдана, но риск дублирования высок.
+  - 📄 A toolkit for transcribing audio/video files and editing them based on their transcripts.
+- **0xzgbot/hermes-media-skill-pack** ⭐0 [craft]
+  - https://github.com/0xzgbot/hermes-media-skill-pack
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: duplicate frame detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Проводит детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения, закрывает gap детерминированного CPU-QC, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 A web-based photo and video management system with automatic date-based organization, duplicate detection, thumbnail generation, and intelligent media browsing.
-- **haimian01/ai-video-director** ⭐1 [craft]
-  - https://github.com/haimian01/ai-video-director
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Предоставляет 129 медиа-продакшн-навыков для Hermes Agent, включая кинематографию, освещение, эмуляцию стиля, последовательность персонажей, инженерию промптов и рабочие процессы видео LTX 2.3/FLUX 2. Закрывает пробел в проверяемых операторских словарях и схемах промптов для управляемой i2v-моторики. Интеграция оправдана, но риск дублирования высок.
+  - 📄 129 media-production skills for Hermes Agent — cinematography, lighting, style emulation, character consistency, prompt engineering, LTX 2.3 / FLUX 2 video work
+- **alphaaico/crisp** ⭐0 [video]
+  - https://github.com/alphaaico/crisp
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Предоставляет локальный прототип транскрипт-ориентированного аудио- и видеоредактора. Позволяет импортировать медиа, транскрибировать, выбирать слова в транскрипте, предварительно просматривать редактирования и рендерить очищенную аудио/видеокопию. Закрывает пробел в компактном представлении таймлайна/транскрипта для дешевого обзора режиссуры. Интеграция оправдана, но риск дублирования высок.
+  - 📄 Crisp is a local transcript-based audio and video editor prototype. It lets a user import media, transcribe it, select words in the transcript, preview edits, a
+- **HiAPIAI/video-prompt-extractor** ⭐0 [craft]
+  - https://github.com/HiAPIAI/video-prompt-extractor
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: camera movement prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 AI video direction and prompt engineering skill for storyboards, camera movement, transitions, and artifact prevention.
-- **MuraliHFX/AI-Cinematography-Studio** ⭐0 [craft]
-  - https://github.com/MuraliHFX/AI-Cinematography-Studio
+  - 💡 Предоставляет инструмент для анализа видео, который преобразует кадры в границы, адаптивные раскадровки, кинематографический анализ и многоразовые промпты, охватывающие действие, движение камеры, освещение, экспозицию, окружение и непрерывность. Закрывает пробел в проверяемых операторских словарях и схемах промптов для управляемой i2v-моторики. Интеграция оправдана, но риск дублирования высок.
+  - 📄 An evidence-first video analysis tool that turns footage into shot boundaries, adaptive storyboards, cinematic analysis,   and reusable prompts covering action,
+- **lingyuanli/FrameLoom** ⭐0 [video]
+  - https://github.com/lingyuanli/FrameLoom
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 AI Visual prompt
-- **ai9app/AI-Cinematic-Prompt-Director** ⭐18 [craft]
-  - https://github.com/ai9app/AI-Cinematic-Prompt-Director
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Предоставляет открытый, агент-родной видеоредактор, который преобразует естественно-языковые инструкции в редактируемые многослойные таймлайны, транскрипт-ориентированные срезы, субтитры, графику и экспорт, готовый к производству. Закрывает пробел в компактном представлении таймлайна/транскрипта для дешевого обзора режиссуры. Интеграция оправдана, но риск дублирования высок.
+  - 📄 FrameLoom is an open-source, agent-native video editor that turns natural-language instructions into editable multi-track timelines, transcript-based cuts, capt
+- **Zambrini/slatecut** ⭐0 [video]
+  - https://github.com/Zambrini/slatecut
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Предоставляет проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы, закрывает gap проверяемых операторских словарей, оправданная цена интеграции с учетом duplicate-risk
-  - 📄 250 AI Cinematic knowledge base of Master camera movements, 3D design, and video effects with this professional prompt engineering framework for AI video models
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Предоставляет локальный видеоредактор на основе транскрипта, который включает автоматические срезы заполнителей/тишины, ИИ-выбор лучшего кадра, моменты зума, субтитры и аппаратно-ускоренное локальное рендеринг. Закрывает пробел в компактном представлении таймлайна/транскрипта для дешевого обзора режиссуры. Интеграция оправдана, но риск дублирования высок.
+  - 📄 Local-first desktop video editor: transcript-based editing, automatic filler/silence cuts, AI best-take selection, zoom moments, captions, and hardware-accelera
