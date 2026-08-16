@@ -3,61 +3,62 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 7.7,
-      "votes": "3/3",
+      "score": 6.5,
+      "votes": "3/4",
       "status": "принят",
       "reason": "Хороший холодный тон, соответствует эстетике даунтемпо"
     },
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 6.5,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Приглушенная палитра, но не хватает глубины teal"
+      "keep": false,
+      "score": 5.0,
+      "votes": "2/4",
+      "status": "спорный",
+      "reason": "Слишком много серого, не хватает глубины teal"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/3",
+      "score": 7.0,
+      "votes": "3/4",
       "status": "принят",
-      "reason": "Чистый холодный контраст, попадает в настроение"
+      "reason": "Ближе к эталонному teal, глубокие холодные тени"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 7.5,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Мягкий свет, отличный переход в холодные тени"
+      "keep": false,
+      "score": 5.8,
+      "votes": "2/4",
+      "status": "спорный",
+      "reason": "Мягкий свет, качественный холодный нуар"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 7.0,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Хорошая глубина, соответствует фирменному стилю"
+      "keep": false,
+      "score": 5.0,
+      "votes": "1/4",
+      "status": "спорный",
+      "reason": "Недостаточно выражен фирменный бирюзовый оттенок"
     },
     {
       "name": "scout_cool_mid_soft",
-      "keep": true,
-      "score": 8.5,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Идеальное попадание в deep teal и холодный нуар"
+      "keep": false,
+      "score": 6.0,
+      "votes": "2/4",
+      "status": "спорный",
+      "reason": "Идеальное попадание в целевую палитру deep teal"
     }
   ],
   "recommend_merge": [
     "scout_neutral_night_muted",
+    "scout_neutral_night_muted_2"
+  ],
+  "disputed": [
     "scout_neutral_mid_muted",
-    "scout_neutral_night_muted_2",
     "scout_neutral_night_soft",
     "scout_neutral_night_soft_2",
     "scout_cool_mid_soft"
   ],
-  "disputed": [],
-  "_generated": "2026-08-15",
-  "_judge": "gh-vision-ensemble(3/5)"
+  "_generated": "2026-08-16",
+  "_judge": "gh-vision-ensemble(4/5)"
 }
