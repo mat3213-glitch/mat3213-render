@@ -1,74 +1,56 @@
-# Repo Scout — 2026-08-16T10:22:10.268891
-Всего в шортлисте: 8
-- **PaulBratslavsky/roughcut-ai-local-first-editor** ⭐0 [video]
-  - https://github.com/PaulBratslavsky/roughcut-ai-local-first-editor
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: transcript based video editing
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Этот репозиторий содержит локальный редактор видео с поддержкой искусственного интеллекта. Он позволяет создавать компактное представление временной шкалы и транскрипта для обзора режиссуры без передачи всего видео в систему искусственного интеллекта. Интеграция с этим репозиторием может быть оправдана, хотя существует высокий риск дублирования функций.
-  - 📄 Open-source, local-first AI video editor: on-device transcription (whisper.cpp), local LLM rough cuts (Gemma via Ollama), transcript-based editing, NLE export, 
-- **workwwoorrkk12-ctrl/aic-directors-chair** ⭐0 [craft]
-  - https://github.com/workwwoorrkk12-ctrl/aic-directors-chair
+# Repo Scout — 2026-08-17T10:31:46.881698
+Всего в шортлисте: 6
+- **62656456/ai-film-knowledge-base** ⭐1 [craft]
+  - https://github.com/62656456/ai-film-knowledge-base
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предоставляет инструмент для создания операторских словарей и схем подсказок для управления генерацией видео через облачные генераторы. Интеграция с этим репозиторием может быть оправдана, но существует высокий риск дублирования функций, поскольку подобные инструменты уже существуют.
-  - 📄 AIC DIRECTOR'S CHAIR - cinematography reference and AI prompt builder
-- **anaskld/pexels-video-downloader** ⭐3 [source]
-  - https://github.com/anaskld/pexels-video-downloader
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий содержит инструмент для скачивания видео со стокового сайта Pexels. Он может быть полезен для получения легального видео контента, но интеграция с ним может быть не оправдана из-за высокого риска дублирования функций, поскольку подобные адаптеры уже существуют.
-  - 📄 Free Python tool to bulk download categorized Pexels stock videos via the official API, Great for YouTube Shorts & Reels backgrounds.
-- **morsdor/content-hub** ⭐0 [video]
-  - https://github.com/morsdor/content-hub
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: transcript based video editing
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Этот репозиторий содержит платформу для производства контента, которая позволяет создавать компактное представление временной шкалы и транскрипта для обзора режиссуры. Интеграция с этим репозиторием может быть оправдана, хотя существует высокий риск дублирования функций.
-  - 📄 A browser-based, Descript-style content production platform for operating a multi-channel YouTube + X (Twitter) content business. Upload raw media, transcribe i
-- **solunea/api-camera-movements** ⭐0 [craft]
-  - https://github.com/solunea/api-camera-movements
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: camera movement prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предоставляет подсказки для движения камеры для генерации видео с помощью искусственного интеллекта. Интеграция с этим репозиторием может быть оправдана, но существует высокий риск дублирования функций, поскольку подобные подсказки уже существуют.
-  - 📄 Camera movement prompts for AI filmmakers.
-- **Fangyuan025/tiktok-video-skill** ⭐1 [source]
-  - https://github.com/Fangyuan025/tiktok-video-skill
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий содержит инструмент для генерации коротких видео для TikTok. Он может быть полезен для получения легального видео контента, но интеграция с ним может быть не оправдана из-за высокого риска дублирования функций, поскольку подобные адаптеры уже существуют.
-  - 📄 One-shot TikTok/Douyin short-video generation skill for AI agents (Claude Code, Cursor, Codex...) — script, free stock assets, bilingual TTS, karaoke captions, 
-- **HZC20030712/freewander-seedance-prompts** ⭐0 [craft]
-  - https://github.com/HZC20030712/freewander-seedance-prompts
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: camera movement prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий содержит профессиональные подсказки для генерации видео с описаниями движения камеры. Интеграция с этим репозиторием может быть оправдана, но существует высокий риск дублирования функций, поскольку подобные подсказки уже существуют.
-  - 📄 Professional Seedance video generation prompts with camera movement descriptions.
-- **siuserxiaowei/cinematic-ai-visual-prompt-hub** ⭐0 [craft]
-  - https://github.com/siuserxiaowei/cinematic-ai-visual-prompt-hub
+  - 💡 Этот репозиторий содержит модульные заметки по теории кино, сценарному делу и промптам для AI-фильмов, включая промпты по кинематографии. Он может обогатить существующие словари и схемы новыми проверяемыми формулировками для управляемой i2v-моторики. Интеграция низкозатратна, но риск дублирования высок, поэтому стоит брать только уникальные, проверенные формулировки.
+  - 📄 105 modular, GitHub-readable notes for film theory, screenwriting, directing, storyboards, prompts, AI-film practice, and review.
+- **socramsea/cine-director** ⭐1 [craft]
+  - https://github.com/socramsea/cine-director
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предоставляет платформу для изучения подсказок для генерации видео с помощью искусственного интеллекта. Интеграция с этим репозиторием может быть оправдана, но существует высокий риск дублирования функций, поскольку подобные подсказки уже существуют.
-  - 📄 把电影课里的镜头语言翻译成 AI 图片和 AI 视频都能用的视觉提示词学习站。
+  - 💡 Данный навык AI-режиссера создает полный пакет препродакшена из идеи, включая промпты для генерации и нарезку аудио ffmpeg, с акцентом на кинематографические промпты. Он может расширить операторские словари и схемы для управляемой i2v-моторики. Интеграция проста, но риск дублирования высок; целесообразно извлекать только новые, проверенные формулировки.
+  - 📄 AI film director skill for Claude Code — turns a song, product or idea into a complete cinematic pre-production package: shot-by-shot decupage, generation promp
+- **clipcurator/ai-storyboard-prompts** ⭐5 [craft]
+  - https://github.com/clipcurator/ai-storyboard-prompts
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий предлагает двуязычные промпты для раскадровки, дизайна персонажей, генерации сцен и движений камеры для AI-фильмов. Он напрямую помогает обогатить существующие словари для управляемой i2v-моторики за счет промптов для движений камеры. Интеграция не требует больших усилий, но риск дублирования высок, поэтому следует извлекать только уникальные и проверенные формулировки.
+  - 📄 Bilingual storyboard, character design, scene generation, and camera movement prompts for AI film creation workflows.
+- **princetechs/cinecards-ai** ⭐1 [craft]
+  - https://github.com/princetechs/cinecards-ai
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предоставляет практические ресурсы по AI-кинематографии, промпты для AI-видео и визуального сторителлинга. Он содержит промпты по кинематографии, которые могут быть использованы для расширения операторских словарей и схем. Интеграция проста, но риск дублирования высок из-за уже имеющихся инструментов; целесообразно извлекать только новые, проверенные формулировки.
+  - 📄 aiscreens: practical AI cinematography, AI video prompts, and visual storytelling resources
+- **cliprise/awesome-image-to-video-prompts** ⭐7 [craft]
+  - https://github.com/cliprise/awesome-image-to-video-prompts
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий содержит промпты для преобразования изображений в видео, шаблоны движений камеры и ресурсы для AI-анимации фото. Он напрямую способствует созданию проверяемых prompt-схем для i2v-моторики через шаблоны движений камеры. Интеграция требует минимальных усилий, но риск дублирования высок; следует брать только уникальные и проверенные формулировки движений камеры.
+  - 📄 Image-to-video prompts, AI photo animation workflows, product video examples, camera movement templates and Cliprise creative resources.
+- **hmzainjamil/higgsfield-cinema-ai** ⭐1 [craft]
+  - https://github.com/hmzainjamil/higgsfield-cinema-ai
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий автоматизирует студию Higgsfield Cinema, предлагая 29 промптов для движений камеры и генератор шотов для AI-видео. Он напрямую поможет обогатить операторские словари и схемы готовыми промптами для движений камеры. Интеграция проста, но риск дублирования высок; следует извлекать только новые, проверенные формулировки движений камеры, которых нет в текущих инструментах.
+  - 📄 Higgsfield Cinema Studio automation — 29 camera movement prompts, shot generator, cinematic workflow for AI video
