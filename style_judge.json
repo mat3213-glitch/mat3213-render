@@ -3,62 +3,62 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 6.8,
-      "votes": "3/4",
+      "score": 7.5,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Слишком много желтого, грязный теплый каст, не наш teal"
+      "reason": "Хороший холодный тон, соответствует эстетике даунтемпо"
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
       "score": 6.0,
-      "votes": "2/4",
+      "votes": "1/3",
       "status": "спорный",
-      "reason": "Грязный желто-зеленый оттенок, не соответствует эталону"
+      "reason": "Слишком много желтого, уходит в грязный зеленый"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 7.2,
-      "votes": "3/4",
+      "score": 8.0,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Слишком теплый свет, уходит в желтизну"
+      "reason": "Близко к эталонному teal, глубокие холодные тени"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 5.3,
-      "votes": "1/4",
-      "status": "спорный",
-      "reason": "Недостаточно глубокий teal, слишком много серого и тепла"
+      "keep": true,
+      "score": 7.0,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Мягкий свет, правильная кинематографичная атмосфера"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": false,
-      "score": 5.0,
-      "votes": "1/4",
+      "score": 6.0,
+      "votes": "1/3",
       "status": "спорный",
-      "reason": "Слишком блекло, не хватает фирменного бирюзового оттенка"
+      "reason": "Недостаточно глубокий teal, слишком серый и плоский"
     },
     {
       "name": "scout_cool_mid_soft",
-      "keep": true,
-      "score": 8.0,
-      "votes": "4/4",
-      "status": "принят",
-      "reason": "Идеальный холодный teal, чистый цвет, попадает в эстетику"
+      "keep": false,
+      "score": 4.5,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Идеальное попадание в целевую палитру deep teal"
     }
   ],
   "recommend_merge": [
     "scout_neutral_night_muted",
     "scout_neutral_night_muted_2",
-    "scout_cool_mid_soft"
+    "scout_neutral_night_soft"
   ],
   "disputed": [
     "scout_neutral_mid_muted",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
+    "scout_neutral_night_soft_2",
+    "scout_cool_mid_soft"
   ],
-  "_generated": "2026-08-17",
-  "_judge": "gh-vision-ensemble(4/5)"
+  "_generated": "2026-08-18",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
