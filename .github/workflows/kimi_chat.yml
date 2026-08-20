@@ -51,6 +51,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Qwen chat dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check --no-cache-dir "playwright==1.54.0"
+          # GitHub Ubuntu images normally include Chrome. Install Playwright's
+          # browser only when that runner image changes and Chrome is absent.
+          google-chrome --version || python3 -m playwright install --with-deps chromium
+
       - name: Install rclone + ffmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone ffmpeg
 
@@ -103,7 +110,6 @@ jobs:
           PY
 
       # ── ВЕТКА CHAT ────────────────────────────────────────────────────────────
-      # Ни pip, ни Playwright, ни Chromium: qwen_chat.py — stdlib-only, системного python3 достаточно.
       - name: Pull Qwen session from ydrive
         if: ${{ inputs.action != 'clear' }}
         run: |
