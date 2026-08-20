@@ -1,74 +1,74 @@
-# Repo Scout — 2026-08-19T10:28:22.353726
+# Repo Scout — 2026-08-20T10:29:39.623990
 Всего в шортлисте: 8
-- **aigeboku/high-speed-action-prompt-director** ⭐0 [craft]
-  - https://github.com/aigeboku/high-speed-action-prompt-director
+- **shangchao11/spoken-cut** ⭐2 [video]
+  - https://github.com/shangchao11/spoken-cut
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий предлагает инструмент для черновой нарезки видео, позволяющий редактировать его как текст на основе транскрипции. Он закрывает потребность в компактном представлении таймлайна/транскрипции для дешевого ревью режиссуры без полной обработки видео LLM. Интеграция низкая, но риск дублирования высокий, так как ценность только в компактном интерфейсе для ревью.
+  - 📄 针对剪辑师设计的一款软件，像编辑文档一样完成视频第一版粗剪。Local-first transcript-based video rough cutter for Windows — edit interviews by deleting sentences, powered by whisper.cpp and FF
+- **cliprise/awesome-seedance-2-prompts** ⭐3 [craft]
+  - https://github.com/cliprise/awesome-seedance-2-prompts
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий содержит промпты для Seedance 2.0, примеры рабочих процессов AI-видео и руководства по движению камеры. Он предлагает проверяемые операторские словари и схемы промптов для управляемой i2v-моторики через облачные генераторы. Интеграция низкая, но риск дублирования высокий, так как брать стоит только новые проверяемые формулировки.
+  - 📄 Seedance 2.0 prompts, multimodal AI video workflows, image-to-video examples, audio sync templates, camera movement guides and Cliprise resources.
+- **mouadaeh/BigData-sentiment-Youtube** ⭐1 [source]
+  - https://github.com/mouadaeh/BigData-sentiment-Youtube
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий, согласно evidence, может предоставлять адаптеры для легального стокового видео, включая метаданные происхождения. Он закрывает потребность в надёжных headless-адаптерах легального stock-видео с лицензией и метаданными. Интеграция низкая, но риск дублирования высокий, так как ценность только в новом источнике или доказательстве происхождения.
+  - 📄 Ce projet est une plateforme Big Data locale permettant de : - Collecter en continu les commentaires d'une vidéo YouTube via l'API officielle  - Analyser leur s
+- **paynecontent/camera-bible** ⭐1 [craft]
+  - https://github.com/paynecontent/camera-bible
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предлагает методы для создания детализированных prompt-запросов для видео, используя принципы анимации и кинематографии. Он может предоставить новые проверяемые формулировки для операторских словарей, улучшая управляемость i2v-генерации. Интеграция недорогая, но риск дублирования высок; стоит брать только уникальные и проверенные формулировки.
-  - 📄 Design fluid, expressive high-speed action video prompts using classical animation principles, motion chains, and motivated cinematography.
-- **zodiacal-roundsporedgyromitra891/pexels-video-downloader** ⭐0 [source]
-  - https://github.com/zodiacal-roundsporedgyromitra891/pexels-video-downloader
+  - 💡 Этот репозиторий представляет систему для режиссеров, использующую AI для кинематографии и дизайна промптов. Он предлагает проверяемые операторские словари и схемы промптов для управляемой i2v-моторики через облачные генераторы. Интеграция низкая, но риск дублирования высокий, так как брать стоит только новые проверяемые формулировки.
+  - 📄 CAMERA BIBLE — A director’s system for AI-powered cinematography, emotion-driven camera language, and reusable prompt design.
+- **Iago-Ferreira-Silva/Stock_Control_API** ⭐1 [source]
+  - https://github.com/Iago-Ferreira-Silva/Stock_Control_API
   - ⚠️ fallback: query-grounded
   - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
   - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий позволяет массово скачивать сток-видео с Pexels по категориям, используя API. Он предоставляет адаптер для Pexels, что может расширить источники легального сток-видео. Интеграция проста, но ценность невелика, так как Pexels уже используется; оправдана, если он предложит новый источник или улучшенные метаданные происхождения.
-  - 📄 Bulk download Pexels stock videos by category with a free API key — perfect for Shorts, Reels, and TikTok backgrounds.
-- **Scottcjn/bottube-feverdream** ⭐13 [video]
-  - https://github.com/Scottcjn/bottube-feverdream
+  - 💡 Этот репозиторий, согласно evidence, может предоставлять адаптеры для легального стокового видео, включая метаданные происхождения. Он закрывает потребность в надёжных headless-адаптерах легального stock-видео с лицензией и метаданными. Интеграция низкая, но риск дублирования высокий, так как ценность только в новом источнике или доказательстве происхождения.
+  - 📄 API REST em Node.js para gerenciamento de estoque com autenticação JWT, 2FA por email, MongoDB, Socket.io em tempo real, sensor virtual via Wokwi, stream de víd
+- **srungarapugopikrishna/toast-effects-dump** ⭐0 [craft]
+  - https://github.com/srungarapugopikrishna/toast-effects-dump
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
+  - 🎯 gap `filmic_overlays` (priority 7): Лицензионно чистые filmic overlays: halation, gate weave, dust, scratches и light leaks для screen-blend.
+  - 🔎 evidence: query matched: light leak overlay video
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Репозиторий генерирует ретро CGI видео из prompt-запросов, используя POV-Ray для детерминированного рендеринга. Он предлагает подход к детерминированному рендерингу, что может помочь в усилении воспроизводимости CPU/GitHub Actions рендера. Интеграция недорогая, но функционал частично дублируется; ценность будет только от конкретных, еще не закрытых механизмов обеспечения воспроизводимости.
-  - 📄 AI-directed retro CGI for BoTTube — prompt -> POV-Ray scene -> deterministic raytraced render. The mid-90s chrome-and-checkerboard fever dream (Bryce/POV-Ray/Re
-- **api-evangelist/stockio** ⭐0 [source]
-  - https://github.com/api-evangelist/stockio
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий предоставляет доступ к платформе Stockio с бесплатными сток-фото, векторами и видео через REST API. Он может служить новым headless-адаптером для легального сток-видео, расширяя доступные источники. Интеграция проста, но риск дублирования высок; ценность только в новом источнике или улучшенных метаданных происхождения.
-  - 📄 Free stock photos, vectors, and videos platform with a REST API for searching and downloading creative assets for commercial and personal use projects. Stockio 
-- **yo-seb/shortsmith** ⭐0 [source]
-  - https://github.com/yo-seb/shortsmith
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — overlay-каталог уже есть; нужен новый лицензированный материал или лучший primitive
+  - 💡 Этот репозиторий содержит набор видеоэффектов, таких как оверлеи и утечки света. Он предоставляет лицензионно чистые filmic overlays для использования в screen-blend. Интеграция низкая, но риск дублирования высокий, так как нужен новый лицензированный материал или лучший примитив.
+  - 📄 Toast video effects asset dump: overlays, light leaks, kinetic typography, title cards, VJ loops, SFX, fonts, textures, glitch reels, festival GIFs.
+- **naveen-rajesh/stock-api** ⭐0 [source]
+  - https://github.com/naveen-rajesh/stock-api
   - ⚠️ fallback: query-grounded
   - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
   - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Репозиторий предназначен для создания коротких вертикальных видео с субтитрами из озвучки, используя сток-материалы. Он может предложить новый подход к использованию сток-видео или дополнительный источник для адаптера. Интеграция недорогая, но дублирование функционала уже существующих адаптеров высокое; ценность только в новом источнике или улучшенных метаданных происхождения.
-  - 📄 Turn a voiceover into a captioned vertical short. Karaoke captions, stock B-roll, Ken Burns stills — no API key required.
-- **ufo1898/shancut-ai-video** ⭐0 [source]
-  - https://github.com/ufo1898/shancut-ai-video
+  - 💡 Этот репозиторий, согласно evidence, может предоставлять адаптеры для легального стокового видео, включая метаданные происхождения. Он закрывает потребность в надёжных headless-адаптерах легального stock-видео с лицензией и метаданными. Интеграция низкая, но риск дублирования высокий, так как ценность только в новом источнике или доказательстве происхождения.
+  - 📄 API to transcript and summarise youtube videos based on the size required
+- **Goyam02/Prism-Motion** ⭐1 [source]
+  - https://github.com/Goyam02/Prism-Motion
   - ⚠️ fallback: query-grounded
   - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
   - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий представляет собой AI-генератор видео ShanCut API, который использует сток-футажи Pexels и субтитры для создания коротких видео. Он может предоставить адаптер для Pexels, что может расширить источники легального сток-видео. Интеграция проста, но ценность невелика, так как Pexels уже используется; оправдана, если он предложит новый источник или улучшенные метаданные происхождения.
-  - 📄 闪剪 ShanCut API v1 — AI Video Generator. Uses Pexels stock footage + subtitles to generate short videos via FastAPI.
-- **krysjak/adobe-stock-browser** ⭐0 [source]
-  - https://github.com/krysjak/adobe-stock-browser
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий предлагает панель OpenAssets для Adobe, позволяющую искать и импортировать 150М+ бесплатных сток-активов, включая видео, без API-ключей. Он может предоставить новый источник легального сток-видео с потенциально большим объемом активов. Интеграция недорогая, но риск дублирования высок; ценность только в новом источнике или улучшенных метаданных происхождения.
-  - 📄 OpenAssets — Adobe CEP panel for After Effects/Premiere: search 150M+ free stock assets (photos, video, music, SFX, anime, PNG, VFX) with no API keys + built-in
-- **WuJay123/ai-video-editor** ⭐0 [source]
-  - https://github.com/WuJay123/ai-video-editor
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий представляет собой AI-инструмент для создания коротких видео, использующий Pexels API для получения сток-футажей. Он может предоставить адаптер для Pexels, что может расширить источники легального сток-видео. Интеграция проста, но ценность невелика, так как Pexels уже используется; оправдана, если он предложит новый источник или улучшенные метаданные происхождения.
-  - 📄 An AI-powered video editing tool that helps users create short videos for TikTok, Instagram Reels, and YouTube Shorts. Uses Pexels API to provide high-quality s
+  - 💡 Этот репозиторий создает видеоконтент, используя API Pexels и Pixabay для стоковых футажей. Он предоставляет адаптеры для легального стокового видео с метаданными происхождения. Интеграция низкая, но риск дублирования высокий, так как ценность только в новом источнике или доказательстве происхождения.
+  - 📄 Prism Motion serves all kinds of video needs for pharma companies — from explainer videos and drug mechanism animations to sales enablement and compliance conte
