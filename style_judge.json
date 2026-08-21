@@ -3,50 +3,50 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 6.8,
-      "votes": "3/4",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хороший холодный нуар, попадает в общую эстетику"
+      "reason": "Холодный сине-зелёный, глубокая тень"
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": true,
-      "score": 6.5,
-      "votes": "3/4",
+      "score": 7.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Приглушенный тон, но не хватает глубины teal"
+      "reason": "Приглушённый, но с синевой"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 7.0,
-      "votes": "3/4",
+      "score": 9.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Чистый холодный тон, соответствует вайбу"
+      "reason": "Очень близок к deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 7.0,
-      "votes": "3/4",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Мягкий свет, отличная кинематографичная глубина"
+      "reason": "Мягкий свет, сохраняет холод"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 6.8,
-      "votes": "3/4",
+      "score": 7.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хороший баланс теней и дымки"
+      "reason": "Несколько светлее, но в теме"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": true,
-      "score": 6.5,
-      "votes": "3/4",
+      "score": 9.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Идеальное попадание в целевой deep teal"
+      "reason": "Бирюзово-зелёный, идеальный оттенок"
     }
   ],
   "recommend_merge": [
@@ -58,6 +58,6 @@
     "scout_green_mid_soft"
   ],
   "disputed": [],
-  "_generated": "2026-08-20",
-  "_judge": "gh-vision-ensemble(4/5)"
+  "_generated": "2026-08-21",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
