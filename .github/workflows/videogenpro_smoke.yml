@@ -36,7 +36,8 @@ jobs:
         working-directory: vgp
         run: |
           corepack enable
-          pnpm install --frozen-lockfile
+          # upstream: pnpm-lock.yaml не соответствует package.json (tsx отсутствует в lock)
+          pnpm install --no-frozen-lockfile
           pnpm build:runtime
           npx playwright install --with-deps chromium
 
