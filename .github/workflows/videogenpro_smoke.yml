@@ -1,0 +1,139 @@
+name: VideoGenPro smoke (детерминированный рендер)
+
+# Смоук videogenpro (MIT, AnubhavChaturvedi-GitHub/videogenpro): движок моушн-графики,
+# где LLM НЕ участвует в рендере — агент пишет только JSON-таймлайн, рендер исполняет
+# его детерминированно (Playwright + ffmpeg). Проверяем: установку на раннере,
+# скорость вертикального 1080x1920, корректность mp4.
+# Граница по правилу Remotion: плоский 2D (титры/лейблы) поверх фона — законная зона;
+# «оживление кадра» вместо футажа в клипы НЕ тащим.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Install ffmpeg + rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Checkout videogenpro
+        uses: actions/checkout@v4
+        with:
+          repository: AnubhavChaturvedi-GitHub/videogenpro
+          path: vgp
+
+      - name: Setup Node 20 + pnpm
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps + build runtime + chromium
+        working-directory: vgp
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm build:runtime
+          npx playwright install --with-deps chromium
+
+      - name: Backgrounds (детерминированные градиенты вместо стока)
+        run: |
+          mkdir -p assets
+          ffmpeg -y -v error -f lavfi -i "gradients=s=1080x1920:c0=0x0e1210:c1=0x24302a:x0=120:y0=160:x1=960:y1=1760:d=1" -frames:v 1 assets/bg1.png
+          ffmpeg -y -v error -f lavfi -i "gradients=s=1080x1920:c0=0x101413:c1=0x1d2622:x0=900:y0=200:x1=140:y1=1700:d=1" -frames:v 1 assets/bg2.png
+          ls -la assets
+
+      - name: Author composition (JSON-таймлайн = весь «интеллект»)
+        run: cat > comp.json <<'EOF'
+        {
+          "fps": 30,
+          "width": 1080,
+          "height": 1920,
+          "name": "vgp_smoke_yaromat",
+          "scenes": [
+            {
+              "duration": 3,
+              "background": "#0e1210",
+              "layers": [
+                { "type": "image", "src": "assets/bg1.png", "fit": "cover",
+                  "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+                  "presets": [ { "id": "image.ken-burns", "duration": 3 } ] },
+                { "type": "text", "text": "YAROMAT",
+                  "rect": { "x": 90, "y": 780, "w": 900, "h": 200 },
+                  "style": { "fontSize": "128px", "fontWeight": "700",
+                             "color": "#e8e4da", "fontFamily": "Georgia, 'Times New Roman', serif",
+                             "letterSpacing": "10px" },
+                  "presets": [ { "id": "text.fade-up", "duration": 1 } ] },
+                { "type": "text", "text": "внутренняя глубина",
+                  "rect": { "x": 92, "y": 980, "w": 900, "h": 100 },
+                  "style": { "fontSize": "46px", "color": "#9aa39c",
+                             "fontFamily": "Georgia, serif" },
+                  "presets": [ { "id": "text.word-stagger", "start": 0.5, "duration": 1 } ] },
+                { "type": "overlay", "effect": "vignette" }
+              ]
+            },
+            {
+              "duration": 3,
+              "background": "#101413",
+              "transitionIn": { "id": "transition.crossfade", "duration": 0.6 },
+              "layers": [
+                { "type": "image", "src": "assets/bg2.png", "fit": "cover",
+                  "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+                  "presets": [ { "id": "image.float", "duration": 3 } ] },
+                { "type": "shape", "shape": "line", "fill": "#39463f",
+                  "rect": { "x": 92, "y": 900, "w": 560, "h": 4 } },
+                { "type": "text", "text": "deterministic render · no diffusion",
+                  "rect": { "x": 92, "y": 940, "w": 900, "h": 300 },
+                  "style": { "fontSize": "52px", "color": "#cfd6cf",
+                             "fontFamily": "Georgia, serif" },
+                  "presets": [ { "id": "text.typewriter", "start": 0.4, "duration": 1.6 } ] }
+              ]
+            }
+          ]
+        }
+        EOF
+
+      - name: Render (замер времени)
+        working-directory: vgp
+        run: |
+          set -o pipefail
+          /usr/bin/time -v npx tsx packages/cli/src/render.ts ../comp.json ../out.mp4 2>&1 | grep -E "Elapsed|Maximum resident|frames|✅|❌|Error|error" || true
+          ls -la ../out.mp4
+
+      - name: Verify mp4
+        run: |
+          DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 out.mp4)
+          RES=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of csv=p=0 out.mp4)
+          echo "duration=${DUR}s res=${RES}"
+          awk -v d="$DUR" 'BEGIN { if (d < 5.7 || d > 6.5) { print "FAIL: duration out of range"; exit 1 } }'
+          case "$RES" in *1080,1920,h264*|*h264,1080,1920*) echo "PASS: 1080x1920 h264";; *) echo "WARN: unexpected $RES";; esac
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vgp_smoke_1080x1920
+          path: out.mp4
+          retention-days: 7
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Upload to YD (превью на гейт yaromat)
+        run: |
+          DEST="ydrive:Content factory/cloud_io/preview/$(date -u +%F)/videogenpro_smoke"
+          rclone copyto out.mp4 "$DEST/vgp_smoke_1080x1920.mp4"
+          N=$(rclone lsf "$DEST" | wc -l)
+          echo "YD files in $DEST: $N"
+          test "$N" -ge 1
