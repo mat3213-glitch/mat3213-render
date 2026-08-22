@@ -48,54 +48,55 @@ jobs:
           ls -la assets
 
       - name: Author composition (JSON-таймлайн = весь «интеллект»)
-        run: cat > comp.json <<'EOF'
-        {
-          "fps": 30,
-          "width": 1080,
-          "height": 1920,
-          "name": "vgp_smoke_yaromat",
-          "scenes": [
-            {
-              "duration": 3,
-              "background": "#0e1210",
-              "layers": [
-                { "type": "image", "src": "assets/bg1.png", "fit": "cover",
-                  "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
-                  "presets": [ { "id": "image.ken-burns", "duration": 3 } ] },
-                { "type": "text", "text": "YAROMAT",
-                  "rect": { "x": 90, "y": 780, "w": 900, "h": 200 },
-                  "style": { "fontSize": "128px", "fontWeight": "700",
-                             "color": "#e8e4da", "fontFamily": "Georgia, 'Times New Roman', serif",
-                             "letterSpacing": "10px" },
-                  "presets": [ { "id": "text.fade-up", "duration": 1 } ] },
-                { "type": "text", "text": "внутренняя глубина",
-                  "rect": { "x": 92, "y": 980, "w": 900, "h": 100 },
-                  "style": { "fontSize": "46px", "color": "#9aa39c",
-                             "fontFamily": "Georgia, serif" },
-                  "presets": [ { "id": "text.word-stagger", "start": 0.5, "duration": 1 } ] },
-                { "type": "overlay", "effect": "vignette" }
-              ]
-            },
-            {
-              "duration": 3,
-              "background": "#101413",
-              "transitionIn": { "id": "transition.crossfade", "duration": 0.6 },
-              "layers": [
-                { "type": "image", "src": "assets/bg2.png", "fit": "cover",
-                  "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
-                  "presets": [ { "id": "image.float", "duration": 3 } ] },
-                { "type": "shape", "shape": "line", "fill": "#39463f",
-                  "rect": { "x": 92, "y": 900, "w": 560, "h": 4 } },
-                { "type": "text", "text": "deterministic render · no diffusion",
-                  "rect": { "x": 92, "y": 940, "w": 900, "h": 300 },
-                  "style": { "fontSize": "52px", "color": "#cfd6cf",
-                             "fontFamily": "Georgia, serif" },
-                  "presets": [ { "id": "text.typewriter", "start": 0.4, "duration": 1.6 } ] }
-              ]
-            }
-          ]
-        }
-        EOF
+        run: |
+          cat > comp.json <<'EOF'
+          {
+            "fps": 30,
+            "width": 1080,
+            "height": 1920,
+            "name": "vgp_smoke_yaromat",
+            "scenes": [
+              {
+                "duration": 3,
+                "background": "#0e1210",
+                "layers": [
+                  { "type": "image", "src": "assets/bg1.png", "fit": "cover",
+                    "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+                    "presets": [ { "id": "image.ken-burns", "duration": 3 } ] },
+                  { "type": "text", "text": "YAROMAT",
+                    "rect": { "x": 90, "y": 780, "w": 900, "h": 200 },
+                    "style": { "fontSize": "128px", "fontWeight": "700",
+                               "color": "#e8e4da", "fontFamily": "Georgia, 'Times New Roman', serif",
+                               "letterSpacing": "10px" },
+                    "presets": [ { "id": "text.fade-up", "duration": 1 } ] },
+                  { "type": "text", "text": "внутренняя глубина",
+                    "rect": { "x": 92, "y": 980, "w": 900, "h": 100 },
+                    "style": { "fontSize": "46px", "color": "#9aa39c",
+                               "fontFamily": "Georgia, serif" },
+                    "presets": [ { "id": "text.word-stagger", "start": 0.5, "duration": 1 } ] },
+                  { "type": "overlay", "effect": "vignette" }
+                ]
+              },
+              {
+                "duration": 3,
+                "background": "#101413",
+                "transitionIn": { "id": "transition.crossfade", "duration": 0.6 },
+                "layers": [
+                  { "type": "image", "src": "assets/bg2.png", "fit": "cover",
+                    "rect": { "x": 0, "y": 0, "w": 1080, "h": 1920 },
+                    "presets": [ { "id": "image.float", "duration": 3 } ] },
+                  { "type": "shape", "shape": "line", "fill": "#39463f",
+                    "rect": { "x": 92, "y": 900, "w": 560, "h": 4 } },
+                  { "type": "text", "text": "deterministic render · no diffusion",
+                    "rect": { "x": 92, "y": 940, "w": 900, "h": 300 },
+                    "style": { "fontSize": "52px", "color": "#cfd6cf",
+                               "fontFamily": "Georgia, serif" },
+                    "presets": [ { "id": "text.typewriter", "start": 0.4, "duration": 1.6 } ] }
+                ]
+              }
+            ]
+          }
+          EOF
 
       - name: Render (замер времени)
         working-directory: vgp
