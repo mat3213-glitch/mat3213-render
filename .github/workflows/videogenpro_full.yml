@@ -254,7 +254,7 @@ jobs:
                   { "type": "text", "text": "beat-pulse · bass-glow · bounce · shake",
                     "rect": { "x": 60, "y": 1560, "w": 960, "h": 90 },
                     "style": { "fontSize": "40px", "color": "#9aa39c", "fontFamily": "Georgia, serif", "textAlign": "center" },
-                    "presets": [ { "id": "in.fade-up", "start": 0.3, "duration": 0.7 } ] }
+                    "presets": [ { "id": "in.fade", "start": 0.3, "duration": 0.7 } ] }
                 ]
               },
               {
