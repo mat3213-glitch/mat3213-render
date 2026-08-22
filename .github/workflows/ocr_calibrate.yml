@@ -31,9 +31,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
         with:
           python-version: "3.11"
 
@@ -58,6 +58,8 @@ jobs:
             > "$HOME/.config/rclone/rclone.conf"
 
       - name: Pull labeled sheet
+        env:
+          SHEET: ${{ inputs.sheet }}
         run: |
           mkdir -p sheet
           # CONTACT_SHEET.jpg — сам по себе подписанная простыня из кадров; в выборке он
@@ -65,7 +67,7 @@ jobs:
           # 🔴 Порядок фильтров важен: rclone берёт ПЕРВОЕ совпавшее правило, поэтому
           # --exclude обязан стоять ДО --include (в прогоне 30807960774 он стоял после и
           # был проигнорирован — лист приехал и попал в выборку как 12-й файл).
-          rclone copy "ydrive:Content factory/cloud_io/${{ inputs.sheet }}" sheet \
+          rclone copy "ydrive:Content factory/cloud_io/$SHEET" sheet \
             --exclude "CONTACT_SHEET*" --include "*.png" --include "*.jpg" -v
           # 🔴 Фильтр rclone лист НЕ отсёк ни до, ни после перестановки правил (проверено
           # в 30807960774 и 30808998513 — «CONTACT_SHEET.jpg: Copied»). Спорить с фильтром
@@ -74,16 +76,22 @@ jobs:
           find sheet -type f | sort
 
       - name: tesseract — по файлам и сеткой
+        env:
+          POSITIVE: ${{ inputs.positive }}
         run: |
-          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine tesseract
+          python3 ocr_gate.py --dir sheet --positive "$POSITIVE" --engine tesseract
           echo "──────────"
-          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine tesseract --grid
+          python3 ocr_gate.py --dir sheet --positive "$POSITIVE" --engine tesseract --grid
 
       - name: rapidocr — СЫРЫЕ ЧИСЛА по кадрам (есть ли вообще граница)
-        run: python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --dump
+        env:
+          POSITIVE: ${{ inputs.positive }}
+        run: python3 ocr_gate.py --dir sheet --positive "$POSITIVE" --dump
 
       - name: rapidocr (детектор регионов) — по файлам и сеткой
+        env:
+          POSITIVE: ${{ inputs.positive }}
         run: |
-          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine rapidocr
+          python3 ocr_gate.py --dir sheet --positive "$POSITIVE" --engine rapidocr
           echo "──────────"
-          python3 ocr_gate.py --dir sheet --positive "${{ inputs.positive }}" --engine rapidocr --grid
+          python3 ocr_gate.py --dir sheet --positive "$POSITIVE" --engine rapidocr --grid

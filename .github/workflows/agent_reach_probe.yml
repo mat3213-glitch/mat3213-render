@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
         with:
           python-version: "3.11"
 
@@ -41,12 +41,14 @@ jobs:
         run: agent-reach doctor || true
 
       - name: YouTube — субтитры без ключа (yt-dlp)
+        env:
+          YT_URL: ${{ inputs.yt_url }}
         run: |
           mkdir -p ~/.config/yt-dlp
           printf '%s\n' '--js-runtimes node' >> ~/.config/yt-dlp/config
           set +e
           yt-dlp --skip-download --write-auto-sub --sub-lang en --sub-format vtt \
-                 -o "yt.%(ext)s" "${{ inputs.yt_url }}"
+                 -o "yt.%(ext)s" "$YT_URL"
           echo "yt-dlp rc=$?"
           ls -la yt.* 2>/dev/null && head -20 yt.en.vtt 2>/dev/null
           set -e
@@ -59,8 +61,10 @@ jobs:
           set -e
 
       - name: Веб-читалка — Jina Reader
+        env:
+          WEB_URL: ${{ inputs.web_url }}
         run: |
-          code=$(curl -s -o web.md -w "%{http_code}" --max-time 60 "https://r.jina.ai/${{ inputs.web_url }}")
+          code=$(curl -s -o web.md -w "%{http_code}" --max-time 60 "https://r.jina.ai/$WEB_URL")
           echo "jina http=$code  bytes=$(wc -c < web.md)"
           head -25 web.md
 

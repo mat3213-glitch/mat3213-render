@@ -10,9 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
         with:
           python-version: '3.11'
 
@@ -23,7 +23,7 @@ jobs:
           # rapidocr-onnxruntime + pillow: source_qc теперь судит и надпись в кадре,
           # регресс обязан гонять гейт по-настоящему, а не через fail-open
           pip install --quiet supervision ultralytics huggingface_hub numpy pillow rapidocr-onnxruntime
-          curl -fsSL https://rclone.org/install.sh | sudo bash
+          (sudo apt-get update -qq && sudo apt-get install -y -qq rclone)
 
       - name: Configure rclone (ЯД / ydrive)
         env:

@@ -8,10 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
 
       - name: Install rclone
-        run: curl -fsSL https://rclone.org/install.sh | sudo bash
+        run: (sudo apt-get update -qq && sudo apt-get install -y -qq rclone)
 
       - name: Configure rclone
         env:
@@ -42,7 +42,7 @@ jobs:
           rclone copy "$HOME/work/pipeline_report.md" "ydrive:Content factory/cloud_io/CreativeLab/outputs/TASK_pipeline_finish/"
           echo "Done"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was v4
         if: always()
         with:
           name: pipeline-finish

@@ -14,18 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
         with:
           python-version: '3.11'
-      - uses: denoland/setup-deno@v2
+      - uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # was v2
         with:
           deno-version: v2.x
 
       - name: Install deps
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
-          curl -fsSL https://rclone.org/install.sh | sudo bash
+          (sudo apt-get update -qq && sudo apt-get install -y -qq rclone)
           # рецепт reference_yt_dlp_ci: nightly yt-dlp + ejs (n-challenge) + deno выше
           pip install -q -U --pre "yt-dlp[default]"
           pip install -q -U yt-dlp-ejs

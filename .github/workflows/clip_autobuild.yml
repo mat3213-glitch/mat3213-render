@@ -56,8 +56,8 @@ jobs:
       matrix:
         idx: ${{ fromJSON(needs.plan.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
         with:
           python-version: '3.11'
       - name: Install system deps
@@ -66,7 +66,7 @@ jobs:
           # apt-хвост (--fix-missing + recommends) тянул до pocketsphinx-en-us и однажды
           # провисел 40 минут на зеркале Azure, съев весь таймаут сборки (07.08).
           command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg; }
-          command -v rclone >/dev/null || curl -fsSL https://rclone.org/install.sh | sudo bash
+          command -v rclone >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq rclone)
           ffmpeg -version | head -1; rclone version | head -1
           pip install --quiet scenedetect[opencv]
       - name: Configure rclone ydrive
@@ -105,14 +105,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
         with:
           python-version: '3.11'
       - name: Install system deps
         run: |
           command -v ffmpeg >/dev/null || { sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg; }
-          command -v rclone >/dev/null || curl -fsSL https://rclone.org/install.sh | sudo bash
+          command -v rclone >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq rclone)
           ffmpeg -version | head -1; rclone version | head -1
       - name: Configure rclone ydrive
         env:
