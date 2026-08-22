@@ -1,74 +1,56 @@
-# Repo Scout — 2026-08-21T10:30:03.786930
-Всего в шортлисте: 8
-- **TokkatheDj/paper-edit** ⭐0 [video]
-  - https://github.com/TokkatheDj/paper-edit
+# Repo Scout — 2026-08-22T10:22:25.053899
+Всего в шортлисте: 6
+- **xiaotianfotos/HyperFrames-RenderKit** ⭐37 [video]
+  - https://github.com/xiaotianfotos/HyperFrames-RenderKit
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: transcript based video editing
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Этот локальный видеоредактор позволяет монтировать видео, редактируя его текстовую расшифровку. Он предлагает компактное текстовое представление для быстрого ревью монтажа без передачи всего видео в LLM. Интеграция недорогая, но риск дублирования высок; ценность в удобном интерфейсе для просмотра.
-  - 📄 A local, text-based video editor - edit long-form video and podcasts by editing the transcript. Runs entirely on your own machine: no cloud, no subscription, no
-- **Ferousco-dev/handheld** ⭐0 [craft]
-  - https://github.com/Ferousco-dev/handheld
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот экспериментальный инструментарий предназначен для детерминированного рендеринга видео. Он может усилить воспроизводимость рендера на CPU/GitHub Actions благодаря своему детерминированному подходу. Интеграция недорогая, но риск дублирования высок, так как это запасной вариант и часть требуемых функций уже частично реализована.
+  - 📄 Experimental deterministic rendering toolkit for HyperFrames video delivery
+- **vosjs/vos** ⭐3 [video]
+  - https://github.com/vosjs/vos
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Это база знаний с более чем 1000 правил для создания реалистичного AI-видео, охватывающих кинематографию и освещение. Она предоставляет проверяемые операторские словари и схемы промтов для управления i2v-моторикой. Интеграция недорогая, но риск дублирования высок; брать стоит только новые проверяемые формулировки.
-  - 📄 A craft knowledge base for prompting AI video toward looking real, not AI-made - 1000+ specific, checkable rules across cinematography, lighting, editing, and p
-- **api-evangelist/pond5** ⭐0 [source]
-  - https://github.com/api-evangelist/pond5
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это открытый программный видеодвижок, который рендерит видео детерминированно и независимо от разрешения. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions благодаря своей детерминированной природе. Стоимость интеграции низкая, но есть высокий риск дублирования, поскольку это запасной вариант и часть задач уже решена.
+  - 📄 A video is just inputs and a function, rendered. The open programmatic video engine: deterministic, resolution-independent, mixed media.
+- **AnubhavChaturvedi-GitHub/videogenpro** ⭐4 [video]
+  - https://github.com/AnubhavChaturvedi-GitHub/videogenpro
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Pond5 — это маркетплейс стоковых медиа с безвозмездной лицензией, где можно покупать видео и музыку. Он может служить новым источником легального стокового видео с метаданными происхождения. Интеграция недорогая, но риск дублирования высок; ценность только в новом источнике или данных о происхождении.
-  - 📄 Pond5 is a royalty-free stock media marketplace where creators buy and sell video footage, music tracks, sound effects, motion graphics, images, and other digit
-- **GaigeVicich30472/picwav-image-to-video-guide** ⭐0 [craft]
-  - https://github.com/GaigeVicich30472/picwav-image-to-video-guide
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот детерминированный движок для моушн-графики не использует AI в процессе рендеринга. Он может улучшить воспроизводимость рендера на CPU/GitHub Actions, предлагая детерминированный подход. Интеграция недорогая, но риск дублирования высок, так как это запасной вариант и некоторые функции уже частично реализованы.
+  - 📄 Deterministic, agent-authorable motion graphics engine with a CapCut-style browser editor. Preset-driven and multi-renderer across HTML, Three.js and video, wit
+- **StarBreaker20/Renderer** ⭐0 [video]
+  - https://github.com/StarBreaker20/Renderer
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: camera movement prompt
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Это практическое руководство по рабочим процессам преобразования изображений в видео, включая промты для движения камеры. Оно предлагает проверяемые операторские словари и схемы промтов для управляемой i2v-моторики. Интеграция недорогая, но риск дублирования высок; брать стоит только новые проверяемые формулировки.
-  - 📄 A practical guide to image-to-video workflows, motion prompts and camera movement for AI video creation.
-- **api-evangelist/pixabay** ⭐0 [source]
-  - https://github.com/api-evangelist/pixabay
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот проект предлагает детерминированное редактирование видео в браузере с последующим рендерингом в облаке. Он может усилить воспроизводимость рендера на CPU/GitHub Actions благодаря своей детерминированной логике. Интеграция имеет низкую стоимость, но высокий риск дублирования, поскольку это запасной кандидат и часть функций уже внедрена.
+  - 📄 Deterministic browser-to-cloud video editing with Next.js and Remotion
+- **etcircle/ETVideoScript** ⭐0 [video]
+  - https://github.com/etcircle/ETVideoScript
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: render manifest ffmpeg
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Pixabay — это платформа с бесплатными стоковыми изображениями и видео, предлагающая публичный REST API. Он может стать новым источником легального стокового видео с лицензией и метаданными через свой API. Интеграция недорогая, но риск дублирования высок; ценность только в новом источнике или данных о происхождении.
-  - 📄 Pixabay is a free stock images, videos, illustrations, vectors, and music platform. The Pixabay API offers a public REST API for searching and retrieving free m
-- **api-evangelist/istock** ⭐0 [source]
-  - https://github.com/api-evangelist/istock
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это локальный видеоредактор, управляемый транскриптами, который использует детерминированный рендеринг через FFmpeg. Он напрямую закрывает потребность в усилении воспроизводимости рендера на CPU/GitHub Actions, используя детерминированные манифесты FFmpeg. Интеграция недорогая, но риск дублирования высок, так как это запасной вариант и часть требуемых функций уже частично реализована.
+  - 📄 Local-first, transcript-driven video editor for screen recordings — the transcript is the timeline. Reversible manifest ops + deterministic FFmpeg renders.
+- **gqy20/slingshot** ⭐0 [video]
+  - https://github.com/gqy20/slingshot
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 iStock — это бренд стоковых медиа от Getty Images, предлагающий лицензирование видео и изображений по подписке. Он может служить источником легального стокового видео с лицензией и метаданными через API Getty. Интеграция недорогая, но риск дублирования высок; ценность только в новом источнике или данных о происхождении при наличии соглашения.
-  - 📄 iStock is Getty Images' royalty-free stock media brand for affordable, subscription-based image, video, illustration, and audio licensing. iStock shares Getty's
-- **api-evangelist/getty** ⭐0 [source]
-  - https://github.com/api-evangelist/getty
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Getty Images — это премиальный лицензиар стоковых медиа, включая видео, с доступом через API для партнёров. Он может предоставить надёжный источник легального стокового видео с лицензией и метаданными происхождения. Интеграция недорогая, но риск дублирования высок; ценность только в новом источнике или данных о происхождении при наличии партнёрского доступа.
-  - 📄 Getty Images is a premium stock media licensor of editorial and creative photography, illustrations, video, and music. The Getty Images API exposes search, asse
-- **api-evangelist/envato** ⭐0 [source]
-  - https://github.com/api-evangelist/envato
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Envato управляет маркетплейсами, такими как VideoHive, и подписочным сервисом Envato Elements, предлагая различные сток-медиа. Он может стать источником легального стокового видео с лицензией и метаданными происхождения через свой API. Интеграция недорогая, но риск дублирования высок; ценность только в новом источнике или данных о происхождении.
-  - 📄 Envato runs Envato Market (per-asset marketplaces like ThemeForest, CodeCanyon, AudioJungle, VideoHive, GraphicRiver, 3DOcean, PhotoDune) and Envato Elements (s
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это детерминированный рендерер видео физики рогатки, созданный на Godot. Он может способствовать усилению воспроизводимости рендера на CPU/GitHub Actions, предлагая детерминированный рендеринг. Стоимость интеграции низкая, но риск дублирования высок, так как это запасной вариант и часть задач уже решена.
+  - 📄 Deterministic Godot slingshot physics video renderer
