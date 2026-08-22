@@ -1,0 +1,130 @@
+name: VideoGenPro prod render
+
+# Прод-рендер композитов videogenpro. Вход: YD-папка «бандл» = comp.json +
+# manifest.json. Манифест маппит имена ассетов из композита на библиотеку ЯД
+# pexels_pool (46 mp4 / 62 jpg от Pexels) или builtin:kick100 (генерируется на месте).
+# Рендер детерминированный (Playwright+ffmpeg), LLM в пути рендера НЕТ.
+# Превью уходит на ЯД и ждёт гейта yaromat.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bundle:
+        description: 'YD-путь к папке бандла (comp.json + manifest.json)'
+        required: true
+        default: 'ydrive:Content factory/cloud_io/vgp_bundles/staging'
+      name:
+        description: 'имя результата без расширения'
+        required: true
+        default: 'vgp_render'
+
+permissions:
+  contents: read
+
+jobs:
+  prod-render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install ffmpeg + rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Checkout videogenpro
+        uses: actions/checkout@v4
+        with:
+          repository: AnubhavChaturvedi-GitHub/videogenpro
+          path: vgp
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps + build runtime + chromium
+        working-directory: vgp
+        run: |
+          corepack enable
+          pnpm install --no-frozen-lockfile
+          pnpm build:runtime
+          npx playwright install --with-deps chromium
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Fetch bundle
+        env:
+          BUNDLE: ${{ github.event.inputs.bundle }}
+        run: |
+          mkdir -p bundle assets
+          rclone copy "$BUNDLE" bundle/
+          test -f bundle/comp.json && test -f bundle/manifest.json || { echo "нет comp.json/manifest.json"; exit 1; }
+          python3 -m json.tool bundle/comp.json > /dev/null && echo "comp.json valid"
+
+      - name: Resolve assets по манифесту
+        env:
+          YD_ROOT: 'ydrive:Content factory'
+        run: |
+          python3 - <<'PYEOF'
+          import json, subprocess, os
+          m = json.load(open('bundle/manifest.json'))
+          root = os.environ['YD_ROOT']
+          for name, src in m.items():
+              dst = f'assets/{name}'
+              if src == 'builtin:kick100':
+                  subprocess.run(['ffmpeg','-y','-v','error','-f','lavfi',
+                    '-i','aevalsrc=if(lt(mod(t\\,0.6)\\,0.18)\\,sin(2*PI*60*t)*exp(-16*mod(t\\,0.6))\\,0):d=32:s=44100',
+                    '-c:a','pcm_s16le',dst], check=True)
+                  print(f'{name} <- generated kick100')
+              else:
+                  subprocess.run(['rclone','copyto',f'{root}/{src}',dst], check=True)
+                  print(f'{name} <- {src}')
+          PYEOF
+          ls -la assets/
+
+      - name: Expected duration (из композита)
+        id: expect
+        run: |
+          D=$(python3 -c "import json;c=json.load(open('bundle/comp.json'));print(sum(s['duration'] for s in c['scenes']))")
+          echo "dur=$D" >> "$GITHUB_OUTPUT"
+          echo "ожидаемая длительность: $D"
+
+      - name: Render (замер времени)
+        working-directory: vgp
+        run: |
+          set -o pipefail
+          /usr/bin/time -v npx tsx packages/cli/src/render.ts ../bundle/comp.json ../out.mp4 2>&1 | grep -E "Elapsed|Maximum resident|frames|✅|❌|Error|error" || true
+          test -f ../out.mp4 || { echo "рендер не дал файла"; exit 1; }
+
+      - name: Verify mp4
+        env:
+          EXPECT: ${{ steps.expect.outputs.dur }}
+        run: |
+          DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 out.mp4)
+          RES=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height,codec_name -of csv=p=0 out.mp4)
+          echo "duration=${DUR}s ожидание=${EXPECT}s res=${RES}"
+          case "$RES" in *1080,1920,h264*|*h264,1080,1920*) ;; *) echo "FAIL: не 1080x1920 h264"; exit 1;; esac
+          awk -v d="$DUR" -v e="$EXPECT" 'BEGIN { diff=d-e; if (diff<0) diff=-diff; if (diff > 1.2) { print "FAIL: длительность ушла"; exit 1 } }'
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.inputs.name }}
+          path: out.mp4
+          retention-days: 7
+
+      - name: Upload to YD (превью на гейт yaromat)
+        env:
+          NAME: ${{ github.event.inputs.name }}
+        run: |
+          DEST="ydrive:Content factory/cloud_io/preview/$(date -u +%F)/videogenprod"
+          rclone copyto out.mp4 "$DEST/$NAME.mp4"
+          N=$(rclone lsf "$DEST" | wc -l)
+          echo "YD files in $DEST: $N"
