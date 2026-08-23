@@ -34,6 +34,16 @@ on:
         description: 'api_name предикта (опц., после первого прогона по view_api)'
         required: false
         type: string
+      steps:
+        description: 'Шаги сэмплирования'
+        required: false
+        default: '6'
+        type: string
+      duration:
+        description: 'Длительность клипа, сек'
+        required: false
+        default: '3.5'
+        type: string
 
 jobs:
   wan_i2v:
@@ -73,5 +83,7 @@ jobs:
           OUT_NAME:          ${{ inputs.out_name }}
           SPACE:             ${{ inputs.space }}
           API_NAME:          ${{ inputs.api_name }}
+          STEPS:             ${{ inputs.steps }}
+          DURATION:          ${{ inputs.duration }}
           HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
         run: python3 wan_i2v.py
