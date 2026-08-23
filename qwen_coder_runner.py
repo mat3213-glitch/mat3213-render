@@ -26,17 +26,24 @@ def main():
     for t in tasks:
         model = t.get("model") or ""
         prompt = t["prompt"]
+        # per-task timeout из батча (fanout --timeout), дефолт 240; cap subprocess = timeout+90
+        try:
+            task_timeout = min(max(int(t.get("timeout") or 240), 60), 1500)
+        except (TypeError, ValueError):
+            task_timeout = 240
         t0 = time.time()
-        args = ["python3", QWEN_CHAT, "--stdin", "--model", model, "--timeout", "240"]
+        args = ["python3", QWEN_CHAT, "--stdin", "--model", model,
+                "--timeout", str(task_timeout)]
         # per-task try: одна зависшая/упавшая задача не должна убить весь батч (иначе out.json
         # не запишется и fanout получит «таймаут» по всем). Каждый исход → строка результата.
         try:
-            r = subprocess.run(args, input=prompt, capture_output=True, text=True, timeout=330)
+            r = subprocess.run(args, input=prompt, capture_output=True, text=True,
+                               timeout=task_timeout + 90)
             text = r.stdout.strip()
             ok = r.returncode == 0 and text != ""
             err = "" if ok else (r.stderr or "")[-200:]
         except subprocess.TimeoutExpired:
-            text, ok, err = "", False, "subprocess timeout 330s"
+            text, ok, err = "", False, f"subprocess timeout {task_timeout + 90}s"
         except Exception as e:
             text, ok, err = "", False, f"{type(e).__name__} {str(e)[:160]}"
         out.append({
