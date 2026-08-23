@@ -3,61 +3,34 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": false,
-      "score": 4.0,
-      "votes": "1/2",
+      "score": 4.3,
+      "votes": "1/3",
       "status": "спорный",
-      "reason": "Слишком тёплый, не наш цвет"
+      "reason": "Грязный и неэстетичный."
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 3.5,
-      "votes": "1/2",
+      "score": 4.0,
+      "votes": "1/3",
       "status": "спорный",
-      "reason": "Слишком тёплый, не наш цвет"
+      "reason": "Грязный и неэстетичный."
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": false,
-      "score": 4.0,
-      "votes": "1/2",
+      "score": 4.3,
+      "votes": "1/3",
       "status": "спорный",
-      "reason": "Слишком тёплый, не наш цвет"
-    },
-    {
-      "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 3.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёплый, не наш цвет"
-    },
-    {
-      "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 3.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёплый, не наш цвет"
-    },
-    {
-      "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 7.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Подходит, наш цвет"
+      "reason": "Грязный и неэстетичный."
     }
   ],
   "recommend_merge": [],
   "disputed": [
     "scout_neutral_night_muted",
     "scout_neutral_mid_muted",
-    "scout_neutral_night_muted_2",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
+    "scout_neutral_night_muted_2"
   ],
-  "_generated": "2026-08-22",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "_generated": "2026-08-23",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
