@@ -1,56 +1,65 @@
-# Repo Scout — 2026-08-22T10:22:25.053899
-Всего в шортлисте: 6
-- **xiaotianfotos/HyperFrames-RenderKit** ⭐37 [video]
-  - https://github.com/xiaotianfotos/HyperFrames-RenderKit
+# Repo Scout — 2026-08-23T10:23:45.404116
+Всего в шортлисте: 7
+- **narmesh/shorts-video-automation** ⭐0 [source]
+  - https://github.com/narmesh/shorts-video-automation
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий генерирует короткие видео, используя сток-видео, ИИ и синтез речи. Он может закрыть потребность в надёжных адаптерах легального сток-видео с лицензией. Интеграция недорогая, но риск дублирования высок, так как уже есть другие источники, и ценность будет только от нового источника или метаданных происхождения.
+  - 📄 Automatically generate Shorts Video using AI, stock video, and TTS
+- **heristop/leclap** ⭐23 [video]
+  - https://github.com/heristop/leclap
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот экспериментальный инструментарий предназначен для детерминированного рендеринга видео. Он может усилить воспроизводимость рендера на CPU/GitHub Actions благодаря своему детерминированному подходу. Интеграция недорогая, но риск дублирования высок, так как это запасной вариант и часть требуемых функций уже частично реализована.
-  - 📄 Experimental deterministic rendering toolkit for HyperFrames video delivery
-- **vosjs/vos** ⭐3 [video]
-  - https://github.com/vosjs/vos
+  - 💡 Этот репозиторий позволяет детерминированно собирать видео из JSON-шаблона, рендеринг происходит локально. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для проекта yaromat. Интеграция недорогая, но риск дублирования высок, так как частичный функционал уже внедрен, и нужна конкретика по незакрытым аспектам.
+  - 📄 Deterministic video composition from one JSON template — renders on Node, in the browser via WebAssembly, and fully on-device on React Native. No server, no upl
+- **vickianand/MarketCast** ⭐0 [source]
+  - https://github.com/vickianand/MarketCast
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий автоматически создает видео-обзоры рынка, используя Descript API. Он может предоставить адаптер для легального сток-видео с лицензией, что соответствует потребности проекта. Интеграция недорогая, но риск дублирования высок, так как уже есть другие источники, и ценность будет только от нового источника или метаданных происхождения.
+  - 📄 MarketCast: Automated Stock Market Recap Videos, Powered by Descript API
+- **dsplce-co/htmlrec** ⭐10 [video]
+  - https://github.com/dsplce-co/htmlrec
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Это открытый программный видеодвижок, который рендерит видео детерминированно и независимо от разрешения. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions благодаря своей детерминированной природе. Стоимость интеграции низкая, но есть высокий риск дублирования, поскольку это запасной вариант и часть задач уже решена.
-  - 📄 A video is just inputs and a function, rendered. The open programmatic video engine: deterministic, resolution-independent, mixed media.
-- **AnubhavChaturvedi-GitHub/videogenpro** ⭐4 [video]
-  - https://github.com/AnubhavChaturvedi-GitHub/videogenpro
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот детерминированный движок для моушн-графики не использует AI в процессе рендеринга. Он может улучшить воспроизводимость рендера на CPU/GitHub Actions, предлагая детерминированный подход. Интеграция недорогая, но риск дублирования высок, так как это запасной вариант и некоторые функции уже частично реализованы.
-  - 📄 Deterministic, agent-authorable motion graphics engine with a CapCut-style browser editor. Preset-driven and multi-renderer across HTML, Three.js and video, wit
-- **StarBreaker20/Renderer** ⭐0 [video]
-  - https://github.com/StarBreaker20/Renderer
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот проект предлагает детерминированное редактирование видео в браузере с последующим рендерингом в облаке. Он может усилить воспроизводимость рендера на CPU/GitHub Actions благодаря своей детерминированной логике. Интеграция имеет низкую стоимость, но высокий риск дублирования, поскольку это запасной кандидат и часть функций уже внедрена.
-  - 📄 Deterministic browser-to-cloud video editing with Next.js and Remotion
-- **etcircle/ETVideoScript** ⭐0 [video]
-  - https://github.com/etcircle/ETVideoScript
+  - 💡 Этот репозиторий рендерит HTML-анимации в видео, обеспечивая покадровую точность и детерминированность. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, что соответствует потребности проекта yaromat. Интеграция недорогая, но риск дублирования высок, так как частичный функционал уже внедрен, и нужна конкретика по незакрытым аспектам.
+  - 📄 Render HTML animations to video — frame-perfect, headless and deterministic
+- **backblaze-b2-samples/remotion-promo-video-pipeline** ⭐0 [video]
+  - https://github.com/backblaze-b2-samples/remotion-promo-video-pipeline
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: render manifest ffmpeg
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Это локальный видеоредактор, управляемый транскриптами, который использует детерминированный рендеринг через FFmpeg. Он напрямую закрывает потребность в усилении воспроизводимости рендера на CPU/GitHub Actions, используя детерминированные манифесты FFmpeg. Интеграция недорогая, но риск дублирования высок, так как это запасной вариант и часть требуемых функций уже частично реализована.
-  - 📄 Local-first, transcript-driven video editor for screen recordings — the transcript is the timeline. Reversible manifest ops + deterministic FFmpeg renders.
-- **gqy20/slingshot** ⭐0 [video]
-  - https://github.com/gqy20/slingshot
+  - 💡 Этот репозиторий представляет собой пайплайн для рендеринга промо-видео с Remotion и FFmpeg, сохраняя манифесты. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для проекта yaromat. Интеграция недорогая, но риск дублирования высок, так как частичный функционал уже внедрен, и нужна конкретика по незакрытым аспектам.
+  - 📄 Remotion + ffmpeg promo-video render pipeline: storyboard a release promo, render it frame by frame, and re-render per-platform cutdowns — storing every PNG fra
+- **GokuOfGotham/video_maker** ⭐0 [video]
+  - https://github.com/GokuOfGotham/video_maker
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: render manifest ffmpeg
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий превращает видео с камер в YouTube Shorts, используя Gemini и FFmpeg для рендеринга по JSON-манифесту. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для проекта yaromat. Интеграция недорогая, но риск дублирования высок, так как частичный функционал уже внедрен, и нужна конкретика по незакрытым аспектам.
+  - 📄 Turns wildlife-camera footage into YouTube Shorts: Gemini understands the video, a deterministic planner writes a JSON edit manifest, FFmpeg renders it
+- **GoldLegendW80/llm-video-maker** ⭐16 [video]
+  - https://github.com/GoldLegendW80/llm-video-maker
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Это детерминированный рендерер видео физики рогатки, созданный на Godot. Он может способствовать усилению воспроизводимости рендера на CPU/GitHub Actions, предлагая детерминированный рендеринг. Стоимость интеграции низкая, но риск дублирования высок, так как это запасной вариант и часть задач уже решена.
-  - 📄 Deterministic Godot slingshot physics video renderer
+  - 💡 Этот репозиторий генерирует готовые MP4 видео из одного промпта, используя детерминированный HTML/GSAP рендеринг. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для проекта yaromat. Интеграция недорогая, но риск дублирования высок, так как частичный функционал уже внедрен, и нужна конкретика по незакрытым аспектам.
+  - 📄 Turn one prompt into a finished MP4. An AI agent skill for Claude Code, Cursor, Codex & Windsurf that generates TikTok/Reels/Shorts, YouTube intros, startup her
