@@ -117,6 +117,11 @@ try:
     # multimodalart/wan2-1-fast (дефолт): /generate_video(image, prompt, h, w, neg, dur, guidance, steps, seed, randomize)
     attempts.append(dict(api_name="/generate_video",
         args=(img, PROMPT, HEIGHT, WIDTH, NEG, DURATION, GUIDANCE, STEPS, SEED, False)))
+    # zerogpu-aoti/wan2-2-fp8da-aoti-faster: /generate_video(image, prompt, steps, neg, duration,
+    #   guidance_scale_high, guidance_scale_low, seed, randomize) — Wan2.2 i2v fp8 на ZeroGPU
+    GUIDANCE2 = float(os.environ.get("GUIDANCE2", "1.0"))
+    attempts.append(dict(api_name="/generate_video",
+        args=(img, PROMPT, STEPS, NEG, DURATION, GUIDANCE, GUIDANCE2, SEED, False)))
     attempts += [
         dict(api_name="/generate", args=(img, PROMPT, NEG)),
         dict(api_name="/i2v_generation", args=(img, PROMPT, NEG)),
