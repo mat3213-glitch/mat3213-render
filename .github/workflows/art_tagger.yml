@@ -1,0 +1,64 @@
+name: Art Tagger — zero-shot таггинг артов для контентных LTX-промптов
+
+# LTX двигает то, что НАЗВАНО: контентный промпт из содержимого кадра дал 5/8
+# живых сцен против 2/29 у шаблонных (замер 08.2026). Считаем на CPU раннера,
+# результат — tags.json на ЯД.
+
+on:
+  workflow_dispatch:
+    inputs:
+      src:
+        required: false
+        default: 'ydrive:Content factory/cloud_io/pexels_pool/vzrosly-arts'
+        description: 'Папка артов на ЯД'
+      out:
+        required: false
+        default: 'ydrive:Content factory/cloud_io/render_jobs/2026-08-23_ltx_art_calib'
+        description: 'Куда класть tags.json на ЯД'
+      model:
+        required: false
+        default: 'ViT-B-32'
+      pretrained:
+        required: false
+        default: 'laion2b_s34b_b79k'
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+          # torch И torchvision — из одного cpu-индекса: смесь «cpu-torch +
+          # pypi-torchvision» падает на `operator torchvision::nms does not exist`.
+          pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          pip install -q open_clip_torch pillow
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Tag
+        env:
+          SRC: ${{ inputs.src }}
+          OUT: ${{ inputs.out }}
+          MODEL: ${{ inputs.model }}
+          PRETRAINED: ${{ inputs.pretrained }}
+        run: |
+          python3 art_tagger.py --src "$SRC" --out "$OUT" --model "$MODEL" --pretrained "$PRETRAINED"

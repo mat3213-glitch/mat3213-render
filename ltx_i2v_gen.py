@@ -213,8 +213,37 @@ indices = (len(frames) // 4, len(frames) // 2, len(frames) - 1)
 distances = [float(np.mean(np.abs(normalised_gray(frames[index]) - reference))) for index in indices]
 metric_line = "MOTION_METRIC quarter=%.6f half=%.6f last=%.6f" % tuple(distances)
 print(metric_line)
+
+# ГЕЙТ РАСПАДА (в ядре, чтобы бук не трогал пиксели). Ловит ОБЕ моды брака:
+# распад (структура последнего кадра утекла относительно исходного стилла)
+# и заморозку (первый и последний кадр совпадают). Пороги от замеров 08.2026.
+def _edge_energy(gray_arr):
+    gy, gx = np.gradient(gray_arr.astype(np.float32))
+    return float(np.mean(np.abs(gx) + np.abs(gy)))
+
+_src = np.asarray(image.convert("L").resize((256, 256)))
+_first = np.asarray(frames[0].convert("L").resize((256, 256)))
+_last = np.asarray(frames[-1].convert("L").resize((256, 256)))
+_retention = _edge_energy(_last) / max(_edge_energy(_src), 1e-6)
+_freeze = float(np.mean(np.abs(_first.astype(np.float32) - _last.astype(np.float32))))
+if _retention < 0.35:
+    _verdict = "DECAYED"
+elif _retention < 0.55 or _freeze < 2.0:
+    _verdict = "WEAK"
+else:
+    _verdict = "ALIVE"
+gate_line = "GATE verdict=%s retention=%.3f freeze=%.2f" % (_verdict, _retention, _freeze)
+print(gate_line)
+
+# Контактный лист (первый/средний/последний кадры) — рядом с видео в выходах ядра.
+sheet = Image.new("RGB", (frames[0].width * 3, frames[0].height))
+for _i, _fr in enumerate((frames[0], frames[len(frames) // 2], frames[-1])):
+    sheet.paste(_fr, (_i * frames[0].width, 0))
+sheet.save("contact_sheet.jpg", quality=88)
+
 with open("motion_metric.log", "w", encoding="utf-8") as metric_file:
     metric_file.write(metric_line + "\\n")
+    metric_file.write(gate_line + "\\n")
 """
     return {
         "cells": [code_cell(install), code_cell(decode), code_cell(pipeline), code_cell(generate), code_cell(metric)],
@@ -337,12 +366,16 @@ def print_motion_metric(directory: Path) -> None:
         except OSError:
             continue
         for line in reversed(lines):
-            if "MOTION_METRIC" in line:
+            if "MOTION_METRIC" in line or "GATE " in line:
                 print(line.strip())
-                return
     # НЕ падаем: видео к этому моменту уже лежит на ЯД. Уронить прогон здесь = записать
     # маркер ошибки поверх удачно сгенерированной сцены.
-    print("Warning: MOTION_METRIC line was not found in the Kaggle log.", file=sys.stderr)
+    return
+
+
+def find_contact_sheet(directory: Path) -> Path | None:
+    matches = sorted(path for path in directory.rglob("contact_sheet.jpg") if path.is_file())
+    return matches[0] if matches else None
 
 
 def main() -> None:
@@ -416,6 +449,10 @@ def main() -> None:
         video = find_output_video(workdir)
         remote = f"ydrive:{destination.rstrip('/')}/{out_name.lstrip('/')}"
         run(["rclone", "copyto", str(video), remote])
+        sheet = find_contact_sheet(workdir)
+        if sheet is not None:
+            sheet_remote = f"ydrive:{destination.rstrip('/')}/{Path(out_name).stem}_contact_sheet.jpg"
+            run(["rclone", "copyto", str(sheet), sheet_remote])
         print_motion_metric(workdir)
 
 
