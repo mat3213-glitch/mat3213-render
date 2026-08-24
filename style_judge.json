@@ -2,35 +2,62 @@
   "verdicts": [
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 4.3,
-      "votes": "1/3",
-      "status": "спорный",
-      "reason": "Грязный и неэстетичный."
+      "keep": true,
+      "score": 8.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Хорошо подходит под даунтемпо-вайб, холодный teal и неон не виден."
     },
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 4.0,
-      "votes": "1/3",
-      "status": "спорный",
-      "reason": "Грязный и неэстетичный."
+      "keep": true,
+      "score": 7.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Мягко и приглушенно, но холодный teal не настолько ярко."
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": false,
-      "score": 4.3,
-      "votes": "1/3",
+      "score": 6.0,
+      "votes": "1/2",
       "status": "спорный",
-      "reason": "Грязный и неэстетичный."
+      "reason": "Слишком тёмно, не видно деталей."
+    },
+    {
+      "name": "scout_neutral_night_soft",
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Очень мягко и приглушенно, холодный teal хорошо виден."
+    },
+    {
+      "name": "scout_neutral_night_soft_2",
+      "keep": true,
+      "score": 7.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "Хорошо подходит под даунтемпо-вайб, холодный teal и неон не виден."
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "keep": false,
+      "score": 2.5,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "Слишком зелёно, не подходит под даунтемпо-вайб."
     }
   ],
-  "recommend_merge": [],
-  "disputed": [
+  "recommend_merge": [
     "scout_neutral_night_muted",
     "scout_neutral_mid_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2"
+  ],
+  "disputed": [
     "scout_neutral_night_muted_2"
   ],
-  "_generated": "2026-08-23",
-  "_judge": "gh-vision-ensemble(3/5)"
+  "_generated": "2026-08-24",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
