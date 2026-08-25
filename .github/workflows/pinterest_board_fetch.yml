@@ -53,6 +53,13 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
+      - name: Restore Pinterest cookies
+        run: |
+          mkdir -p Instrument/Pinterest/cookies
+          rclone copyto "ydrive:Content factory/mirror/Instrument/Pinterest/cookies/pinterest_cookies.txt" \
+            "Instrument/Pinterest/cookies/pinterest_cookies.txt"
+          test -s Instrument/Pinterest/cookies/pinterest_cookies.txt
+
       - name: Fetch board videos
         env:
           BOARD_REF: ${{ inputs.board_ref }}
