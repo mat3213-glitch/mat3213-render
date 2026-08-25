@@ -214,7 +214,7 @@ def main() -> int:
     ok = 0
     failures: list[dict] = []
     records: list[dict] = []
-    color_kinds = ["invert", "bright", "strobo"]
+    color_kinds = ["bright", "strobo"]  # одобрено yaromat; invert отброшен
     for src in sources:
         fps = probe_fps(src)
         if args.color == "all":
