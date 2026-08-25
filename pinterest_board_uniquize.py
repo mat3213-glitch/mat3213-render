@@ -33,7 +33,58 @@ def probe_duration(path: Path) -> float:
         return 0.0
 
 
-def uniquize(src: Path, dst: Path) -> None:
+def probe_fps(path: Path) -> float:
+    r = sh([
+        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
+        "-show_entries", "stream=r_frame_rate",
+        "-of", "csv=p=0", str(path)
+    ], timeout=60)
+    try:
+        num, den = r.stdout.strip().split("/")
+        fps = float(num) / float(den)
+        return fps if fps > 0 else 24.0
+    except Exception:
+        return 24.0
+
+
+def color_chain(kind: str, fps: float) -> str:
+    """Цветовой вариант поверх базового рецепта (кроме strobo — он через граф). "" = без цвета."""
+    if kind == "invert":
+        return "negate"
+    if kind == "bright":
+        hue = random.randint(0, 359)
+        sat = round(random.uniform(1.7, 2.6), 2)
+        con = round(random.uniform(1.06, 1.18), 3)
+        bri = round(random.uniform(0.02, 0.05), 3)
+        return f"hue=h={hue}:s={sat},eq=contrast={con}:brightness={bri}"
+    return ""
+
+
+def strobo_graph(duration: float, fps: float, in_label: str = "0:v",
+                 out_label: str = "vs") -> tuple[str, int]:
+    """Стробо: чередование ярких и инвертированных сегментов (trim/negate/concat).
+    Возвращает (граф для -filter_complex, число сегментов). Яркая фаза = базовая картинка
+    с усиленной яркостью, инверсная = negate."""
+    freq = round(random.uniform(1.6, 4.0), 2)
+    period = max(2, int(round(fps / freq)))
+    total_frames = max(period * 2, int(math.ceil(duration * fps)))
+    segs = min(120, max(2, math.ceil(total_frames / period)))
+    head = f"[{in_label}]split={segs}" + "".join(f"[g{i}]" for i in range(segs))
+    parts = [head]
+    labels = []
+    for i in range(segs):
+        start = i * period
+        end = min((i + 1) * period, total_frames)
+        effect = "" if i % 2 == 0 else ",negate,eq=brightness=0.08"
+        parts.append(
+            f"[g{i}]trim=start_frame={start}:end_frame={end},setpts=PTS-STARTPTS{effect}[v{i}]"
+        )
+        labels.append(f"[v{i}]")
+    parts.append("".join(labels) + f"concat=n={segs}:v=1:a=0[{out_label}]")
+    return ";".join(parts), segs
+
+
+def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0) -> None:
     speed = round(random.uniform(0.97, 1.03), 3)
     pts_factor = round(1.0 / speed, 4)
     flip = random.choice(["hflip,", ""])
@@ -67,18 +118,23 @@ def uniquize(src: Path, dst: Path) -> None:
         f"scale=1280:720,"
     )
     vignette = f"vignette=PI*{round(random.uniform(0.22, 0.30), 2)}"
-    vf = (
-        f"{flip}"
-        f"{crop}"
-        f"scale=1280:720,"
-        f"setpts={pts_factor}*PTS,"
-        f"{shake}"
-        f"{color_mix}"
-        f"{eq}"
-        f"{noise}"
-        f"{unsharp}"
-        f"{vignette}"
-    )
+    chain = [
+        flip,
+        crop,
+        "scale=1280:720",
+        f"setpts={pts_factor}*PTS",
+        shake,
+        color_mix,
+        eq,
+        noise,
+        unsharp,
+        vignette,
+    ]
+    color_kind = color
+    color = color_chain(color, fps)
+    if color:
+        chain.append(color)
+    vf = ",".join(c.rstrip(",") for c in chain if c)
 
     probe = sh([
         "ffprobe", "-v", "quiet", "-select_streams", "a",
@@ -87,7 +143,18 @@ def uniquize(src: Path, dst: Path) -> None:
     has_audio = bool(probe.stdout.strip())
 
     cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src)]
-    if has_audio:
+    if color_kind == "strobo":
+        graph, segs = strobo_graph(probe_duration(src), fps, in_label="pre")
+        graph = f"[0:v]{vf}[pre];{graph}"
+        if has_audio:
+            cmd += [
+                "-filter_complex", f"{graph};[0:a]atempo={speed}[a]",
+                "-map", "[vs]", "-map", "[a]",
+                "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k",
+            ]
+        else:
+            cmd += ["-filter_complex", graph, "-map", "[vs]", "-an"]
+    elif has_audio:
         cmd += [
             "-filter_complex",
             f"[0:v]{vf}[v];[0:a]atempo={speed}[a]",
@@ -112,6 +179,9 @@ def uniquize(src: Path, dst: Path) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source-folder", required=True, help="YaD raw folder, without ydrive:")
+    ap.add_argument("--color", choices=["off", "random", "all"], default="random",
+                    help="цветовой вариант: off=как раньше, random=1 случайный на клип, "
+                         "all=три файла (invert/bright/strobo) на клип")
     args = ap.parse_args()
 
     try:
@@ -144,30 +214,40 @@ def main() -> int:
     ok = 0
     failures: list[dict] = []
     records: list[dict] = []
+    color_kinds = ["invert", "bright", "strobo"]
     for src in sources:
-        dst = uniq_local / f"{src.stem}_uniq.mp4"
-        print(f"[uniq] {src.name} -> {dst.name}", flush=True)
-        try:
-            uniquize(src, dst)
-            records.append(
-                {
-                    "source": src.name,
-                    "output": dst.name,
-                    "source_bytes": src.stat().st_size,
-                    "output_bytes": dst.stat().st_size,
-                    "source_duration": round(probe_duration(src), 3),
-                }
-            )
-            ok += 1
-        except Exception as exc:
-            failures.append({"source": src.name, "error": str(exc)})
-            print(f"[uniq] FAIL {src.name}: {exc}", flush=True)
+        fps = probe_fps(src)
+        if args.color == "all":
+            jobs = [(c, uniq_local / f"{src.stem}_uniq_{c}.mp4") for c in color_kinds]
+        elif args.color == "random":
+            jobs = [(random.choice(color_kinds), uniq_local / f"{src.stem}_uniq.mp4")]
+        else:
+            jobs = [("", uniq_local / f"{src.stem}_uniq.mp4")]
+        for color, dst in jobs:
+            print(f"[uniq] {src.name} -> {dst.name} (color={color or 'off'}, fps={fps:.0f})", flush=True)
+            try:
+                uniquize(src, dst, color=color, fps=fps)
+                records.append(
+                    {
+                        "source": src.name,
+                        "output": dst.name,
+                        "color": color,
+                        "source_bytes": src.stat().st_size,
+                        "output_bytes": dst.stat().st_size,
+                        "source_duration": round(probe_duration(src), 3),
+                    }
+                )
+                ok += 1
+            except Exception as exc:
+                failures.append({"source": src.name, "color": color, "error": str(exc)})
+                print(f"[uniq] FAIL {src.name} (color={color}): {exc}", flush=True)
 
     (uniq_local / "unique_manifest.json").write_text(
         json.dumps(
             {
                 "source_folder": source_folder,
                 "dest_folder": dest_folder,
+                "color_mode": args.color,
                 "count_source": len(sources),
                 "count_ok": ok,
                 "count_failed": len(failures),

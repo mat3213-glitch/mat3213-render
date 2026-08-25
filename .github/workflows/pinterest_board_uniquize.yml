@@ -11,6 +11,10 @@ on:
         description: "ЯД raw-папка из fetch workflow"
         required: true
         default: "Content factory/cloud_io/YYYY-MM-DD/pinterest_board_pipeline/<run>/raw"
+      color_mode:
+        description: "Цветовой вариант: off | random | all (invert/bright/strobo)"
+        required: false
+        default: "random"
 
 concurrency:
   group: pinterest-board-uniquize
@@ -47,12 +51,14 @@ jobs:
       - name: Download raw board folder
         env:
           SOURCE_FOLDER: ${{ inputs.source_folder }}
+          COLOR_MODE: ${{ inputs.color_mode }}
           YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
           YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
           YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
         run: |
           python -u pinterest_board_uniquize.py \
-            --source-folder "$SOURCE_FOLDER"
+            --source-folder "$SOURCE_FOLDER" \
+            --color "$COLOR_MODE"
 
       - name: Summarize uniquize
         if: success()
