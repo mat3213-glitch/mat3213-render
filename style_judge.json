@@ -2,62 +2,59 @@
   "verdicts": [
     {
       "name": "scout_neutral_night_muted",
-      "keep": true,
-      "score": 8.0,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "Хорошо подходит под даунтемпо-вайб, холодный teal и неон не виден."
+      "keep": false,
+      "score": 2.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Кадр слишком тёмный, холодный чёрно-зелёный тон не соответствует deep teal. Отсу"
     },
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "Мягко и приглушенно, но холодный teal не настолько ярко."
+      "keep": false,
+      "score": 4.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Тон слишком тёплый, не соответствует deep teal. Световой акцент не соответствует"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": false,
-      "score": 6.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёмно, не видно деталей."
+      "score": 3.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Тон слишком тёмный, холодный чёрно-зелёный тон не соответствует deep teal. Отсут"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 9.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Очень мягко и приглушенно, холодный teal хорошо виден."
+      "reason": "Кадр соответствует deep teal, холодный тон и приглушённый свет, присутствует дым"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 7.0,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хорошо подходит под даунтемпо-вайб, холодный teal и неон не виден."
+      "reason": "Кадр соответствует deep teal, холодный тон и приглушённый свет, присутствует дым"
     },
     {
       "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 2.5,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Слишком зелёно, не подходит под даунтемпо-вайб."
+      "keep": true,
+      "score": 10.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Кадр соответствует deep teal, холодный тон и приглушённый свет, присутствует дым"
     }
   ],
   "recommend_merge": [
-    "scout_neutral_night_muted",
-    "scout_neutral_mid_muted",
     "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
-  "disputed": [
-    "scout_neutral_night_muted_2"
-  ],
-  "_generated": "2026-08-24",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [],
+  "_generated": "2026-08-25",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
