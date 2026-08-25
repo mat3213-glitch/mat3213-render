@@ -34,23 +34,28 @@ run_cell() { # $1 cell  $2 art  $3 prompt  $4 seed
   JOB_ID="2026-08-23_ltx_art_calib/$1" SCENE_IDX="$1" \
   PROMPT="$3" IMG_LOCAL="$2" DEST_FOLDER="$YD_DEST" OUT_NAME="$1.mp4" SEED="$4" \
     python3 ltx_i2v_gen.py > "$CALIB_DIR/log_$1.txt" 2>&1
+  local rc=$?
+  echo "rc=$rc"
   grep -h "GATE" "$CALIB_DIR/log_$1.txt" | tail -1
-  echo "rc=$?"
 }
 
 run_checked() { # $1 cell  $2 art  $3 prompt
-  local v
-  v=$(run_cell "$1" "$2" "$3" 42 | grep -E "^GATE|^rc=" | tail -1)
-  echo "VERDICT $1: ${v:-FAIL}"
+  local out v rc
+  out=$(run_cell "$1" "$2" "$3" 42)
+  rc=$(printf '%s' "$out" | grep -E "^rc=" | tail -1)
+  v=$(printf '%s' "$out" | grep "^GATE" | tail -1)
+  echo "VERDICT $1: ${v:-FAIL} ${rc}"
   if [[ "${v:-}" != GATE*ALIVE* ]]; then
-    v=$(run_cell "${1}_r43" "$2" "$3" 43 | grep -E "^GATE|^rc=" | tail -1)
-    echo "RETRY $1 -> ${v:-FAIL}"
+    out=$(run_cell "${1}_r43" "$2" "$3" 43)
+    rc=$(printf '%s' "$out" | grep -E "^rc=" | tail -1)
+    v=$(printf '%s' "$out" | grep "^GATE" | tail -1)
+    echo "RETRY $1 -> ${v:-FAIL} ${rc}"
   fi
 }
 
 ART=/tmp/opencode/ltx_calib/arts/art_corridor.jpg
 METRO=/tmp/opencode/ltx_calib/arts/art_metro_station.jpg
-run_checked art_metro_station_tpl "$METRO" "$TPL"
+# metro_tpl уже закрыт (GATE ALIVE .934 + r43 .857) — не перегонять и не перезаписывать ЯД.
 run_checked art_metro_station_cnt "$METRO" "$(cnt_prompt art_metro_station)"
 run_checked corridor_tpl "$ART" "$TPL"
 run_checked corridor_cnt "$ART" "$(cnt_prompt art_corridor)"
