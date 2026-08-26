@@ -345,15 +345,16 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
                 ]
         else:
             # Другой complex-эффект (split_drift, grid_2x2, motion_pan, negative_echo, self_blend_reverse)
+            fixed_graph = complex_graph.replace("[0:v]", "[pre]")
             if has_audio:
                 cmd += [
-                    "-filter_complex", f"[0:v]{vf}[pre];[pre]{complex_graph}[v];[0:a]atempo={speed}[a]",
+                    "-filter_complex", f"[0:v]{vf}[pre];{fixed_graph}[v];[0:a]atempo={speed}[a]",
                     "-map", "[v]", "-map", "[a]",
                     "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k",
                 ]
             else:
                 cmd += [
-                    "-filter_complex", f"[0:v]{vf}[pre];[pre]{complex_graph}[v]",
+                    "-filter_complex", f"[0:v]{vf}[pre];{fixed_graph}[v]",
                     "-map", "[v]", "-an",
                 ]
     elif color_kind in ("strobo", "flash"):
