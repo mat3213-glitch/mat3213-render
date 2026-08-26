@@ -21,9 +21,9 @@ on:
         default: '0.45'
         type: string
       font_size:
-        description: 'Размер шрифта (дефолт 96)'
+        description: 'Размер шрифта (дефолт 192)'
         required: false
-        default: '96'
+        default: '192'
         type: string
       max_frames:
         description: 'Макс. кадров (для тестов; пусто = все)'

@@ -49,20 +49,28 @@ def estimate_depth(depth_pipe, image_pil):
     return depth
 
 
-def depth_to_foreground_mask(depth, threshold=0.45, feather=15):
+def depth_to_foreground_mask(depth, threshold=0.45, feather=15,
+                              prev_mask=None, temporal_blend=0.65):
     """
     Преобразует карту глубины в маску foreground.
     threshold: порог — объекты ближе этого порога = foreground.
     feather: размытие краёв для плавного перехода.
+    prev_mask: маска предыдущего кадра для временного сглаживания (anti-strobe).
+    temporal_blend: доля предыдущей маски в смеси (0=только текущая, 1=только предыдущая).
     """
     mask = (depth > threshold).astype(np.uint8) * 255
-    # Морфология: убираем шум, заполняем дыры
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    # Морфология: убираем шум, заполняем дыры (aggressive)
+    kernel_large = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_large, iterations=3)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_small, iterations=2)
     # Feather: Gaussian blur для плавных краёв
     if feather > 0:
         mask = cv2.GaussianBlur(mask, (feather * 2 + 1, feather * 2 + 1), 0)
+    # Temporal smoothing: blend с предыдущей маской против стробоскопа
+    if prev_mask is not None and prev_mask.shape == mask.shape:
+        mask = cv2.addWeighted(prev_mask, temporal_blend,
+                               mask, 1.0 - temporal_blend, 0)
     return mask
 
 
@@ -179,14 +187,18 @@ def process_video(input_path, output_path, text, depth_threshold=0.45,
             frame_files = frame_files[:max_frames]
         print(f"  Извлечено {len(frame_files)} кадров")
 
-        # Step 2: Depth + mask для каждого кадра
+        # Step 2: Depth + mask для каждого кадра (с temporal smoothing)
         print("[2/4] Depth-сегментация...")
         depth_pipe = load_depth_model()
+        prev_mask = None
 
         for idx, fp in enumerate(frame_files, 1):
             img_pil = Image.open(fp).convert('RGB')
             depth = estimate_depth(depth_pipe, img_pil)
-            mask = depth_to_foreground_mask(depth, threshold=depth_threshold, feather=feather)
+            mask = depth_to_foreground_mask(depth, threshold=depth_threshold,
+                                            feather=feather, prev_mask=prev_mask,
+                                            temporal_blend=0.65)
+            prev_mask = mask.copy()
             cv2.imwrite(os.path.join(masks_dir, fp.name), mask)
 
             if idx % 25 == 0 or idx == len(frame_files):
@@ -239,8 +251,8 @@ def main():
                     help="Порог глубины для foreground (0..1, выше = ближе к камере)")
     ap.add_argument("--feather", type=int, default=15,
                     help="Размытие краёв маски (px)")
-    ap.add_argument("--font-size", type=int, default=96,
-                    help="Размер шрифта")
+    ap.add_argument("--font-size", type=int, default=192,
+                    help="Размер шрифта (дефолт 192)")
     ap.add_argument("--font-path", type=str,
                     default="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
                     help="Путь к шрифту")
