@@ -75,8 +75,8 @@ def depth_to_foreground_mask(depth, threshold=0.45, feather=15,
 
 
 def create_text_layer(text, width, height, font_path, font_size,
-                       color=(255, 255, 255, 230), shadow=True, pos=None):
-    """Создаёт RGBA-слой с текстом. pos=(x,y) — центр текста; None = по центру кадра."""
+                       color=(255, 255, 255, 255), shadow=True, pos=None):
+    """Создаёт RGBA-слой с текстом + тёмная полоса-фон для читаемости. pos=(x,y) — центр."""
     img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     try:
@@ -94,55 +94,41 @@ def create_text_layer(text, width, height, font_path, font_size,
         x = (width - tw) // 2
         y = (height - th) // 2
 
-    # Тень для читаемости
-    if shadow:
-        for dx, dy in [(3, 3), (5, 5)]:
-            draw.text((x + dx, y + dy), text, fill=(0, 0, 0, 180), font=font)
+    # Тёмная полоса-фон за текстом для гарантированной читаемости
+    pad = 20
+    bar_bbox = (x - pad, y - pad, x + tw + pad, y + th + pad)
+    draw.rounded_rectangle(bar_bbox, radius=12, fill=(0, 0, 0, 160))
+
+    # Текст с тёмной обводкой
+    for dx in range(-3, 4):
+        for dy in range(-3, 4):
+            if dx*dx + dy*dy <= 9:
+                draw.text((x + dx, y + dy), text, fill=(0, 0, 0, 220), font=font)
     draw.text((x, y), text, fill=color, font=font)
     return img
 
 
-def composite_frame(original_bgr, text_rgba, fg_mask, bg_mask_inv=None):
+def composite_frame(original_bgr, text_rgba, fg_mask):
     """
-    Композит 3 слоёв:
-    - background: оригинал, но с областью под текстом (чтобы текст не перекрывал foreground)
-    - text: текстовый слой
-    - foreground: оригинальный кадр, замаскированный маской foreground
-
-    Финал: background → text → foreground (сверху вниз по z-order).
+    Композит: текст позади foreground.
+    final = original * fg + (original_bg_behind_text + text) * (1 - fg)
+    Текст виден ТОЛЬКО в областях без foreground (на фоне).
     """
     h, w = original_bgr.shape[:2]
+    orig_f = original_bgr.astype(np.float32)
 
-    # BGRA for original
-    original_rgba = cv2.cvtColor(original_bgr, cv2.COLOR_BGR2BGRA)
-
-    # Text layer as numpy
-    text_np = np.array(text_rgba)  # (h, w, 4) RGBA
-
-    # Alpha канал text → float
+    text_np = np.array(text_rgba)
     text_alpha = text_np[:, :, 3:4].astype(np.float32) / 255.0
-
-    # Foreground mask → float (0..1)
-    fg_float = fg_mask.astype(np.float32) / 255.0
-    fg_alpha = fg_float[:, :, np.newaxis]
-
-    # Step 1: Background = original * (1 - text_alpha)
-    # ( text не перекрывает фон ТОЛЬКО в области foreground )
-    # Actually, simpler approach:
-    # final = foreground_on_top * fg + (original * (1-text_alpha) + text * text_alpha) * (1-fg)
-
-    # Text RGBA → float BGR
     text_bgr = text_np[:, :, :3].astype(np.float32)
 
-    # Blended where text exists: bg behind text
-    bg_behind_text = original_rgba[:, :, :3].astype(np.float32)
-    blended_text = bg_behind_text * (1 - text_alpha) + text_bgr * text_alpha
+    fg = fg_mask.astype(np.float32) / 255.0
+    fg3 = fg[:, :, np.newaxis]
 
-    # Where foreground exists: use original (text is behind)
-    # Where no foreground: use blended (text is visible)
-    final = original_rgba[:, :, :3].astype(np.float32) * fg_alpha + \
-            blended_text * (1 - fg_alpha)
+    # Blend text onto original (text replaces original where text exists)
+    bg_with_text = orig_f * (1 - text_alpha) + text_bgr * text_alpha
 
+    # Final: original where foreground, text-blended where background
+    final = orig_f * fg3 + bg_with_text * (1 - fg3)
     return final.astype(np.uint8)
 
 
