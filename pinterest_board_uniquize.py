@@ -188,6 +188,8 @@ def resolve_effect_filter(name: str, effects_db: dict, fps: float, duration: flo
         eff = effects_db["vf"][name]
         if "_generator" in eff:
             return "vf", VF_GENERATORS[name]()
+        if "complex" in eff:
+            return "complex", eff["complex"]
         return "vf", eff["filter"]
     if name in effects_db.get("complex", {}):
         eff = effects_db["complex"][name]
@@ -198,7 +200,9 @@ def resolve_effect_filter(name: str, effects_db: dict, fps: float, duration: flo
             return "complex", graph
         if "_generator" in eff:
             return "complex", COMPLEX_GENERATORS[name]()
-        return "complex", eff["filter"]
+        if "complex" in eff:
+            return "complex", eff["complex"]
+        return "complex", eff.get("filter", "")
     raise ValueError(f"unknown effect: {name}")
 
 
