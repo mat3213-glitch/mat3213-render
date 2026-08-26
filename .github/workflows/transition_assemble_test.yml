@@ -1,0 +1,58 @@
+name: Transition Assemble Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_folder:
+        description: "YaD folder with raw mp4s"
+        required: true
+        default: "Content factory/yaromat_music/context/clip_refs"
+      max_clips:
+        description: "Number of clips (default 4)"
+        required: false
+        default: "4"
+
+concurrency:
+  group: trans-test
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Configure rclone
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run A/B/C test
+        env:
+          SOURCE_FOLDER: ${{ inputs.source_folder }}
+          MAX_CLIPS: ${{ inputs.max_clips }}
+        run: |
+          python -u transition_assemble_test.py \
+            --source-folder "$SOURCE_FOLDER" \
+            --max-clips "$MAX_CLIPS"
+
+      - name: Summary
+        if: success()
+        run: echo "A/B/C test results uploaded to YaD."
