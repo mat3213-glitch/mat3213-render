@@ -1,0 +1,106 @@
+name: Text Behind Object
+
+# Размещение текста позади движущегося объекта.
+# Использует Depth-Anything-V2 для сегментации foreground по карте глубины,
+# затем композитит текст между background и foreground слоями.
+
+on:
+  workflow_dispatch:
+    inputs:
+      video_url:
+        description: 'Ссылка на видео (HTTP/ЯД) или путь в cloud_io'
+        required: true
+        type: string
+      text:
+        description: 'Текст для размещения позади объекта'
+        required: true
+        type: string
+      depth_threshold:
+        description: 'Порог глубины (0..1; выше = ближе к камере; дефолт 0.45)'
+        required: false
+        default: '0.45'
+        type: string
+      font_size:
+        description: 'Размер шрифта (дефолт 96)'
+        required: false
+        default: '96'
+        type: string
+      max_frames:
+        description: 'Макс. кадров (для тестов; пусто = все)'
+        required: false
+        type: string
+
+jobs:
+  text-behind:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone fonts-dejavu-core
+
+      - name: Install Python deps
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install transformers opencv-python-headless numpy pillow huggingface_hub
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Download input video
+        env:
+          VIDEO_URL: ${{ inputs.video_url }}
+        run: |
+          mkdir -p work
+          if [[ "$VIDEO_URL" == s3://* ]] || [[ "$VIDEO_URL" == *cloud_io* ]]; then
+            rclone copyto "ydrive:$VIDEO_URL" work/input.mp4
+          elif [[ "$VIDEO_URL" == http* ]]; then
+            curl -L -o work/input.mp4 "$VIDEO_URL"
+          else
+            rclone copyto "ydrive:Content factory/cloud_io/$VIDEO_URL" work/input.mp4
+          fi
+          ls -lh work/input.mp4
+
+      - name: Run text-behind-object
+        env:
+          TEXT: ${{ inputs.text }}
+          DEPTH_THRESHOLD: ${{ inputs.depth_threshold }}
+          FONT_SIZE: ${{ inputs.font_size }}
+          MAX_FRAMES: ${{ inputs.max_frames }}
+        run: |
+          ARGS=(--input work/input.mp4 --output work/output.mp4 --text "$TEXT")
+          ARGS+=(--depth-threshold "$DEPTH_THRESHOLD")
+          ARGS+=(--font-size "$FONT_SIZE")
+          if [ -n "$MAX_FRAMES" ]; then ARGS+=(--max-frames "$MAX_FRAMES"); fi
+          python -u text_behind_object.py "${ARGS[@]}"
+
+      - name: Upload result
+        env:
+          VIDEO_URL: ${{ inputs.video_url }}
+        run: |
+          BASENAME=$(basename "${VIDEO_URL%.*}")
+          rclone copyto work/output.mp4 "ydrive:Content factory/cloud_io/text_behind/${BASENAME}_textbehind.mp4"
+          echo "✅ Результат: ydrive:Content factory/cloud_io/text_behind/${BASENAME}_textbehind.mp4"
+
+      - name: Write error status on failure
+        if: failure()
+        run: |
+          echo "error: workflow failed" | rclone rcat "ydrive:Content factory/cloud_io/text_behind/status.txt" || true
