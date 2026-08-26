@@ -29,6 +29,11 @@ on:
         description: 'Макс. кадров (для тестов; пусто = все)'
         required: false
         type: string
+      crop_bottom:
+        description: 'Обрезать нижние N%% кадра из маски (пол/земля; дефолт 25)'
+        required: false
+        default: '25'
+        type: string
 
 jobs:
   text-behind:
@@ -85,10 +90,12 @@ jobs:
           DEPTH_THRESHOLD: ${{ inputs.depth_threshold }}
           FONT_SIZE: ${{ inputs.font_size }}
           MAX_FRAMES: ${{ inputs.max_frames }}
+          CROP_BOTTOM: ${{ inputs.crop_bottom }}
         run: |
           ARGS=(--input work/input.mp4 --output work/output.mp4 --text "$TEXT")
           ARGS+=(--depth-threshold "$DEPTH_THRESHOLD")
           ARGS+=(--font-size "$FONT_SIZE")
+          ARGS+=(--crop-bottom "$CROP_BOTTOM")
           if [ -n "$MAX_FRAMES" ]; then ARGS+=(--max-frames "$MAX_FRAMES"); fi
           python -u text_behind_object.py "${ARGS[@]}"
 

@@ -50,15 +50,21 @@ def estimate_depth(depth_pipe, image_pil):
 
 
 def depth_to_foreground_mask(depth, threshold=0.45, feather=15,
-                              prev_mask=None, temporal_blend=0.65):
+                              prev_mask=None, temporal_blend=0.65, crop_bottom=0):
     """
     Преобразует карту глубины в маску foreground.
     threshold: порог — объекты ближе этого порога = foreground.
     feather: размытие краёв для плавного перехода.
     prev_mask: маска предыдущего кадра для временного сглаживания (anti-strobe).
     temporal_blend: доля предыдущей маски в смеси (0=только текущая, 1=только предыдущая).
+    crop_bottom: обрезать нижние N% кадра (пол/земля).
     """
     mask = (depth > threshold).astype(np.uint8) * 255
+    # Обрезка нижней части (пол/земля)
+    if crop_bottom > 0:
+        h = mask.shape[0]
+        cut = int(h * crop_bottom / 100)
+        mask[h - cut:, :] = 0
     # Морфология: убираем шум, заполняем дыры (aggressive)
     kernel_large = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
     kernel_small = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -134,7 +140,7 @@ def composite_frame(original_bgr, text_rgba, fg_mask):
 
 def process_video(input_path, output_path, text, depth_threshold=0.45,
                    feather=15, font_path="/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-                   font_size=96, max_frames=None):
+                   font_size=96, max_frames=None, crop_bottom_pct=0):
     """Основной pipeline: видео → depth → mask → composite → видео."""
 
     # Получаем info о видео
@@ -187,7 +193,8 @@ def process_video(input_path, output_path, text, depth_threshold=0.45,
             depth = estimate_depth(depth_pipe, img_pil)
             mask = depth_to_foreground_mask(depth, threshold=depth_threshold,
                                             feather=feather, prev_mask=prev_mask,
-                                            temporal_blend=0.65)
+                                            temporal_blend=0.65,
+                                            crop_bottom=crop_bottom_pct)
             prev_mask = mask.copy()
             cv2.imwrite(os.path.join(masks_dir, fp.name), mask)
 
@@ -254,6 +261,8 @@ def main():
                     help="Путь к шрифту")
     ap.add_argument("--max-frames", type=int, default=None,
                     help="Макс. кадров для обработки (для тестов)")
+    ap.add_argument("--crop-bottom", type=int, default=0,
+                    help="Обрезать нижние N%% кадра из маски (пол/земля)")
     args = ap.parse_args()
 
     ok = process_video(
@@ -263,6 +272,7 @@ def main():
         font_path=args.font_path,
         font_size=args.font_size,
         max_frames=args.max_frames,
+        crop_bottom_pct=args.crop_bottom,
     )
     sys.exit(0 if ok else 1)
 
