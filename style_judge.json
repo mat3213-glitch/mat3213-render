@@ -3,58 +3,54 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": false,
-      "score": 2.0,
+      "score": 0,
       "votes": "0/1",
-      "status": "отклонён",
-      "reason": "Кадр слишком тёмный, холодный чёрно-зелёный тон не соответствует deep teal. Отсу"
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 4.0,
+      "score": 0,
       "votes": "0/1",
-      "status": "отклонён",
-      "reason": "Тон слишком тёплый, не соответствует deep teal. Световой акцент не соответствует"
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": false,
-      "score": 3.0,
+      "score": 0,
       "votes": "0/1",
-      "status": "отклонён",
-      "reason": "Тон слишком тёмный, холодный чёрно-зелёный тон не соответствует deep teal. Отсут"
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 9.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Кадр соответствует deep teal, холодный тон и приглушённый свет, присутствует дым"
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Кадр соответствует deep teal, холодный тон и приглушённый свет, присутствует дым"
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_green_mid_soft",
-      "keep": true,
-      "score": 10.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Кадр соответствует deep teal, холодный тон и приглушённый свет, присутствует дым"
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     }
   ],
-  "recommend_merge": [
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
-  ],
+  "recommend_merge": [],
   "disputed": [],
-  "_generated": "2026-08-25",
+  "_generated": "2026-08-26",
   "_judge": "gh-vision-ensemble(1/5)"
 }
