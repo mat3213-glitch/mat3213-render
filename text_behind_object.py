@@ -75,8 +75,8 @@ def depth_to_foreground_mask(depth, threshold=0.45, feather=15,
 
 
 def create_text_layer(text, width, height, font_path, font_size,
-                       color=(255, 255, 255, 230), shadow=True):
-    """Создаёт RGBA-слой с текстом по центру."""
+                       color=(255, 255, 255, 230), shadow=True, pos=None):
+    """Создаёт RGBA-слой с текстом. pos=(x,y) — центр текста; None = по центру кадра."""
     img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     try:
@@ -87,13 +87,17 @@ def create_text_layer(text, width, height, font_path, font_size,
 
     bbox = draw.textbbox((0, 0), text, font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    x = (width - tw) // 2
-    y = (height - th) // 2
+    if pos is not None:
+        x = pos[0] - tw // 2
+        y = pos[1] - th // 2
+    else:
+        x = (width - tw) // 2
+        y = (height - th) // 2
 
     # Тень для читаемости
     if shadow:
-        for dx, dy in [(2, 2), (3, 3)]:
-            draw.text((x + dx, y + dy), text, fill=(0, 0, 0, 140), font=font)
+        for dx, dy in [(3, 3), (5, 5)]:
+            draw.text((x + dx, y + dy), text, fill=(0, 0, 0, 180), font=font)
     draw.text((x, y), text, fill=color, font=font)
     return img
 
@@ -204,21 +208,27 @@ def process_video(input_path, output_path, text, depth_threshold=0.45,
             if idx % 25 == 0 or idx == len(frame_files):
                 print(f"  [{idx}/{len(frame_files)}] depth+mask готово")
 
-        # Step 3: Текстовый слой
-        print("[3/4] Создание текстового слоя...")
-        text_rgba = create_text_layer(text, width, height, font_path, font_size)
-        text_rgba.save(os.path.join(text_dir, 'text.png'))
-
-        # Step 4: Композит
-        print("[4/4] Композитинг...")
+        # Step 3+4: Композит с текстом позади объекта (текст = на centroid foreground)
+        print("[3/4] Композитинг (текст за объектом)...")
         for idx, fp in enumerate(frame_files, 1):
             original = cv2.imread(str(fp))
             mask = cv2.imread(str(os.path.join(masks_dir, fp.name)), cv2.IMREAD_GRAYSCALE)
+
+            # Находим центр mass foreground объекта
+            moments = cv2.moments(mask)
+            if moments["m00"] > 0:
+                cx = int(moments["m10"] / moments["m00"])
+                cy = int(moments["m01"] / moments["m00"])
+            else:
+                cx, cy = width // 2, height // 2
+
+            # Текст позиционируется по центру объекта
+            text_rgba = create_text_layer(text, width, height, font_path, font_size, pos=(cx, cy))
             composite = composite_frame(original, text_rgba, mask)
             cv2.imwrite(os.path.join(comp_dir, fp.name), composite)
 
             if idx % 25 == 0 or idx == len(frame_files):
-                print(f"  [{idx}/{len(frame_files)}] composite готово")
+                print(f"  [{idx}/{len(frame_files)}] composite @ ({cx},{cy})")
 
         # Собираем видео
         print("Сборка видео...")
