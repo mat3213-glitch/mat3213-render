@@ -1,10 +1,10 @@
-# Repo Scout — 2026-08-26T10:34:52.628157
+# Repo Scout — 2026-08-27T20:10:13.737606
 Всего в шортлисте: 1
-- **Moyan557/interior-cinematography-prompt** ⭐1 [craft]
-  - https://github.com/Moyan557/interior-cinematography-prompt
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: cinematography prompt
+- **lawyerch-dev/cc-ffmpeg-xfade** ⭐0 [video]
+  - https://github.com/lawyerch-dev/cc-ffmpeg-xfade
+  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
+  - 🔎 evidence: xfade easing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий генерирует промпты для кинематографических движений камеры в интерьерах для AI-видео. Он закрывает потребность в проверяемых операторских словарях и схемах промптов для управляемой i2v-моторики через облачные генераторы. Интеграция оправдана низкой стоимостью, но из-за высокого риска дублирования следует брать только новые, уникальные формулировки, избегая повторов с существующими camera_moves.json и prompt_writer.
-  - 📄 室内空间电影感运镜分镜与AI视频提示词生成器，兼容MiniMax H3
+  - ♻ duplicate-risk: medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
+  - 💡 Этот репозиторий предлагает сборку FFmpeg с xfade-easing и GLSL-переходами типа "page curl" для генерации видео. Он решает проблему отсутствия органичных стыков, предоставляя "нецифровые" переходы поверх уже используемого FFmpeg xfade. Низкая стоимость интеграции оправдана, так как добавляет уникальный органичный примитив, несмотря на наличие базовых функций.
+  - 📄 Pre-built FFmpeg with xfade-easing — GLSL page curl transitions for video generation
