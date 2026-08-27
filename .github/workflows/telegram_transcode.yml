@@ -1,0 +1,45 @@
+name: Telegram delivery transcode
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Source video path relative to Content factory/ on Yandex Disk"
+        required: true
+        type: string
+      destination:
+        description: "Output video path relative to Content factory/ on Yandex Disk"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  transcode:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Install ffmpeg and rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg rclone
+      - name: Configure Yandex Disk
+        env:
+          YDRIVE_CLIENT_ID: ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN: ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" > "$HOME/.config/rclone/rclone.conf"
+      - name: Make Telegram-safe copy
+        env:
+          SOURCE: ${{ inputs.source }}
+          DESTINATION: ${{ inputs.destination }}
+        run: |
+          rclone copyto "ydrive:Content factory/$SOURCE" source.mp4
+          ffmpeg -y -i source.mp4 -vf 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2' \
+            -c:v libx264 -preset medium -b:v 550k -maxrate 600k -bufsize 1200k -pix_fmt yuv420p \
+            -c:a aac -b:a 48k -movflags +faststart telegram.mp4
+          test "$(stat -c%s telegram.mp4)" -le 20000000
+          rclone copyto telegram.mp4 "ydrive:Content factory/$DESTINATION"
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 telegram.mp4
