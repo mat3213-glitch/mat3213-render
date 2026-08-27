@@ -199,6 +199,10 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
         vf = f"{speed_vf}{cover},fps=25,setsar=1"
         if effect_vf:
             vf += f",{effect_vf}"
+        # A precise source slice can end a few frames before the transition tail
+        # (especially after time mapping to a beat). Hold its last real frame for
+        # that tail instead of shortening the EDL or replaying the source start.
+        vf += ",tpad=stop_mode=clone:stop_duration=2"
         ok = ff([*input_args, "-vf", vf, *common])
     return out if ok else None
 
