@@ -45,18 +45,27 @@ from analyze import Segment  # noqa: E402
 
 
 def reslice_to_beat_grid(segments: list[Segment], bpm: float,
-                        beats_per_segment: int = 6) -> list[Segment]:
+                        beats_per_segment: int = 6,
+                        audio_duration: float | None = None) -> list[Segment]:
     """Rewrite energy-grouped segments to a uniform beat grid.
 
     Each output segment spans `beats_per_segment` beats.  Energy classification
     is dropped — every slice is treated the same; the visual rhythm comes from
     the cuts and the xfade pattern, not the energy curve.  The first slice
     starts at t=0 so the audio timeline stays anchored.
+
+    If `segments` is empty (caller skipped analyze_track and provided an explicit
+    BPM), we fall back to `audio_duration` to size the grid.
     """
-    if not segments:
-        return []
+    if bpm <= 0:
+        raise ValueError(f"invalid BPM {bpm}")
     beat = 60.0 / bpm
-    total_dur = segments[-1].track_pos + segments[-1].duration
+    if segments:
+        total_dur = segments[-1].track_pos + segments[-1].duration
+    elif audio_duration is not None and audio_duration > 0:
+        total_dur = audio_duration
+    else:
+        return []
     n_full = int(total_dur / (beat * beats_per_segment))
     out: list[Segment] = []
     for i in range(n_full):
@@ -311,13 +320,23 @@ def main() -> None:
 
     track, src_files, src_durations = download_inputs(work, job)
 
-    # 1. Audio analysis
-    bpm, raw_segments = cpj.analyze_track(track, duration=duration, seed=seed)
-    print(f"  raw BPM={bpm:.2f}  segments={len(raw_segments)}")
+    # 1. Audio analysis (BPM from job.json if provided, else aubio on a longer window)
+    explicit_bpm = job.get("bpm")
+    if explicit_bpm:
+        bpm = float(explicit_bpm)
+        # Skip aubio entirely — produce a single dummy segment so the caller still
+        # receives (bpm, segments).  reslice_to_beat_grid does not need the segments.
+        raw_segments = []
+        print(f"  using explicit BPM={bpm:.2f} from job.json")
+    else:
+        bpm, raw_segments = cpj.analyze_track(track, duration=duration, seed=seed)
+        print(f"  raw BPM={bpm:.2f}  segments={len(raw_segments)}")
 
     # 2. Reslice to uniform beat grid
-    grid_segments = reslice_to_beat_grid(raw_segments, bpm, beats_per_segment=beats_per_seg)
-    print(f"  grid segments={len(grid_segments)} (each {beats_per_seg} beats)")
+    grid_segments = reslice_to_beat_grid(raw_segments, bpm,
+                                          beats_per_segment=beats_per_seg,
+                                          audio_duration=duration)
+    print(f"  grid segments={len(grid_segments)} (each {beats_per_seg} beats @ {bpm:.2f} BPM)")
 
     # 3. Render each variant
     for variant in variants:
