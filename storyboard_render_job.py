@@ -17,6 +17,7 @@ Environment: JOB_ID
 """
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -55,6 +56,33 @@ COVER = {
     "landscape": "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080",
 }
 OVERLAY_OPACITY = 0.45
+
+# One named effect per shot: the EDL shuffles the full approved effects.json
+# palette before reuse.  These vertical-safe recipes intentionally cap every
+# synthetic crop/zoom below 2x.  `flash` is assigned only to kick-aligned drop
+# shots by beat_storyboard.py.
+EFFECT_VF = {
+    "faded_film": "unsharp=5:5:1.0,eq=contrast=0.88:brightness=0.03:gamma=1.05,vignette=PI/3.5",
+    "hue_rotate": "hue=h=150:s=0.7",
+    "color_pulse": "hue=h=90:s=1.45,eq=contrast=1.16:brightness=-0.02",
+    "bleach_negate": "negate,eq=contrast=0.85:saturation=0.4:brightness=0.06:gamma=1.1",
+    "film_burn": "eq=brightness=0.08:contrast=1.2:saturation=1.18:gamma=0.92,noise=alls=12:allf=t+u",
+    "mirror_split": "hflip",
+    "screen_interference": "drawgrid=w=0:h=2:t=1:color=white@0.06,noise=alls=14:allf=t+u,eq=brightness=0.025*sin(t*18):contrast=1.12:saturation=0.7",
+    "parallax": "scale=1620:2880,crop=1080:1920:x='270+180*sin(t*0.22)':y='480+300*cos(t*0.18)'",
+    "slide_crop": "scale=1620:2880,crop=1080:1920:x='540*t/4':y=480",
+    "corner_sweep": "scale=1620:2880,crop=1080:1920:x='270+170*sin(t*0.8)':y='480+280*cos(t*0.7)'",
+    "zoom_drift": "scale=1620:2880,crop=1080:1920:x='270+160*sin(t*0.3)':y='480+240*cos(t*0.25)'",
+    "diagonal_crop": "scale=1620:2880,crop=1080:1920:x='540*t/4':y='960*t/4'",
+    "strobo": "eq=brightness='if(lt(mod(t,0.30),0.06),0.32,0)'",
+    "flash": "eq=brightness='if(lt(t,0.065),0.72,0)'",
+    "split_drift": "crop=1080:960:0:0,pad=1080:1920:0:0:color=black,vflip,blend=all_mode=screen:all_opacity=0.5",
+    "grid_2x2": "scale=540:960,tile=2x2",
+    "split_converge": "vflip,blend=all_mode=screen:all_opacity=0.52",
+    "negative_echo": "negate,eq=contrast=0.9:saturation=0.65",
+    "self_blend_reverse": "tblend=all_mode=average",
+    "motion_pan": "scale=1620:2880,crop=1080:1920:x='270+210*sin(t*0.42)':y='480+340*cos(t*0.31)'",
+}
 
 
 def yd_get(remote_path: str, local: Path) -> bool:
@@ -136,6 +164,8 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
     chroma = base.get("chroma") if base.get("kind") != "generated" else None
     speed = float(shot.get("speed") or 1.0)
     speed_vf = f"setpts=PTS/{speed:.4f}," if speed != 1.0 else ""
+    effect = str(shot.get("effect") or "").strip()
+    effect_vf = EFFECT_VF.get(effect, "")
     common = ["-t", f"{dur:.3f}", "-r", "25", "-pix_fmt", "yuv420p",
               "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-an", str(out)]
     if chroma and fill:
@@ -160,8 +190,16 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
                 f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps=25,setsar=1")
         ok = ff(["-i", str(bfile), "-vf", zoom, *common])
     else:
-        ok = ff(["-stream_loop", "-1", "-i", str(bfile),
-                 "-vf", f"{speed_vf}{cover},fps=25,setsar=1", *common])
+        # `source_start` makes EDL coverage real: no more replaying the first
+        # seconds of every Pinterest source.  Legacy boards without it retain
+        # looping behaviour for compatibility.
+        source_start = shot.get("source_start")
+        input_args = (["-ss", f"{float(source_start):.3f}", "-i", str(bfile)]
+                      if source_start is not None else ["-stream_loop", "-1", "-i", str(bfile)])
+        vf = f"{speed_vf}{cover},fps=25,setsar=1"
+        if effect_vf:
+            vf += f",{effect_vf}"
+        ok = ff([*input_args, "-vf", vf, *common])
     return out if ok else None
 
 
