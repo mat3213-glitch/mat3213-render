@@ -328,8 +328,17 @@ def main():
             hl = 0.0
         print(f"  highlight_offset={hl:.1f}с (интро до него отрезано)", flush=True)
     result = WORKDIR / "result.mp4"
+    # xfade rounds frame boundaries. Across a long EDL this can leave the assembled
+    # video a few frames short of its musical duration (e.g. 191.6s for a 192.0s
+    # contract). Normalize after the edit: pad only with the last real frame, then
+    # trim exactly to the audio window. This preserves every cut and keeps A/V sync.
+    timeline_vf = (
+        f"tpad=stop_mode=clone:stop_duration=2,trim=duration={reel_dur:.3f},"
+        "setpts=PTS-STARTPTS"
+    )
     if not ff(["-i", str(concat), "-ss", f"{hl:.3f}", "-t", f"{reel_dur:.3f}", "-i", str(track),
-               "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "veryfast",
+               "-map", "0:v", "-map", "1:a", "-vf", timeline_vf,
+               "-c:v", "libx264", "-preset", "veryfast",
                "-crf", "21", "-c:a", "aac", "-b:a", "192k", "-shortest",
                "-movflags", "+faststart", str(result)]):
         sys.exit("mux не вышел")
