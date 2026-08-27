@@ -1,0 +1,69 @@
+name: Director Shuffle (round-robin + cyclic-shuffle, A/B compare)
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID (e.g. 2026-08-27/hurts_preview)'
+        required: true
+      variants:
+        description: 'Variants to render (e.g. A or A,B)'
+        required: false
+        default: 'A,B'
+
+concurrency:
+  group: director-shuffle
+  cancel-in-progress: false
+
+jobs:
+  shuffle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: '3.11'
+
+      - name: Cache apt packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was v4
+        with:
+          path: /var/cache/apt/archives
+          key: apt-ffmpeg-rclone-${{ runner.os }}-v1
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+
+      - name: Install Python deps
+        run: pip install aubio numpy scipy pillow
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run director_shuffle_job.py
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          SHUFFLE_VARIANTS: ${{ inputs.variants }}
+        run: python -u director_shuffle_job.py
+
+      - name: Write error status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/status.txt" \
+            <<< "error: director_shuffle workflow failed" || true
