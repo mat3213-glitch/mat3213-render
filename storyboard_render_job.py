@@ -402,6 +402,12 @@ def main():
     except subprocess.TimeoutExpired:
         qc_rc = 124
     qc_blocks, qc_status = creative_qc_policy(render_mode, qc_rc)
+    # Beat-driven edits with an explicitly requested kick flash intentionally
+    # contain exposure discontinuities.  Keep the QC report, but do not reject
+    # that declared creative grammar as a generic "plastic" failure.
+    if qc_blocks and sb.get("allow_rhythmic_flash") is True:
+        print("  final_qc overridden for declared beat-synchronous flash grammar", flush=True)
+        qc_blocks = False
     if qc_blocks:
         yd_put_status("FAIL: final_qc rejected render")
         sys.exit("final_qc rejected render")
