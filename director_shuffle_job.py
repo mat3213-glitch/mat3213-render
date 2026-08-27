@@ -75,27 +75,27 @@ def assign_round_robin(segments: list[Segment], sources: list[str]) -> list[Segm
     if the pool is at least as large as two consecutive segment counts (it usually is)."""
     if not sources:
         return segments
+    out: list[Segment] = []
     cursor = 0
     last = ""
     for seg in segments:
         if cursor >= len(sources) or sources[cursor] == last:
             # pool exhausted or would repeat last; pick the next slot, skip if equal
+            chosen = sources[cursor % len(sources)]
             for off in range(len(sources)):
                 cand = sources[(cursor + off) % len(sources)]
                 if cand != last:
-                    seg = replace(seg, source=cand)
+                    chosen = cand
                     cursor = (cursor + off + 1) % len(sources)
-                    last = cand
                     break
-            else:
-                seg = replace(seg, source=sources[cursor % len(sources)])
-                cursor = (cursor + 1) % len(sources)
-                last = sources[cursor % len(sources)]
+            out.append(replace(seg, source=chosen))
+            last = chosen
         else:
-            seg = replace(seg, source=sources[cursor])
+            chosen = sources[cursor]
+            out.append(replace(seg, source=chosen))
             cursor += 1
-            last = seg.source
-    return segments
+            last = chosen
+    return out
 
 
 def assign_cyclic_shuffle(segments: list[Segment], sources: list[str],
