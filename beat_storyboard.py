@@ -110,25 +110,36 @@ def main() -> None:
             return max(0.75, min(1.1, base))
         return max(0.6, min(0.95, base))  # low / intro / outro — calm
 
-    # Build global beat slots.  A long high-energy run (>= 6s) is treated as a
-    # drop: split into one-beat slots so flash lands on each kick.  Short high
-    # bursts / medium / low stay as single slots.
+    # Build global beat slots.  A contiguous high-energy run (>= 6s) is a drop:
+    # split into one-beat slots so flash lands on each kick.  Short high bursts /
+    # medium / low stay as single slots.  analyze_track splits a continuous drop
+    # into many 1-3s sub-segments, so coalesce consecutive high groups first.
     beat = 60.0 / bpm
     slots: list[tuple[float, float, str, bool]] = []  # (t_start, d, energy, drop)
     first = groups[0].track_pos
     if first > 0.04:
         slots.append((0.0, first, "low", False))
-    for g in groups:
-        t, left, en = float(g.track_pos), float(g.duration), g.energy
-        is_drop = (en == "high") and left >= 6.0
-        if is_drop:
-            while left > 0.08:
-                d = min(beat, left)
-                slots.append((t, d, "high", True))
-                t += d
-                left -= d
+    i = 0
+    while i < len(groups):
+        t0, d0, en = float(groups[i].track_pos), float(groups[i].duration), groups[i].energy
+        if en == "high":
+            run_t, run_d = t0, 0.0
+            while i < len(groups) and groups[i].energy == "high":
+                run_d += float(groups[i].duration)
+                i += 1
+            if run_d >= 6.0:
+                t = run_t
+                left = run_d
+                while left > 0.08:
+                    dd = min(beat, left)
+                    slots.append((t, dd, "high", True))
+                    t += dd
+                    left -= dd
+            else:
+                slots.append((run_t, run_d, "high", False))
         else:
-            slots.append((t, left, en, False))
+            slots.append((t0, d0, en, False))
+            i += 1
 
     # Optional preview slice: keep only shots whose global start is in [S, S+W]
     # and snap audio_start to the first retained shot boundary (no leading gap).
