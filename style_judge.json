@@ -6,47 +6,47 @@
       "score": 9.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Правильный холодный teal."
+      "reason": "близок к deep teal, холодный нуар, дымка"
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": true,
-      "score": 9.0,
+      "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Правильный холодный teal."
+      "reason": "холодный, сине-зелёный сдвиг, но не deep teal"
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 9.0,
+      "score": 7.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Правильный холодный teal."
+      "reason": "холодный, не deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 9.0,
+      "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Правильный холодный teal."
+      "reason": "холодный, не deep teal"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 9.0,
+      "score": 7.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Правильный холодный teal."
+      "reason": "холодный, не deep teal"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 0.0,
+      "score": 1.0,
       "votes": "0/1",
       "status": "отклонён",
-      "reason": "Неправильный теплый грейд."
+      "reason": "слишком тёплый, не deep teal"
     }
   ],
   "recommend_merge": [
@@ -57,6 +57,6 @@
     "scout_neutral_night_soft_2"
   ],
   "disputed": [],
-  "_generated": "2026-08-27",
+  "_generated": "2026-08-28",
   "_judge": "gh-vision-ensemble(1/5)"
 }
