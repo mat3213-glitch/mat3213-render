@@ -84,7 +84,11 @@ def main() -> None:
     pi = 0
 
     def uniq_name(p: Path) -> str:
-        # uniquize produces ref_<pin>_uniq.mp4 from ref_<pin>.mp4
+        # uniquize produces ref_<pin>_uniq.mp4 from ref_<pin>.mp4.  When the source
+        # dir already holds uniqued files (ref_<pin>_uniq.mp4) the generated clip
+        # keeps that exact name — never double-suffix to _uniq_uniq.
+        if p.stem.endswith("_uniq"):
+            return p.stem + ".mp4"
         return p.stem + "_uniq.mp4"
 
     def next_effect(energy: str, drop: bool) -> str:
