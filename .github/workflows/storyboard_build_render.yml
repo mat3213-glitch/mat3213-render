@@ -1,0 +1,132 @@
+name: Storyboard Build + Render
+
+# Self-contained: pulls uniquized sources + track from YaD, generates the EDL
+# (beat_storyboard), assembles render_jobs/<JOB_ID> and renders — ALL on the fast
+# runner, so the buku never has to move the source pool (YaD throttle).
+#
+# preview mode: window [start, start+window] with audio_start snapped to a beat.
+# full mode:   requires --preview-job-id/--preview-sha256 + the preview's
+#              render_receipt.json on YaD + approval.json pre-uploaded to
+#              render_jobs/<JOB_ID>/approval.json (approved_by=yaromat).
+
+on:
+  workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Render job id (render_jobs/<JOB_ID>)'
+        required: true
+      sources_uniq:
+        description: 'YaD folder containing ref_*_uniq.mp4 (without ydrive:)'
+        required: true
+      track_remote:
+        description: 'YaD path to track mp3 (without ydrive:)'
+        required: true
+      mode:
+        description: 'preview | full'
+        required: true
+        default: 'preview'
+      seed:
+        description: 'random seed'
+        required: false
+        default: '17509'
+      bpm:
+        description: 'BPM override'
+        required: false
+        default: '127.98'
+      start:
+        description: 'preview start (s)'
+        required: false
+        default: ''
+      window:
+        description: 'preview window (s)'
+        required: false
+        default: '30'
+      duration:
+        description: 'full duration (s), default auto'
+        required: false
+        default: ''
+      preview_job_id:
+        description: 'for full: the approved preview job id'
+        required: false
+        default: ''
+      preview_sha256:
+        description: 'for full: sha256 of preview result.mp4'
+        required: false
+        default: ''
+
+jobs:
+  build_render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: '3.11'
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone fonts-dejavu-core
+      - name: Install Python deps
+        run: pip install aubio numpy scipy pillow
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Pull sources + track
+        env:
+          SOURCES_UNIQ: ${{ inputs.sources_uniq }}
+          TRACK_REMOTE: ${{ inputs.track_remote }}
+        run: |
+          mkdir -p /tmp/wd/sources /tmp/wd/out
+          rclone copy "ydrive:$SOURCES_UNIQ" /tmp/wd/sources
+          rclone copyto "ydrive:$TRACK_REMOTE" /tmp/wd/track.mp3
+          ls -la /tmp/wd/sources | head
+      - name: Assemble job (generate storyboard + genered)
+        env:
+          MODE: ${{ inputs.mode }}
+          SEED: ${{ inputs.seed }}
+          BPM: ${{ inputs.bpm }}
+          START: ${{ inputs.start }}
+          WINDOW: ${{ inputs.window }}
+          DURATION: ${{ inputs.duration }}
+          PREV_JOB: ${{ inputs.preview_job_id }}
+          PREV_SHA: ${{ inputs.preview_sha256 }}
+          JOB_ID: ${{ inputs.job_id }}
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          CMD="python screenplay_pipeline/storyboard_assemble.py --track /tmp/wd/track.mp3 --sources-dir /tmp/wd/sources --out-dir /tmp/wd/out --mode $MODE --seed $SEED --bpm $BPM"
+          [ -n "$START" ] && CMD="$CMD --start $START"
+          [ -n "$WINDOW" ] && CMD="$CMD --window $WINDOW"
+          [ -n "$DURATION" ] && CMD="$CMD --duration $DURATION"
+          [ -n "$PREV_JOB" ] && CMD="$CMD --preview-job-id $PREV_JOB --preview-sha256 $PREV_SHA"
+          bash -c "$CMD"
+          # upload job folder to YaD
+          rclone copyto /tmp/wd/out/storyboard.json "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/storyboard.json"
+          rclone copyto /tmp/wd/track.mp3 "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/track.mp3"
+          rclone copy /tmp/wd/out/generated "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated"
+      - name: Render
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python -u storyboard_render_job.py
+      - name: Write error status on failure
+        if: failure()
+        env:
+          JOB_ID: ${{ inputs.job_id }}
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/status.txt" \
+            <<< "error: workflow failed" || true
