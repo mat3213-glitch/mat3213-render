@@ -55,6 +55,40 @@ COVER = {
     "square":    "scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080",
     "landscape": "scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080",
 }
+# Landscape source dropped into a portrait frame: hard fill-crop would magnify
+# ~2.7-3.2x (the "зум слишком близко" complaint).  Show the full frame at natural
+# ~1x on a softly blurred/darkened background instead — never re-crop beyond a
+# tasteful edge.  [[yak-zoom-1.5x]]  Vertical sources keep the plain fill-crop.
+_COVER_CONTAIN = {
+    "vertical":  "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2",
+    "square":    "scale=1080:1080:force_original_aspect_ratio=decrease,pad=1080:1080:(ow-iw)/2:(oh-ih)/2",
+    "landscape": "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2",
+}
+_BLUR_BG = ",boxblur=24:3,eq=brightness=-0.07:saturation=0.65"
+
+
+def probe_aspect(path: Path) -> float:
+    """Source w/h ratio; 1.0 on any probe failure."""
+    try:
+        r = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0", str(path)],
+            capture_output=True, text=True)
+        w, h = (r.stdout.strip().split(",")[:2]
+                if r.stdout.strip() else ("0", "0"))
+        return float(w) / float(h) if float(h) > 0 else 1.0
+    except Exception:
+        return 1.0
+
+
+def blurpad_cover(bfile: Path, fmt: str) -> str | None:
+    """landscape-in-portrait → blurred-bg composite (contain), else None (plain cover)."""
+    aspect = probe_aspect(bfile)
+    pad = {"vertical": 9.0 / 16.0, "square": 1.0, "landscape": 16.0 / 9.0}[fmt]
+    # only when the source is noticeably more landscape than the target
+    if aspect >= pad * 1.28 and fmt == "vertical":
+        return _COVER_CONTAIN[fmt]
+    return None
 OVERLAY_OPACITY = 0.45
 
 # One named effect per shot: the EDL shuffles the full approved effects.json
@@ -141,7 +175,7 @@ def pull_generated(path: str) -> Path | None:
     return None
 
 
-def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | None:
+def render_shot(i: int, shot: dict, cover: str, fill: Path | None, fmt: str) -> Path | None:
     """Кадр = base-футаж. Если у base ЗЕЛЁНАЯ зона (chroma) и есть fill → целевое наложение:
     фон-заливка (арт/он-тема) + винил с вырезанным зелёным сверху. БЕЗ футаж-на-футаж/оверлеев
     ([[feedback_no_footage_on_footage]]). base.kind=='generated' (Фаза 1 AI-генерация по сценам) —
@@ -196,14 +230,26 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None) -> Path | Non
         source_start = shot.get("source_start")
         input_args = (["-ss", f"{float(source_start):.3f}", "-i", str(bfile)]
                       if source_start is not None else ["-stream_loop", "-1", "-i", str(bfile)])
-        vf = f"{speed_vf}{cover},fps=25,setsar=1"
-        if effect_vf:
-            vf += f",{effect_vf}"
-        # A precise source slice can end a few frames before the transition tail
-        # (especially after time mapping to a beat). Hold its last real frame for
-        # that tail instead of shortening the EDL or replaying the source start.
-        vf += ",tpad=stop_mode=clone:stop_duration=2"
-        ok = ff([*input_args, "-vf", vf, *common])
+        tail = ",tpad=stop_mode=clone:stop_duration=2"
+        contain = blurpad_cover(bfile, fmt)
+        if contain:
+            # landscape-in-portrait → full frame on a blurred/darkened bg (contains
+            # the whole shot; no aggressive re-crop).  Effects (if any) run after
+            # compositing, so they cover the whole frame uniformly.
+            fc = (f"[0:v]{speed_vf}split=2[bg][fg];"
+                  f"[bg]{cover}{_BLUR_BG}[bg];"
+                  f"[fg]{contain},fps=25,setsar=1[fg];"
+                  f"[bg][fg]overlay=0:0")
+            if effect_vf:
+                fc += f",{effect_vf}"
+            fc += f"{tail}[o]"
+            ok = ff([*input_args, "-filter_complex", fc, "-map", "[o]", *common])
+        else:
+            vf = f"{speed_vf}{cover},fps=25,setsar=1"
+            if effect_vf:
+                vf += f",{effect_vf}"
+            vf += tail
+            ok = ff([*input_args, "-vf", vf, *common])
     return out if ok else None
 
 
@@ -287,7 +333,7 @@ def main():
     for i, sh in enumerate(shots):
         d_out = plan[i + 1][1] if i + 1 < len(shots) else 0.0
         rdur = _trn.render_tail(float(sh["t_dur"]), d_out)
-        out = render_shot(i, {**sh, "t_dur": rdur}, cover, fill)
+        out = render_shot(i, {**sh, "t_dur": rdur}, cover, fill, fmt)
         if out:
             rendered.append((out, sh, rdur))
             b = sh.get("base") or {}

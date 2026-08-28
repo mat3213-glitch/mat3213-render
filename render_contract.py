@@ -25,7 +25,7 @@ class RenderContractError(ValueError):
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _JOB_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$")
 _ALLOWED_MODES = {"preview", "full"}
-MAX_PREVIEW_SECONDS = 15.0
+MAX_PREVIEW_SECONDS = 30.0
 
 
 def requested_duration(job: dict[str, Any]) -> float:
