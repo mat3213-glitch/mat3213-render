@@ -11,7 +11,7 @@ jobs:
   render:
     runs-on: ubuntu-latest
     # Full-track video pools are much longer than review proxies.
-    timeout-minutes: 90
+    timeout-minutes: 180
 
     steps:
       - name: Checkout
