@@ -10,7 +10,8 @@ on:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Full-track video pools are much longer than review proxies.
+    timeout-minutes: 90
 
     steps:
       - name: Checkout
@@ -31,7 +32,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --fix-missing ffmpeg rclone
-          pip install --quiet scenedetect[opencv]
+          pip install --quiet scenedetect[opencv] aubio numpy scipy
 
       - name: Configure rclone ydrive
         env:

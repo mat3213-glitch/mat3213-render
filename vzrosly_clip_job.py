@@ -546,8 +546,9 @@ def build_timeline(variant="full", bpm=87.0, seed=42, calm=False, split=False, s
     return _timeline_collage(variant, bpm, seed, calm, split)
 
 
-def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: int):
-    """Use every footage source once before any repeat, locked to the track BPM."""
+def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: int,
+                              energy_groups=None):
+    """Build a pool EDL with cuts on analysed high-energy drop boundaries."""
     if not keys:
         sys.exit("video_pool: пустой список видео")
     if target < 4.0:
@@ -557,37 +558,57 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
     beat = 60.0 / bpm
     intro = min(2.0 * beat, target * 0.12)
     outro = min(3.0 * beat, target * 0.16)
-    raw: list[tuple[str, float, str]] = [(keys[0], intro, "intro")]
-
-    # First pass is deliberately stable: all pool members are visible before reuse.
-    raw.extend((key, 1.5 * beat, "groove") for key in keys)
+    raw: list[tuple[str, float, str, bool]] = [(keys[0], intro, "intro", False)]
+    if energy_groups:
+        cursor = intro
+        for group in energy_groups:
+            start, dur, energy = float(group.track_pos), float(group.duration), group.energy
+            end = start + dur
+            if end <= cursor + 0.03:
+                continue
+            if start > cursor + 0.03:
+                raw.append((keys[len(raw) % len(keys)], start - cursor, "groove", False))
+                cursor = start
+            take = min(end, target - outro) - cursor
+            if take <= 0.08:
+                break
+            is_drop = energy == "high"
+            if is_drop:
+                # High groups start on aubio beat positions.  Keep every beat-sized
+                # slot as a cut so the drop does not fall back to generic BPM cuts.
+                left = take
+                while left > 0.08:
+                    slot = min(beat, left)
+                    raw.append((keys[len(raw) % len(keys)], slot, "drop", True))
+                    left -= slot
+            else:
+                raw.append((keys[len(raw) % len(keys)], take, "groove", False))
+            cursor += take
+            if cursor >= target - outro - 0.03:
+                break
+    else:
+        # Preview fallback: every source appears before a repeat.
+        raw.extend((key, 1.5 * beat, "groove", False) for key in keys)
     rotation = list(keys)
     rng.shuffle(rotation)
     pos = 0
-    while True:
+    while sum(item[1] for item in raw) + outro < target:
         region = "breath" if len(raw) % 11 == 0 else "groove"
         dur = (3.0 if region == "breath" else 2.0) * beat
-        raw.append((rotation[pos % len(rotation)], dur, region))
+        remaining = target - outro - sum(item[1] for item in raw)
+        raw.append((rotation[pos % len(rotation)], min(dur, remaining), region, False))
         pos += 1
-        # vzrosly extends every source segment by its incoming xfade duration,
-        # so its final timeline equals the sum of these planned durations.
-        estimated = sum(item[1] for item in raw) + outro
-        if estimated >= target:
-            break
-    raw.append((rotation[pos % len(rotation)], outro, "outro"))
+    raw.append((rotation[pos % len(rotation)], outro, "outro", False))
 
     seq = []
-    for i, (key, dur, region) in enumerate(raw):
+    for i, (key, dur, region, is_drop) in enumerate(raw):
         if i == 0:
             tin, tdur = None, 0.0
-        elif region == "breath":
-            tin, tdur = rng.choice(["fadeblack", "dissolve"]), 0.30
-        elif region == "outro":
-            tin, tdur = "fadeblack", 0.35
         else:
-            tin, tdur = rng.choice(GROOVE_TR), 0.15
+            # A single blend grammar for every join, including a drop boundary.
+            tin, tdur = "fade", 1.75
         seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
-                        blend="none", tin=tin, tdur=tdur, region=region))
+                        blend="none", tin=tin, tdur=tdur, region=region, drop=is_drop))
 
     # xfade overlap is already included in each encoded segment. The final shot
     # absorbs rounding so the rendered body is exactly the requested duration.
@@ -733,7 +754,7 @@ def main():
     # сценарий stemcut: метки по стемам (demucs) вместо сетки долей бита.
     # job["stems"] = ПОЛНЫЙ путь на ЯД к <трек>_stems.json, включая префикс "Content factory/"
     # (yd_get зовёт rclone как есть; прежний комментарий врал и стоил падения рана 31078868209).
-    drum_cues, vocal_cues = [], []
+    drum_cues, vocal_cues, energy_groups = [], [], None
     if scenario == "stemcut":
         sj = WORK / "stems.json"
         if not yd_get(job.get("stems", ""), sj):
@@ -748,7 +769,16 @@ def main():
     if video_pool:
         if video_duration <= 0:
             sys.exit("video_pool: job['duration'] обязателен")
-        seq, total = build_video_pool_timeline(video_pool, video_duration, bpm, seed)
+        # Full-pool cuts are driven by the actual track energy, with high-energy
+        # groups retained as drop boundaries.  This runs only on GitHub Actions.
+        try:
+            from analyze import analyze_track
+            detected_bpm, energy_groups = analyze_track(
+                WORK / "track.mp3", duration=video_duration, seed=seed, start=audio_start)
+            print(f"  energy_map: groups={len(energy_groups)} bpm={detected_bpm:.2f}")
+        except Exception as e:
+            print(f"  WARN: energy_map unavailable ({e}); BPM fallback")
+        seq, total = build_video_pool_timeline(video_pool, video_duration, bpm, seed, energy_groups)
         scenario = "video_pool"
     else:
         seq, total = build_timeline(variant, bpm, seed, calm, split, scenario,
@@ -944,6 +974,12 @@ def main():
     if af_mode is True or af_mode == "out":
         af_parts.append(f"afade=t=out:st={afade_out}:d=1.5")
     af_chain = ",".join(af_parts) or "anull"
+    edge_fade = float(job.get("dark_fade_seconds", 0) or 0)
+    edge_chain = ""
+    if edge_fade > 0:
+        edge_fade = min(edge_fade, duration / 2.0)
+        edge_chain = (f",fade=t=in:st=0:d={edge_fade:.3f},"
+                      f"fade=t=out:st={max(0.0, duration-edge_fade):.3f}:d={edge_fade:.3f}")
     fc = (
         f"[0:v]fps={FPS},{grade},"
         f"format=gbrp,setpts=PTS-STARTPTS[v];"
@@ -953,7 +989,7 @@ def main():
         f"[b1][grt]blend=all_mode=screen:all_opacity={grt_op}[b2];"
         f"[b2]format=yuv420p,noise=alls={nz_str}:all_seed={nz_seed}:allf=t+u,"
         f"{vig}"
-        f"trim=duration={duration},setpts=PTS-STARTPTS{draw_chain}[vout]"
+        f"trim=duration={duration},setpts=PTS-STARTPTS{draw_chain}{edge_chain}[vout]"
     )
     silent = audio_mode == "none"
     cmd = [
