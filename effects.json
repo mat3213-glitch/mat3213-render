@@ -32,7 +32,7 @@
       "filter": "drawgrid=w=0:h=2:t=1:color=white@0.06,noise=alls=22:allf=t+u,eq=brightness=0.03*sin(t*18):contrast=1.15:saturation=0.6"
     },
     "parallax": {
-      "desc": "scale-up 1.35-1.65x + animated crop drift",
+      "desc": "scale-up 1.04-1.10x + animated crop drift",
       "_generator": "parallax_filter"
     },
     "slide_crop": {
@@ -78,7 +78,7 @@
     },
     "negative_echo": {
       "desc": "negate + screen blend с оригиналом",
-      "complex": "[0:v]split[a][b];[a]negate[na];[b][na]blend=all_mode=screen:all_opacity=0.5"
+      "complex": "[0:v]split[a][b];[a]negate,eq=brightness=-0.04[na];[b][na]blend=all_mode=screen:all_opacity=0.24"
     },
     "self_blend_reverse": {
       "desc": "клип поверх自己 инвертированной reverse-версии",
@@ -86,13 +86,13 @@
     },
     "motion_pan": {
       "desc": "2 копии едут в противоположные стороны + screen blend",
-      "complex": "[0:v]scale=1920:1080,split[a][b];[a]crop=1280:720:x='(640)*sin(t*0.3)':y='(180)*cos(t*0.25)',format=gbrp[ca];[b]crop=1280:720:x='(640)*cos(t*0.3)':y='(180)*sin(t*0.25)',format=gbrp[cb];[ca][cb]blend=all_mode=screen:all_opacity=0.55"
+      "complex": "[0:v]scale=1408:792,split[a][b];[a]crop=1280:720:x='64+48*sin(t*0.3)':y='36+28*cos(t*0.25)',format=gbrp[ca];[b]crop=1280:720:x='64+48*cos(t*0.3)':y='36+28*sin(t*0.25)',format=gbrp[cb];[ca][cb]blend=all_mode=screen:all_opacity=0.55"
     }
   },
 
   "chain_rules": {
-    "min_effects": 2,
-    "max_effects": 3,
+    "min_effects": 1,
+    "max_effects": 1,
     "must_include_one_vf": true,
     "complex_max": 1,
     "exclude_together": [["strobo", "flash"], ["split_drift", "grid_2x2", "split_converge"]]

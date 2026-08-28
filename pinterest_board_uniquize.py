@@ -55,42 +55,22 @@ def probe_fps(path: Path) -> float:
 
 
 def pick_chain(effects_db: dict, n: int | None = None) -> list[str]:
-    """Выбирает случайную цепочку из n эффектов (по правилам из JSON)."""
-    rules = effects_db["chain_rules"]
-    if n is None:
-        n = random.randint(rules["min_effects"], rules["max_effects"])
+    """Choose exactly one visible effect for one source video.
 
-    vf_names = list(effects_db["vf"].keys())
-    complex_names = list(effects_db["complex"].keys())
-    exclude = rules["exclude_together"]
-
-    chosen_vf = []
-    chosen_complex = []
-
-    for _ in range(n):
-        # Берём 1-2 vf + опционально 1 complex
-        if len(chosen_vf) < 2 and (not chosen_complex or len(chosen_vf) < 2):
-            pool = [x for x in vf_names if x not in chosen_vf]
-            if pool:
-                pick = random.choice(pool)
-                chosen_vf.append(pick)
-        if not chosen_complex and len(chosen_vf) >= 1 and random.random() < 0.35:
-            pool = [x for x in complex_names if x not in chosen_complex]
-            if pool:
-                pick = random.choice(pool)
-                # Проверяем exclude_together
-                if not any(set([pick]) & set(exc) and set(chosen_complex) & set(exc) for exc in exclude):
-                    chosen_complex.append(pick)
-
-    chain = chosen_vf + chosen_complex
-    if not chain:
-        chain = [random.choice(vf_names)]
-    return chain
+    ``bleach_negate`` remains available for manual diagnostics, but is excluded
+    from production randomization because a full-frame negative washes objects out.
+    """
+    del n  # The production contract is one effect, never an effect chain.
+    names = [*effects_db["vf"], *effects_db["complex"]]
+    production = [name for name in names if name != "bleach_negate"]
+    if not production:
+        raise ValueError("effects database has no production effects")
+    return [random.choice(production)]
 
 
 def gen_parallax_filter() -> str:
     """Параллакс: медленный дрейф oversized кадра."""
-    scale = round(random.uniform(1.35, 1.65), 2)
+    scale = round(random.uniform(1.04, 1.10), 2)
     sw = int(1280 * scale)
     sh = int(720 * scale)
     dx = sw - 1280
@@ -110,23 +90,23 @@ def gen_parallax_filter() -> str:
 
 
 def gen_slide_crop_filter() -> str:
-    """oversized кадр едет горизонтально."""
-    return "scale=1920:1080,crop=1280:720:'(1920-1280)*t/24':'(1080-720)/2'"
+    """Неглубокий горизонтальный дрейф, zoom не больше 1.10x."""
+    return "scale=1408:792,crop=1280:720:'64+48*sin(t*0.25)':'36'"
 
 
 def gen_corner_sweep_filter() -> str:
-    """crop по дуге из угла в угол."""
-    return "scale=1920:1080,crop=1280:720:x='320+200*sin(t*0.8)':y='180+120*cos(t*0.8)'"
+    """Неглубокая дуга внутри 1.10x crop."""
+    return "scale=1408:792,crop=1280:720:x='64+48*sin(t*0.8)':y='36+28*cos(t*0.8)'"
 
 
 def gen_zoom_drift_filter() -> str:
-    """oversized + синусоидальный дрейф crop'а."""
-    return "scale=1920:1080,crop=1280:720:x='320+200*sin(t*0.3)':y='180+120*cos(t*0.25)'"
+    """Неглубокий zoom 1.10x + синусоидальный дрейф crop'а."""
+    return "scale=1408:792,crop=1280:720:x='64+48*sin(t*0.3)':y='36+28*cos(t*0.25)'"
 
 
 def gen_diagonal_crop_filter() -> str:
-    """oversized кадр едет по диагонали."""
-    return "scale=1920:1080,crop=1280:720:'(1920-1280)*t/24':'(1080-720)*t/24'"
+    """Неглубокий диагональный дрейф внутри 1.10x crop."""
+    return "scale=1408:792,crop=1280:720:'128*t/24':'72*t/24'"
 
 
 def gen_split_drift_complex() -> str:
@@ -246,10 +226,16 @@ def strobo_graph(duration: float, fps: float, in_label: str = "0:v",
     parts = [head]
     labels = []
     for i, (start, end, is_flash) in enumerate(boundaries):
-        effect = ",negate,eq=brightness=0.08" if is_flash else ""
-        parts.append(
-            f"[g{i}]trim=start_frame={start}:end_frame={end},setpts=PTS-STARTPTS{effect}[v{i}]"
-        )
+        if is_flash:
+            # Keep object contours readable: a 24% negative blend, not a white full-frame negate.
+            parts.append(
+                f"[g{i}]trim=start_frame={start}:end_frame={end},setpts=PTS-STARTPTS[seg{i}];"
+                f"[seg{i}]split[orig{i}][negsrc{i}];"
+                f"[negsrc{i}]negate,eq=brightness=-0.04[neg{i}];"
+                f"[orig{i}][neg{i}]blend=all_mode=normal:all_opacity=0.24[v{i}]"
+            )
+        else:
+            parts.append(f"[g{i}]trim=start_frame={start}:end_frame={end},setpts=PTS-STARTPTS[v{i}]")
         labels.append(f"[v{i}]")
     parts.append("".join(labels) + f"concat=n={segs}:v=1:a=0[{out_label}]")
     return ";".join(parts), segs
@@ -260,7 +246,8 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
     speed = round(random.uniform(0.97, 1.03), 3)
     pts_factor = round(1.0 / speed, 4)
     flip = random.choice(["hflip,", ""])
-    crop_pct = round(random.uniform(0.93, 0.96), 3)
+    # Base crop plus the later shake crop must remain within the 1.10x zoom ceiling.
+    crop_pct = round(random.uniform(0.95, 0.97), 3)
     margin = round((1.0 - crop_pct) / 2, 4)
     crop = f"crop=iw*{crop_pct}:ih*{crop_pct}:iw*{margin}:ih*{margin},"
     rr = round(random.uniform(0.84, 0.90), 3)
@@ -454,7 +441,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--source-folder", required=True, help="YaD raw folder, without ydrive:")
     ap.add_argument("--effects", choices=["off", "random", "all"], default="random",
-                    help="эффекты: off=базовый рецепт, random=случайная цепочка 2-3 из effects.json, "
+                    help="эффекты: off=базовый рецепт, random=ровно один эффект из effects.json, "
                          "all=каждый эффект отдельным файлом")
     ap.add_argument("--blend", choices=["off", "random", "all"], default="off",
                     help="бленд двух видео: off=отключен, random=1 blend-пара на каждые "
@@ -557,28 +544,8 @@ def main() -> int:
                     }
                 )
                 ok += 1
-                if args.effects != "off":
-                    fps = probe_fps(blend_dst)
-                    chain = pick_chain(effects_db)
-                    c_dst = blend_dir / f"{pair_tag}_blend_{'_'.join(chain)}.mp4"
-                    print(f"[blend+effects] {blend_dst.name} -> {c_dst.name} (chain={'+'.join(chain)})", flush=True)
-                    try:
-                        uniquize(blend_dst, c_dst, fps=fps, effects_chain=chain, effects_db=effects_db)
-                        records.append(
-                            {
-                                "source": str(blend_dst.relative_to(uniq_local)),
-                                "output": str(c_dst.relative_to(uniq_local)),
-                                "effects_chain": chain,
-                                "blend_opacity": opacity,
-                                "source_bytes": blend_dst.stat().st_size,
-                                "output_bytes": c_dst.stat().st_size,
-                                "source_duration": round(probe_duration(blend_dst), 3),
-                            }
-                        )
-                        ok += 1
-                    except Exception as exc:
-                        failures.append({"source": blend_dst.name, "effects_chain": chain, "error": str(exc)})
-                        print(f"[blend+effects] FAIL {blend_dst.name}: {exc}", flush=True)
+                # Blend is itself the one allowed effect for this output.  Do not
+                # bake another effect on top of it, even in diagnostic all-mode.
             except Exception as exc:
                 failures.append({"source": f"{v1.name}+{v2.name}", "effects_chain": ["blend"], "error": str(exc)})
                 print(f"[blend] FAIL {v1.name}+{v2.name}: {exc}", flush=True)
