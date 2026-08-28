@@ -109,6 +109,29 @@ def scene_qc(video: Path, expected_cuts: int) -> str:
     return f"scene_qc: ok (found={found}, expected~{expected_cuts})"
 
 
+def send_tg(video: Path, caption: str) -> None:
+    """Deliver an opt-in review proxy through the Cloudflare Telegram relay."""
+    worker = os.environ.get("CLOUDFLARE_WORKER")
+    token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    chat = os.environ.get("TG_CHAT_ID")
+    thread = os.environ.get("TG_THREAD_ID", "")
+    if not (worker and token and chat):
+        print("  [tg] секреты не заданы — пропуск доставки")
+        return
+    proxy = WORK / "tg_proxy.mp4"
+    run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(video),
+         "-vf", "scale=-2:1280", "-c:v", "libx264", "-crf", "30", "-preset", "veryfast",
+         "-c:a", "aac", "-b:a", "96k", "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(proxy)])
+    send = proxy if proxy.exists() and proxy.stat().st_size > 5000 else video
+    cmd = ["curl", "-sf", "-m", "180", "-F", f"chat_id={chat}"]
+    if thread:
+        cmd += ["-F", f"message_thread_id={thread}"]
+    cmd += ["-F", f"caption={caption}", "-F", f"video=@{send}",
+            f"{worker}/bot{token}/sendVideo"]
+    result = run(cmd)
+    print(f"  [tg] sendVideo rc={result.returncode} ({send.stat().st_size // 1024}KB)")
+
+
 def yd_put_text(text: str, remote: str):
     t = WORK / "_s.txt"; t.write_text(text); yd_put(t, remote)
 
@@ -523,6 +546,57 @@ def build_timeline(variant="full", bpm=87.0, seed=42, calm=False, split=False, s
     return _timeline_collage(variant, bpm, seed, calm, split)
 
 
+def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: int):
+    """Use every footage source once before any repeat, locked to the track BPM."""
+    if not keys:
+        sys.exit("video_pool: пустой список видео")
+    if target < 4.0:
+        sys.exit("video_pool: duration должен быть не меньше 4 секунд")
+
+    rng = random.Random(seed + 3003)
+    beat = 60.0 / bpm
+    intro = min(2.0 * beat, target * 0.12)
+    outro = min(3.0 * beat, target * 0.16)
+    raw: list[tuple[str, float, str]] = [(keys[0], intro, "intro")]
+
+    # First pass is deliberately stable: all pool members are visible before reuse.
+    raw.extend((key, 1.5 * beat, "groove") for key in keys)
+    rotation = list(keys)
+    rng.shuffle(rotation)
+    pos = 0
+    while True:
+        region = "breath" if len(raw) % 11 == 0 else "groove"
+        dur = (3.0 if region == "breath" else 2.0) * beat
+        raw.append((rotation[pos % len(rotation)], dur, region))
+        pos += 1
+        # xfade removes about 0.15s at each normal boundary; reserve the outro.
+        estimated = sum(item[1] for item in raw) + outro - 0.15 * len(raw)
+        if estimated >= target:
+            break
+    raw.append((rotation[pos % len(rotation)], outro, "outro"))
+
+    seq = []
+    for i, (key, dur, region) in enumerate(raw):
+        if i == 0:
+            tin, tdur = None, 0.0
+        elif region == "breath":
+            tin, tdur = rng.choice(["fadeblack", "dissolve"]), 0.30
+        elif region == "outro":
+            tin, tdur = "fadeblack", 0.35
+        else:
+            tin, tdur = rng.choice(GROOVE_TR), 0.15
+        seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
+                        blend="none", tin=tin, tdur=tdur, region=region))
+
+    # The final shot absorbs rounding so the actual xfade timeline is 30 seconds.
+    net = sum(s["dur"] for s in seq) - sum(s["tdur"] for s in seq)
+    seq[-1]["dur"] = max(0.25, seq[-1]["dur"] - (net - target))
+    net = sum(s["dur"] for s in seq) - sum(s["tdur"] for s in seq)
+    if abs(net - target) > 0.03:
+        sys.exit(f"video_pool: не удалось собрать target duration ({net:.3f}s != {target:.3f}s)")
+    return seq, net
+
+
 # источники-ассеты (имена файлов) и спецификация cover-кадров: ключ → (src, zoom, flip).
 # Общий источник правды для рендера и для локального сториборда (preview tier 1).
 SRC_ASSETS = ["anchor.png", "cold_01.png", "cold_02.png", "cold_03.png", "cold_04.png",
@@ -563,6 +637,8 @@ def main():
     track_credit = job.get("track_credit", "")   # старт: «Артист — Трек» (режим reference)
     watermark    = job.get("watermark", "")       # весь клип: кредит yaromat (привязка охватов)
     video_keys   = job.get("video_keys", [])      # ключи-сегменты из видео-футажа (Pexels) вместо стиллов
+    video_source_dir = str(job.get("video_source_dir", "")).strip()
+    video_duration = float(job.get("duration", 0) or 0)
     # тинт футажа в лук замка палитры (замер 17.07: серые облака hue 0°/sat 0% → 176°/44%, к артам 178°/60%)
     footage_tint = job.get("footage_tint", FOOTAGE_TINT)
     seed         = int(job.get("seed", 42))        # per-track: монтаж + текстура (см. build_timeline)
@@ -583,14 +659,39 @@ def main():
     seg_crf, seg_preset = ("30", "ultrafast") if preview else ("22", "veryfast")
     body_crf, body_preset = ("30", "ultrafast") if preview else ("20", "veryfast")
 
-    # downloads
-    for name in ["track.mp3"] + SRC_ASSETS:
-        if not yd_get(f"{JOB_YD}/{name}", WORK / name):
-            sys.exit(f"missing {name}")
-    # видео-футаж для video_keys (Pexels-вставки)
-    for k in video_keys:
-        if not yd_get(f"{JOB_YD}/{k}.mp4", WORK / f"{k}.mp4"):
-            print(f"  WARN: нет видео {k}.mp4 — упаду на стилл")
+    # Legacy jobs fetch named art roles from their job folder. A video-pool job
+    # instead consumes an arbitrary YaD directory and maps filenames to stable keys.
+    track_remote = str(job.get("track_remote", "")).strip()
+    if track_remote:
+        if not yd_get(track_remote, WORK / "track.mp3"):
+            sys.exit(f"missing track_remote: {track_remote}")
+    elif not yd_get(f"{JOB_YD}/track.mp3", WORK / "track.mp3"):
+        sys.exit("missing track.mp3")
+
+    video_pool = []
+    if video_source_dir:
+        listing = run(["rclone", "lsf", f"{REMOTE}:{video_source_dir}"])
+        if listing.returncode != 0:
+            sys.exit(f"video_pool: нельзя прочитать {video_source_dir}")
+        names = sorted(name.strip() for name in listing.stdout.splitlines()
+                       if name.lower().endswith((".mp4", ".mov", ".mkv", ".webm")))
+        if not names:
+            sys.exit(f"video_pool: в {video_source_dir} нет видео")
+        for i, name in enumerate(names):
+            key = f"vp_{i:02d}"
+            if not yd_get(f"{video_source_dir}/{name}", WORK / f"{key}.mp4"):
+                sys.exit(f"video_pool: не скачался {name}")
+            video_pool.append(key)
+        video_keys = video_pool
+        print(f"  video_pool: {len(video_pool)} sources from {video_source_dir}")
+    else:
+        for name in SRC_ASSETS:
+            if not yd_get(f"{JOB_YD}/{name}", WORK / name):
+                sys.exit(f"missing {name}")
+        # видео-футаж для video_keys (Pexels-вставки)
+        for k in video_keys:
+            if not yd_get(f"{JOB_YD}/{k}.mp4", WORK / f"{k}.mp4"):
+                print(f"  WARN: нет видео {k}.mp4 — упаду на стилл")
 
     # оверлеи из библиотеки Pinterest (доска yaromat/overlay) вместо репо-дефолтов.
     # job["overlays"] = {"scratch": "<pin_id>", "grit": "<pin_id>"} → assets/overlay_assets/board/.
@@ -611,10 +712,11 @@ def main():
     # covers
     cov = WORK / "cov"; cov.mkdir(exist_ok=True)
     cover_path = {}
-    for key, (src, zoom, flip) in COVER_SPEC.items():
-        p = cov / f"{key}.png"
-        make_cover(WORK / src, p, W, H, zoom, flip)
-        cover_path[key] = p
+    if not video_pool:
+        for key, (src, zoom, flip) in COVER_SPEC.items():
+            p = cov / f"{key}.png"
+            make_cover(WORK / src, p, W, H, zoom, flip)
+            cover_path[key] = p
 
     # сетка-панель (приём mimo): 4 ассета для анимированной сетки 2×2 в hook-сегментах
     grid_srcs = None
@@ -641,8 +743,14 @@ def main():
         vocal_cues = stem_cues(sdata, "vocals", min_gap=gap)
         print(f"  stemcut: метки drums={len(drum_cues)} vocals={len(vocal_cues)} (min_gap={gap})")
 
-    seq, total = build_timeline(variant, bpm, seed, calm, split, scenario,
-                                drum_cues, vocal_cues, audio_start)
+    if video_pool:
+        if video_duration <= 0:
+            sys.exit("video_pool: job['duration'] обязателен")
+        seq, total = build_video_pool_timeline(video_pool, video_duration, bpm, seed)
+        scenario = "video_pool"
+    else:
+        seq, total = build_timeline(variant, bpm, seed, calm, split, scenario,
+                                    drum_cues, vocal_cues, audio_start)
     print(f"  variant={variant} bpm={bpm} seed={seed} calm={calm} split={split} scenario={scenario}")
     print(f"  motion: speed={MOTION_SPEED} amp={MOTION_AMP} blend_opacity={BLEND_OPACITY}")
     print(f"  style={style['name']} — {style.get('note','')}")
@@ -741,8 +849,8 @@ def main():
     outro_file = WORK / "outro.txt"; outro_file.write_text(outro, encoding="utf-8")
 
     # адаптивный контраст: яркость кадров под интро-текстом и под аутро
-    luma_intro = mean_luma(cover_path["anchor"])
-    luma_outro = mean_luma(cover_path.get("child", cover_path["anchor"]))
+    luma_intro = mean_luma(cover_path["anchor"]) if cover_path else 128.0
+    luma_outro = mean_luma(cover_path.get("child", cover_path["anchor"])) if cover_path else 128.0
     fc_intro, bc_intro = contrast_text(luma_intro)
     fc_outro, bc_outro = contrast_text(luma_outro)
     bw_word  = max(2, int(fs_word * 0.04))
@@ -878,6 +986,9 @@ def main():
     qc = scene_qc(result, len(seq))
     print(f"  {qc}")
     yd_put_text(f"done\n{qc}", f"{JOB_YD}/status.txt")
+    if bool(job.get("send_tg", False)):
+        caption = str(job.get("tg_caption") or f"vzrosly · {duration:.0f}с · preview")
+        send_tg(result, caption)
     print(f"✅ done {out_name} ({mb:.1f}MB)")
 
 

@@ -47,6 +47,10 @@ jobs:
       - name: Run vzrosly_clip_job.py
         env:
           JOB_ID: ${{ inputs.job_id }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_ID:         ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:       "5"
         run: python -u vzrosly_clip_job.py
 
       - name: Write error status on failure
