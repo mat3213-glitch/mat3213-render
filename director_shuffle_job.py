@@ -170,8 +170,10 @@ def xfade_assemble(seg_files: list[Path], dst: Path,
             f"scale={target_w}:{target_h},setsar=1[v{i}]"
         )
     prev = "v0"
+    trans_so_far = 0.0
     for i, (tr, dur) in enumerate(transitions):
-        offset = sum(durs[: i + 1]) - dur * (i + 1)
+        trans_so_far += dur
+        offset = sum(durs[: i + 1]) - trans_so_far
         offset = max(0.1, offset)
         out = f"xf{i}" if i < n - 2 else "vout"
         filters.append(
