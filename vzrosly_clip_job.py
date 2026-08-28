@@ -569,8 +569,9 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
         dur = (3.0 if region == "breath" else 2.0) * beat
         raw.append((rotation[pos % len(rotation)], dur, region))
         pos += 1
-        # xfade removes about 0.15s at each normal boundary; reserve the outro.
-        estimated = sum(item[1] for item in raw) + outro - 0.15 * len(raw)
+        # vzrosly extends every source segment by its incoming xfade duration,
+        # so its final timeline equals the sum of these planned durations.
+        estimated = sum(item[1] for item in raw) + outro
         if estimated >= target:
             break
     raw.append((rotation[pos % len(rotation)], outro, "outro"))
@@ -588,10 +589,11 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
         seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
                         blend="none", tin=tin, tdur=tdur, region=region))
 
-    # The final shot absorbs rounding so the actual xfade timeline is 30 seconds.
-    net = sum(s["dur"] for s in seq) - sum(s["tdur"] for s in seq)
+    # xfade overlap is already included in each encoded segment. The final shot
+    # absorbs rounding so the rendered body is exactly the requested duration.
+    net = sum(s["dur"] for s in seq)
     seq[-1]["dur"] = max(0.25, seq[-1]["dur"] - (net - target))
-    net = sum(s["dur"] for s in seq) - sum(s["tdur"] for s in seq)
+    net = sum(s["dur"] for s in seq)
     if abs(net - target) > 0.03:
         sys.exit(f"video_pool: не удалось собрать target duration ({net:.3f}s != {target:.3f}s)")
     return seq, net
