@@ -317,6 +317,23 @@ def xfade_chain(segs, durs, trans, tdurs, out: Path,
     """Склейка сегментов через xfade с разными переходами. Возвращает успех.
     segs[i] — путь, durs[i] — реальная длительность, trans[i]/tdurs[i] — переход
     ВХОДА в сегмент i (i>=1)."""
+    # A full energy EDL can exceed 200 shots.  Feeding all of them to one ffmpeg
+    # graph exhausts runner resources, so collapse bounded batches first.  Every
+    # boundary uses the same fade/tdur as the rest of this recipe.
+    if len(segs) > 20:
+        chunks, chunk_durs = [], []
+        for start in range(0, len(segs), 20):
+            end = min(len(segs), start + 20)
+            chunk = out.with_name(f"{out.stem}_chunk_{start // 20:02d}.mp4")
+            if not xfade_chain(segs[start:end], durs[start:end], trans[start:end],
+                               tdurs[start:end], chunk, crf=crf, preset=preset):
+                return False
+            chunks.append(chunk)
+            chunk_durs.append(probe_dur(chunk))
+        bridge = [0.0] + [1.75] * (len(chunks) - 1)
+        return xfade_chain(chunks, chunk_durs, ["fade"] * len(chunks), bridge,
+                           out, crf=crf, preset=preset)
+
     inputs = []
     for s in segs:
         inputs += ["-i", str(s)]
