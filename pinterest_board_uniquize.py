@@ -316,8 +316,9 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
     if complex_parts:
         # Один complex-эффект ( strobo/flash/split_drift/... )
         complex_graph = complex_parts[0]
-        if color_kind in ("strobo", "flash"):
-            # strobo/flash уже в complex_parts
+        strobo_effect = bool(effects_chain and effects_chain[0] in ("strobo", "flash"))
+        if strobo_effect:
+            # strobo/flash emit [vs] themselves; do not append a second output label.
             if has_audio:
                 cmd += [
                     "-filter_complex", f"[0:v]{vf}[pre];{complex_graph.replace('[0:v]', '[pre]')};[0:a]atempo={speed}[a]",
@@ -380,7 +381,7 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
 
 def parallax_filter(duration: float) -> str:
     """Параллакс: медленный дрейф oversized кадра, создаёт иллюзию глубины."""
-    scale = round(random.uniform(1.35, 1.65), 2)
+    scale = round(random.uniform(1.04, 1.10), 2)
     sw = int(1280 * scale)
     sh = int(720 * scale)
     dx = sw - 1280
