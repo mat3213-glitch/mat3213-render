@@ -1,0 +1,95 @@
+name: Prepare platform variants
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: "Full vertical video path relative to Content factory/"
+        required: true
+        type: string
+      slug:
+        description: "Queue slug (letters, digits, underscore, hyphen)"
+        required: true
+        type: string
+      title:
+        description: "Publication title"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  variants:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - name: Install ffmpeg and rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends ffmpeg rclone
+      - name: Configure Yandex Disk
+        env:
+          YDRIVE_CLIENT_ID: ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN: ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" > "$HOME/.config/rclone/rclone.conf"
+      - name: Encode variants and queue them
+        env:
+          SOURCE: ${{ inputs.source }}
+          SLUG: ${{ inputs.slug }}
+          TITLE: ${{ inputs.title }}
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          rclone copyto "ydrive:Content factory/$SOURCE" source.mp4
+          # Four equal sections remain below one minute for Shorts and Reels.
+          total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source.mp4)
+          section=$(python3 -c 'import sys; print(float(sys.argv[1]) / 4.0)' "$total")
+          for n in 1 2 3 4; do
+            start=$(python3 -c 'import sys; print((int(sys.argv[1])-1)*float(sys.argv[2]))' "$n" "$section")
+            ffmpeg -y -loglevel error -ss "$start" -t "$section" -i source.mp4 \
+              -vf 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920' \
+              -c:v libx264 -crf 22 -preset medium -c:a aac -b:a 160k -pix_fmt yuv420p \
+              -movflags +faststart "out/${SLUG}_section_${n}.mp4"
+          done
+          ffmpeg -y -loglevel error -i source.mp4 \
+            -vf 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2' \
+            -c:v libx264 -preset medium -b:v 550k -maxrate 600k -bufsize 1200k \
+            -c:a aac -b:a 48k -pix_fmt yuv420p -movflags +faststart "out/${SLUG}_full_720.mp4"
+          base="Content factory/cloud_io/publish_queue/media/${SLUG}"
+          for n in 1 2 3 4; do
+            rclone copyto "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
+          done
+          rclone copyto "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
+          rclone copyto "ydrive:Content factory/cloud_io/publish_queue/queue.json" queue.json
+          python3 - "$SLUG" "$TITLE" <<'PY'
+          import json, sys
+          slug, title = sys.argv[1:]
+          q = json.load(open("queue.json"))
+          caption = "никто не придёт. это и есть взросление.\n\nyaromat — взрослый\nвключи звук"
+          for platform, media, item_id in (
+              ("tg", f"{slug}/{slug}_full_720.mp4", f"{slug}_tg"),
+              ("vk", f"{slug}/{slug}_full_720.mp4", f"{slug}_vk"),
+          ):
+              q.setdefault(platform, [])
+              if not any(x.get("id") == item_id for x in q[platform]):
+                  q[platform].append({"id": item_id, "media": media, "type": "video",
+                                      "caption": caption, "own_track": True})
+          q.setdefault("youtube", [])
+          for n in range(1, 5):
+              item_id = f"{slug}_short_{n}"
+              if not any(x.get("id") == item_id for x in q["youtube"]):
+                  q["youtube"].append({
+                      "id": item_id,
+                      "media": f"{slug}/{slug}_section_{n}.mp4",
+                      "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
+                      "description": caption + f"\n\n#Shorts #futuregarage #downtempo #yaromat",
+                      "own_track": True})
+          json.dump(q, open("queue.json", "w"), ensure_ascii=False, indent=2)
+          PY
+          rclone copyto queue.json "ydrive:Content factory/cloud_io/publish_queue/queue.json"
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_full_720.mp4
+          ls -lh out/
