@@ -3,50 +3,50 @@
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 9.0,
-      "votes": "1/1",
+      "score": 8.0,
+      "votes": "2/2",
       "status": "принят",
-      "reason": "близок к deep teal, холодный нуар, дымка"
+      "reason": "Хорошо подходит к глубине и холодному тону."
     },
     {
       "name": "scout_neutral_mid_muted",
       "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
+      "score": 7.5,
+      "votes": "2/2",
       "status": "принят",
-      "reason": "холодный, сине-зелёный сдвиг, но не deep teal"
+      "reason": "Дорого и цельно."
     },
     {
       "name": "scout_neutral_night_muted_2",
       "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
+      "score": 8.5,
+      "votes": "2/2",
       "status": "принят",
-      "reason": "холодный, не deep teal"
+      "reason": "Близок к deep teal."
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
+      "score": 7.0,
+      "votes": "2/2",
       "status": "принят",
-      "reason": "холодный, не deep teal"
+      "reason": "Не слишком ярко."
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
+      "score": 8.0,
+      "votes": "2/2",
       "status": "принят",
-      "reason": "холодный, не deep teal"
+      "reason": "Хорошо подходит к глубине."
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 1.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "слишком тёплый, не deep teal"
+      "score": 5.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Слишком зеленоватый и не холодный."
     }
   ],
   "recommend_merge": [
@@ -56,7 +56,9 @@
     "scout_neutral_night_soft",
     "scout_neutral_night_soft_2"
   ],
-  "disputed": [],
-  "_generated": "2026-08-28",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "disputed": [
+    "scout_green_mid_soft"
+  ],
+  "_generated": "2026-08-29",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
