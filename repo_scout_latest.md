@@ -1,20 +1,20 @@
-# Repo Scout — 2026-08-28T21:06:52.466634
+# Repo Scout — 2026-08-29T14:57:09.211414
 Всего в шортлисте: 2
-- **APIStock/api-stock-examples** ⭐1 [source]
-  - https://github.com/APIStock/api-stock-examples
+- **artnebo/cinematic-frame-director** ⭐2 [craft]
+  - https://github.com/artnebo/cinematic-frame-director
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий предоставляет примеры использования API Stock для работы с AI-сервисами, включая получение стокового видео. Он может закрыть потребность в надёжных headless-адаптерах для легального стокового видео с метаданными. Интеграция имеет низкую стоимость, но оправдана только если API Stock предложит новый уникальный источник или данные о происхождении, иначе есть высокий риск дублирования с уже используемыми сервисами.
-  - 📄 Production-minded starter examples for the API Stock unified AI API — one key and one balance for chat, image, video and music. TypeScript, Python and curl.
-- **Jakubczak/render-qa** ⭐2 [video]
-  - https://github.com/Jakubczak/render-qa
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий генерирует качественные кинематографические промты для изображений, описывая сцену, ракурс и освещение. Он закрывает потребность в проверяемых операторских словарях и prompt-схемах для управляемой i2v-моторики через облачные генераторы. Интеграция оправдана только для получения новых, уникальных формулировок, так как это запасной вариант и часть функционала уже существует.
+  - 📄 Claude Code skill: turn any idea into ONE production-grade cinematic image prompt — decisive moment, mise-en-scène, motivated camera, 60:30:10 lighting
+- **mecrimino/deepvideo** ⭐5 [video]
+  - https://github.com/mecrimino/deepvideo
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий содержит инструменты для детерминированных проверок качества автоматического рендеринга графики и видео, включая воспроизводимый рендеринг HTML в видео. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, помогая обеспечить надёжные результаты. Интеграция стоит недорого, но оправдана только если закроет конкретный, ещё не решённый аспект контроля качества, так как часть функций уже внедрена, и есть высокий риск дублирования.
-  - 📄 Deterministic quality checks for automated graphics and video rendering: reproducible HTML-to-video rendering plus geometry, layer-presence and alpha-halo measu
+  - 💡 Данный AI-видеоредактор превращает идеи в редактируемые таймлайны и использует FFmpeg для рендеринга, поддерживая детерминированные резервы. Он может усилить воспроизводимость рендера на CPU/GitHub Actions за счёт манифестов и чеков. Интеграция оправдана, если репозиторий закрывает конкретные, ещё не реализованные аспекты воспроизводимости, так как часть функций уже внедрена.
+  - 📄 AI video editor with an agentic core — turns a script or idea into an editable timeline, then edits it by chat. Runs keyless (degrades to deterministic fallback
