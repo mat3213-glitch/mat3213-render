@@ -15,6 +15,7 @@ Playwright вводит промпт (фронт подписывает запр
   python3 Instrument/GLM/glm_chat.py "..." --model GLM-5.2 --timeout 240
 """
 import re
+import os
 import sys
 import json
 import argparse
@@ -60,11 +61,12 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
     state = json.loads(SESSION_FILE.read_text())
     print(f"  [glm-chat] model={model} prompt=«{prompt[:60]}»", file=sys.stderr)
 
+    headless = os.environ.get("GLM_HEADLESS", "1").strip().lower() not in {"0", "false", "no"}
     async with async_playwright() as p:
         try:
-            browser = await p.chromium.launch(**chromium_launch_kwargs(channel="chrome"))
+            browser = await p.chromium.launch(**chromium_launch_kwargs(channel="chrome", headless=headless))
         except Exception:
-            browser = await p.chromium.launch(**chromium_launch_kwargs())
+            browser = await p.chromium.launch(**chromium_launch_kwargs(headless=headless))
         ctx = await browser.new_context(storage_state=state,
                                         viewport={"width": 1280, "height": 900})
         page = await ctx.new_page()

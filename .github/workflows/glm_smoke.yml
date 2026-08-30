@@ -1,4 +1,4 @@
-name: glm smoke (headless US-check)
+name: glm smoke (xvfb headed US-check)
 
 # Разовый диагностический smoke-тест GLM-воркера (chat.z.ai) с US-IP GH-раннера.
 # Цель: понять, CAPTCHA это фингерпринт/headless-специфика бука или IP-зависимость,
@@ -39,7 +39,7 @@ jobs:
         run: |
           python3 -m pip install --disable-pip-version-check --no-cache-dir "playwright==1.54.0"
           google-chrome --version || python3 -m playwright install --with-deps chromium
-          sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+          sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone xvfb
 
       - name: Configure rclone ydrive
         env:
@@ -70,12 +70,13 @@ jobs:
           print(f"origins: {origins} (localStorage/keyValues)")
           PY
 
-      - name: Run headless smoke
+      - name: Run xvfb headed smoke
         id: run
         run: |
           set +e
           mkdir -p /tmp/glmout
-          timeout 540 python3 Instrument/GLM/glm_chat.py "${{ inputs.prompt }}" \
+          GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
+            python3 Instrument/GLM/glm_chat.py "${{ inputs.prompt }}" \
             --model "${{ inputs.model }}" --timeout ${{ inputs.timeout }} \
             > /tmp/glmout/stdout.txt 2> /tmp/glmout/stderr.txt
           RC=$?
