@@ -1,20 +1,74 @@
-# Repo Scout — 2026-08-29T14:57:09.211414
-Всего в шортлисте: 2
-- **artnebo/cinematic-frame-director** ⭐2 [craft]
-  - https://github.com/artnebo/cinematic-frame-director
+# Repo Scout — 2026-08-30T14:42:18.316024
+Всего в шортлисте: 8
+- **Deepduharia/vision-ai-prompt-library** ⭐0 [craft]
+  - https://github.com/Deepduharia/vision-ai-prompt-library
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий генерирует качественные кинематографические промты для изображений, описывая сцену, ракурс и освещение. Он закрывает потребность в проверяемых операторских словарях и prompt-схемах для управляемой i2v-моторики через облачные генераторы. Интеграция оправдана только для получения новых, уникальных формулировок, так как это запасной вариант и часть функционала уже существует.
-  - 📄 Claude Code skill: turn any idea into ONE production-grade cinematic image prompt — decisive moment, mise-en-scène, motivated camera, 60:30:10 lighting
-- **mecrimino/deepvideo** ⭐5 [video]
-  - https://github.com/mecrimino/deepvideo
+  - 💡 Этот репозиторий предлагает библиотеку профессиональных AI-промптов для генерации изображений, основанных на кинематографии. Он помогает закрыть потребность в проверяемых операторских словарях для управляемой i2v-моторики. Низкая стоимость интеграции оправдана только для поиска новых, уникальных формулировок, так как аналогичные инструменты уже существуют.
+  - 📄 Vision. — A cinematic AI prompt library featuring professionally crafted image-generation prompts developed from cinematography, lighting, composition and creat
+- **api-evangelist/stockeld-dreamery** ⭐0 [source]
+  - https://github.com/api-evangelist/stockeld-dreamery
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий представляет собой профиль API шведской компании Stockeld Dreamery, которая может быть источником стокового видео. Он потенциально закрывает потребность в новых надёжных адаптерах для легального стокового видео. Низкая стоимость интеграции оправдана только если источник предлагает уникальный контент или улучшенные метаданные по сравнению с уже используемыми.
+  - 📄 Stockeld Dreamery — independent third-party profile of a public API surface, by API Evangelist. Stockeld Dreamery is a Swedish food-tech company founded in Stoc
+- **Locke-Werks/milkrun** ⭐1 [video]
+  - https://github.com/Locke-Werks/milkrun
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Данный AI-видеоредактор превращает идеи в редактируемые таймлайны и использует FFmpeg для рендеринга, поддерживая детерминированные резервы. Он может усилить воспроизводимость рендера на CPU/GitHub Actions за счёт манифестов и чеков. Интеграция оправдана, если репозиторий закрывает конкретные, ещё не реализованные аспекты воспроизводимости, так как часть функций уже внедрена.
-  - 📄 AI video editor with an agentic core — turns a script or idea into an editable timeline, then edits it by chat. Runs keyless (degrades to deterministic fallback
+  - 💡 Репозиторий предназначен для детерминированного рендеринга видео из пресетов MilkDrop в синхронизации с музыкой. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, что является ключевым для проекта. Низкая стоимость интеграции оправдана, если репозиторий предлагает конкретные, ещё не реализованные механизмы для повышения воспроизводимости.
+  - 📄 Renders a MilkDrop preset to video, in sync with a song, start to finish, nothing extra. H.265 Main10, offline and deterministic.
+- **c-wang-dev/storyboard-master** ⭐0 [craft]
+  - https://github.com/c-wang-dev/storyboard-master
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает AI-инструмент для создания раскадровок из сценариев, включающий правила кинематографии и оценку качества промптов. Он помогает закрыть потребность в проверяемых операторских словарях и prompt-схемах для управляемой i2v-моторики. Низкая стоимость интеграции оправдана только для получения новых, проверяемых формулировок, дополняющих уже имеющиеся инструменты.
+  - 📄 AI film storyboard prompt engineer. Script-to-storyboard pipeline with acting consistency, cinematography rules, and prompt quality evaluation. Knowledge-base d
+- **api-evangelist/soundstripe** ⭐0 [source]
+  - https://github.com/api-evangelist/soundstripe
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Репозиторий содержит профиль API платформы Soundstripe, которая предоставляет лицензионную музыку, звуковые эффекты и стоковое видео. Он потенциально закрывает потребность в надёжных адаптерах для легального стокового видео. Низкая стоимость интеграции оправдана только если этот источник предлагает уникальный контент или улучшенные метаданные по сравнению с уже используемыми.
+  - 📄 Soundstripe — independent third-party profile of a public API surface, by API Evangelist. Soundstripe is a Nashville-based subscription platform that licenses r
+- **Manancode/colophon-agent-harness** ⭐0 [video]
+  - https://github.com/Manancode/colophon-agent-harness
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает подход к генерации видео с машинной проверкой и воспроизводимым "отпечатком" для каждого рендера. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, что важно для проекта. Низкая стоимость интеграции оправдана, если репозиторий предлагает конкретные, ещё не реализованные механизмы для повышения воспроизводимости.
+  - 📄 Spec-first video generation with machine-checkable taste: a closed motion grammar, seven deterministic QA gates, and a reproducible fingerprint for every render
+- **api-evangelist/seekho** ⭐0 [source]
+  - https://github.com/api-evangelist/seekho
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Репозиторий содержит профиль API платформы Seekho, которая предоставляет короткие обучающие видео. Он потенциально закрывает потребность в надёжных адаптерах для легального стокового видео. Низкая стоимость интеграции оправдана только если этот источник предлагает уникальный контент или улучшенные метаданные по сравнению с уже используемыми.
+  - 📄 Seekho — independent third-party profile of a public API surface, by API Evangelist. Seekho (operated by Keyaro Edutech Pvt Ltd, Bengaluru, India) is a consumer
+- **api-evangelist/motion-elements** ⭐0 [source]
+  - https://github.com/api-evangelist/motion-elements
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий представляет собой профиль API маркетплейса MotionElements, предлагающего роялти-фри стоковое видео, музыку и звуковые эффекты. Он потенциально закрывает потребность в надёжных адаптерах для легального стокового видео. Низкая стоимость интеграции оправдана только если этот источник предлагает уникальный контент или улучшенные метаданные по сравнению с уже используемыми.
+  - 📄 Motion Elements — independent third-party profile of a public API surface, by API Evangelist. MotionElements is a global creative-asset marketplace and AI produ
