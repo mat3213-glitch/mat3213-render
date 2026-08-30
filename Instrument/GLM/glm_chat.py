@@ -312,13 +312,17 @@ def _drop_thoughts(txt: str) -> str:
 
 def main():
     ap = argparse.ArgumentParser(description="GLM-5.2 текст-чат через chat.z.ai")
-    ap.add_argument("prompt", help="Промпт")
+    ap.add_argument("prompt", nargs="?", default="", help="Промпт (или --stdin)")
+    ap.add_argument("--stdin", action="store_true", help="Читать промпт из stdin")
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Модель (default {DEFAULT_MODEL})")
     ap.add_argument("--timeout", type=int, default=240)
     args = ap.parse_args()
+    prompt = sys.stdin.read() if args.stdin else args.prompt
+    if not prompt.strip():
+        ap.error("пустой промпт: передай аргументом или через --stdin")
 
     OUTPUTS.mkdir(exist_ok=True)
-    text = asyncio.run(chat(args.prompt, args.model, args.timeout))
+    text = asyncio.run(chat(prompt, args.model, args.timeout))
     if not text:
         sys.exit(1)
     print(text)   # чистый ответ в stdout — fanout захватит
