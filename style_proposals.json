@@ -1,19 +1,7 @@
 {
-  "_generated": "2026-08-30",
+  "_generated": "2026-08-31",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
-    {
-      "name": "scout_neutral_night_muted",
-      "note": "scout: neutral night muted",
-      "eq": "contrast=1.01:saturation=0.68:brightness=-0.064:gamma=1.068",
-      "balance": "rm=-0.02:rh=0.024:bh=-0.036",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "92903010.jpg"
-    },
     {
       "name": "scout_neutral_mid_muted",
       "note": "scout: neutral mid muted",
@@ -24,10 +12,10 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "9444655.jpg"
+      "_src": "42253442.jpg"
     },
     {
-      "name": "scout_neutral_night_muted_2",
+      "name": "scout_neutral_night_muted",
       "note": "scout: neutral night muted",
       "eq": "contrast=0.9:saturation=0.69:brightness=-0.052:gamma=1.056",
       "balance": "rm=0.061:bm=-0.068:rh=0.058:bh=-0.072",
@@ -36,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "10986872.jpg"
+      "_src": "5457976.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "54837776.jpg"
+      "_src": "63750571.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "94405749.jpg"
+      "_src": "89850058.jpg"
     },
     {
       "name": "scout_green_mid_soft",
@@ -72,7 +60,19 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "75653645.jpg"
+      "_src": "28106716.jpg"
+    },
+    {
+      "name": "scout_green_mid_soft_2",
+      "note": "scout: green mid soft",
+      "eq": "contrast=1.06:saturation=1.0:brightness=0.013:gamma=0.986",
+      "balance": "gs=0.049:bs=-0.042:gm=0.1:bm=-0.1:rh=0.069:gh=0.097:bh=-0.1",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "45191443.jpg"
     }
   ]
 }
