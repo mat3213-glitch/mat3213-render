@@ -1,0 +1,31 @@
+{
+  "channel_username": "@iiwnitca",
+  "channel_id": -1003927546260,
+  "channel_title": "ИИшница",
+  "language": "ru",
+  "include_any": [
+    "искусственный интеллект",
+    "нейросет",
+    "нейронн",
+    "ai model",
+    "llm",
+    "gpt",
+    "claude",
+    "gemini",
+    "openai",
+    "robot",
+    "робот",
+    "машинное обучение",
+    "генератив"
+  ],
+  "exclude_any": [
+    "passive income",
+    "staking",
+    "airdrop",
+    "yield",
+    "arbitrage",
+    "dropship",
+    "affiliate"
+  ],
+  "style": "Коротко, живо и понятно: новость или кейс, зачем это важно, ссылка на первоисточник. Без обещаний доходности и неподтверждённых фактов."
+}
