@@ -51,8 +51,8 @@ _EDITOR_PROMPT = """Ты редактор русскоязычного Telegram-
 * Перед ответом молча проверь: мысль закончена, есть вывод, есть ссылка.
 
 Заголовок сигнала: {title}
-Описание: {summary or 'нет'}
-Источник: {source_url or 'не указан'}"""
+Описание: {summary}
+Источник: {source_url}"""
 
 _CITATION_RE = re.compile(r"\[\[\d+\]\]|\[\d+\]")
 
@@ -201,7 +201,7 @@ def main() -> int:
 
     new_sent = list(sent_set)
     for c in candidates:
-        prompt = _EDITOR_PROMPT.format(title=c["title"], summary=(c["text"] or "нет"), source_url=c["url"])
+        prompt = _EDITOR_PROMPT.format(title=c["title"], summary=(c["text"] or "нет"), source_url=(c["url"] or "не указан"))
         text = qwen_generate(prompt, qwen_model)
         if not text or text.strip().upper() == "SKIP":
             print(f"  [skip] id={c['item_id']}: Qwen вернул SKIP/пусто")
