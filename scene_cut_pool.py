@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-scene_cut_pool.py — нарезка уникализированных видео-источников на лупы
-по РЕАЛЬНЫМ сценам (PySceneDetect ContentDetector) + добивка равномерной
-дробью самых длинных до целевого числа луп.
+scene_cut_pool.py — нарезка RAW-видео-источников на лупы по РЕАЛЬНЫМ сценам
+(PySceneDetect ContentDetector) + добивка равномерной дробью самых длинных до
+целевого числа луп. Каждый луп затем уникализируется ОДНИМ случайным
+инструментом (single-effect, base=False) — «1 уникализатор на 1 отрезок».
 
 Зачем: для режима video_pool движка vzrosly_clip_job пул из N дискретных
 источников даёт больше комбинаций монтажа, чем 18 длинных файлов. Режем по
@@ -10,14 +11,15 @@ scene_cut_pool.py — нарезка уникализированных виде
 границу сцены.
 
 Пайплайн (только GH Actions, бук не грузим):
-  1. скачать uniq/*.mp4 с ЯД (результат pinterest_board_uniquize)
+  1. скачать raw/*.mp4 с ЯД (результат pinterest_board_fetch)
   2. на каждый файл — PySceneDetect -> границы сцен
   3. нарезать ffmpeg на сегменты сцен, сохранить 1280x720 landscape (как в исходнике)
   4. если сцен < target — раздробить самые длинные сегменты равномерно до ~target
-  5. залить в sibling pool/ на ЯД
+  5. каждый луп — 1 случайный эффект (uniquize base=False)
+  6. залить в sibling pool/ на ЯД
 
 Usage:
-  python3 scene_cut_pool.py --source-folder "Content factory/cloud_io/.../uniq" \
+  python3 scene_cut_pool.py --source-folder "Content factory/cloud_io/.../raw" \
       --target 54 --out-base "Content factory/cloud_io/.../pool"
 Env: rclone "ydrive:" через ~/.config/rclone (как в flow).
 """
@@ -33,6 +35,8 @@ import sys
 import tempfile
 from pathlib import Path
 from collections import OrderedDict
+
+from pinterest_board_uniquize import uniquize, pick_chain, load_effects
 
 REMOTE = "ydrive:"
 MIN_SEG = 1.2          # не резать короче этого (иначе мусор)
@@ -176,16 +180,24 @@ def main():
     if len(all_work) < a.target:
         print(f"  ⚠ не добрали: {len(all_work)} < {a.target}", flush=True)
 
-    # 5. нарезать и залить
+    # 5. нарезать, каждый луп — 1 случайный уникализатор (single-effect), залить
+    effects_db = load_effects()
     uploaded = 0
     for idx, (name, seg) in enumerate(all_work):
         out_name = f"loop_{idx:03d}.mp4"
         dst = out_work / out_name
+        uniq_dst = out_work / f"loop_{idx:03d}_uniq.mp4"
         src = src_dir / name
         if not split_segment(src, seg, dst):
             print(f"  ✗ {out_name}", flush=True)
             continue
-        if sh(["rclone", "copyto", str(dst),
+        chain = pick_chain(effects_db)
+        try:
+            uniquize(dst, uniq_dst, effects_chain=chain, effects_db=effects_db, base=False)
+        except Exception as e:
+            print(f"  ✗ {out_name}: uniquize fail ({e})", flush=True)
+            continue
+        if sh(["rclone", "copyto", str(uniq_dst),
                f"{REMOTE}{a.out_base}/pool/{out_name}"]).returncode != 0:
             print(f"  ✗ upload {out_name}", flush=True)
             continue

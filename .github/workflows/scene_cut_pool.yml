@@ -1,17 +1,17 @@
 name: Scene Cut Pool
 
-# Этап 3: нарезать уникализированные видео (uniq/) на лупы по РЕАЛЬНЫМ сценам
-# (PySceneDetect) и положить готовый пул в sibling pool/ на ЯД — для режима
-# video_pool движка vzrosly_clip_job (полный трек).
+# Этап 3: нарезать RAW-видео (raw/) на лупы по РЕАЛЬНЫМ сценам (PySceneDetect)
+# + каждый луп — 1 случайный уникализатор (single-effect), залить готовый пул
+# в sibling pool/ на ЯД — для режима video_pool движка vzrosly_clip_job (полный трек).
 
 on:
   workflow_dispatch:
     inputs:
       source_folder:
-        description: "ЯД папка с уникализированными видео (uniq/)"
+        description: "ЯД папка с RAW-видео (raw/, результат pinterest_board_fetch)"
         required: true
       out_base:
-        description: "ЯД базовая папка (рядом с uniq/), создаст pool/"
+        description: "ЯД базовая папка (рядом с raw/), создаст pool/"
         required: true
       target:
         description: "Целевое число луп (~54)"

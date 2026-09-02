@@ -788,13 +788,19 @@ def main():
             sys.exit("video_pool: job['duration'] обязателен")
         # Full-pool cuts are driven by the actual track energy, with high-energy
         # groups retained as drop boundaries.  This runs only on GitHub Actions.
-        try:
-            from analyze import analyze_track
-            detected_bpm, energy_groups = analyze_track(
-                WORK / "track.mp3", duration=video_duration, seed=seed, start=audio_start)
-            print(f"  energy_map: groups={len(energy_groups)} bpm={detected_bpm:.2f}")
-        except Exception as e:
-            print(f"  WARN: energy_map unavailable ({e}); BPM fallback")
+        # job["energy_map"]=false → строгий равномерный монтаж по доле bpm (136),
+        # без детектора темпа (aubio на электронике может давать ложный BPM).
+        energy_groups = None
+        if job.get("energy_map", True):
+            try:
+                from analyze import analyze_track
+                detected_bpm, energy_groups = analyze_track(
+                    WORK / "track.mp3", duration=video_duration, seed=seed, start=audio_start)
+                print(f"  energy_map: groups={len(energy_groups)} bpm={detected_bpm:.2f}")
+            except Exception as e:
+                print(f"  WARN: energy_map unavailable ({e}); BPM fallback")
+        else:
+            print("  energy_map: OFF — строгий монтаж по доле bpm (fallback)")
         seq, total = build_video_pool_timeline(video_pool, video_duration, bpm, seed, energy_groups)
         scenario = "video_pool"
     else:

@@ -242,8 +242,9 @@ def strobo_graph(duration: float, fps: float, in_label: str = "0:v",
 
 
 def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
-             effects_chain: list[str] | None = None, effects_db: dict | None = None) -> None:
-    speed = round(random.uniform(0.97, 1.03), 3)
+             effects_chain: list[str] | None = None, effects_db: dict | None = None,
+             base: bool = True) -> None:
+    speed = round(random.uniform(0.97, 1.03), 3) if base else 1.0
     pts_factor = round(1.0 / speed, 4)
     flip = random.choice(["hflip,", ""])
     # Base crop plus the later shake crop must remain within the 1.10x zoom ceiling.
@@ -278,16 +279,18 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
     )
     vignette = f"vignette=PI*{round(random.uniform(0.22, 0.30), 2)}"
 
-    # Базовый vf-цепочка
-    base_chain = [
-        flip, crop, "scale=1280:720",
-        f"setpts={pts_factor}*PTS",
-        shake, color_mix, eq, noise, unsharp, vignette,
-    ]
+    # Базовый vf-цепочка (пропускается в режиме single-effect: 1 инструмент на луп)
     color_kind = color
-    color_f = color_chain(color, fps)
-    if color_f:
-        base_chain.append(color_f)
+    color_f = color_chain(color, fps) if base else ""
+    base_chain = []
+    if base:
+        base_chain = [
+            flip, crop, "scale=1280:720",
+            f"setpts={pts_factor}*PTS",
+            shake, color_mix, eq, noise, unsharp, vignette,
+        ]
+        if color_f:
+            base_chain.append(color_f)
 
     vf_parts = [c.rstrip(",") for c in base_chain if c]
 
@@ -303,6 +306,7 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
                 complex_parts.append(eff_filter)
 
     vf = ",".join(vf_parts)
+    pre_graph = f"[0:v]{vf}[pre]" if vf else "[0:v]null[pre]"
 
     probe = sh([
         "ffprobe", "-v", "quiet", "-select_streams", "a",
@@ -321,14 +325,14 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
             # strobo/flash emit [vs] themselves; do not append a second output label.
             if has_audio:
                 cmd += [
-                    "-filter_complex", f"[0:v]{vf}[pre];{complex_graph.replace('[0:v]', '[pre]')};[0:a]atempo={speed}[a]",
+                    "-filter_complex", f"{pre_graph};{complex_graph.replace('[0:v]', '[pre]')};[0:a]atempo={speed}[a]",
                     "-map", "[vs]" if "[vs]" in complex_graph else "[v]",
                     "-map", "[a]",
                     "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k",
                 ]
             else:
                 cmd += [
-                    "-filter_complex", f"[0:v]{vf}[pre];{complex_graph.replace('[0:v]', '[pre]')}",
+                    "-filter_complex", f"{pre_graph};{complex_graph.replace('[0:v]', '[pre]')}",
                     "-map", "[vs]" if "[vs]" in complex_graph else "[v]", "-an",
                 ]
         else:
@@ -336,19 +340,19 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
             fixed_graph = complex_graph.replace("[0:v]", "[pre]")
             if has_audio:
                 cmd += [
-                    "-filter_complex", f"[0:v]{vf}[pre];{fixed_graph}[v];[0:a]atempo={speed}[a]",
+                    "-filter_complex", f"{pre_graph};{fixed_graph}[v];[0:a]atempo={speed}[a]",
                     "-map", "[v]", "-map", "[a]",
                     "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k",
                 ]
             else:
                 cmd += [
-                    "-filter_complex", f"[0:v]{vf}[pre];{fixed_graph}[v]",
+                    "-filter_complex", f"{pre_graph};{fixed_graph}[v]",
                     "-map", "[v]", "-an",
                 ]
     elif color_kind in ("strobo", "flash"):
         fp = round(random.uniform(0.35, 0.50), 2) if color_kind == "strobo" else round(random.uniform(0.18, 0.28), 2)
         graph, segs = strobo_graph(probe_duration(src), fps, in_label="pre", flash_pct=fp)
-        graph = f"[0:v]{vf}[pre];{graph}"
+        graph = f"{pre_graph};{graph}"
         if has_audio:
             cmd += [
                 "-filter_complex", f"{graph};[0:a]atempo={speed}[a]",
