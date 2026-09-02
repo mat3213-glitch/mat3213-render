@@ -1,0 +1,65 @@
+name: Scene Cut Pool
+
+# Этап 3: нарезать уникализированные видео (uniq/) на лупы по РЕАЛЬНЫМ сценам
+# (PySceneDetect) и положить готовый пул в sibling pool/ на ЯД — для режима
+# video_pool движка vzrosly_clip_job (полный трек).
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_folder:
+        description: "ЯД папка с уникализированными видео (uniq/)"
+        required: true
+      out_base:
+        description: "ЯД базовая папка (рядом с uniq/), создаст pool/"
+        required: true
+      target:
+        description: "Целевое число луп (~54)"
+        required: false
+        default: "54"
+
+concurrency:
+  group: scene-cut-pool
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing ffmpeg rclone
+          pip install --quiet scenedetect[opencv]
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Run scene cut pool
+        run: |
+          python -u scene_cut_pool.py \
+            --source-folder "${{ inputs.source_folder }}" \
+            --out-base "${{ inputs.out_base }}" \
+            --target "${{ inputs.target }}"
+
+      - name: Summarize
+        if: success()
+        run: |
+          echo "Pool stored under ${{ inputs.out_base }}/pool/ on YaD."
+          echo "Next: point vzrosly_clip_job video_source_dir at that pool/ and set duration."
