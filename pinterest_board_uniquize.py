@@ -243,7 +243,8 @@ def strobo_graph(duration: float, fps: float, in_label: str = "0:v",
 
 def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
              effects_chain: list[str] | None = None, effects_db: dict | None = None,
-             base: bool = True) -> None:
+             base: bool = True, in_ss: float | None = None, in_t: float | None = None,
+             out_wh: tuple[int, int] | None = None, drop_audio: bool = False) -> None:
     speed = round(random.uniform(0.97, 1.03), 3) if base else 1.0
     pts_factor = round(1.0 / speed, 4)
     flip = random.choice(["hflip,", ""])
@@ -297,7 +298,7 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
     # Дополнительные vf-эффекты из цепочки
     complex_parts = []
     if effects_chain and effects_db:
-        dur = probe_duration(src)
+        dur = in_t if in_t is not None else probe_duration(src)
         for eff_name in effects_chain:
             eff_type, eff_filter = resolve_effect_filter(eff_name, effects_db, fps, dur)
             if eff_type == "vf":
@@ -306,15 +307,23 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
                 complex_parts.append(eff_filter)
 
     vf = ",".join(vf_parts)
+    if out_wh is not None:
+        ow, oh = out_wh
+        vf = (vf + "," if vf else "") + f"scale={ow}:{oh}:force_original_aspect_ratio=increase,crop={ow}:{oh}"
     pre_graph = f"[0:v]{vf}[pre]" if vf else "[0:v]null[pre]"
 
     probe = sh([
         "ffprobe", "-v", "quiet", "-select_streams", "a",
         "-show_entries", "stream=index", "-of", "csv=p=0", str(src)
     ], timeout=30)
-    has_audio = bool(probe.stdout.strip())
+    has_audio = bool(probe.stdout.strip()) and not drop_audio
 
-    cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y", "-i", str(src)]
+    cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y"]
+    if in_ss is not None:
+        cmd += ["-ss", f"{in_ss:.3f}"]
+    if in_t is not None:
+        cmd += ["-t", f"{in_t:.3f}"]
+    cmd += ["-i", str(src)]
 
     # Если есть complex-эффекты — собираем filter_complex
     if complex_parts:

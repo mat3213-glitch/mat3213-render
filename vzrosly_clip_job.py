@@ -576,6 +576,7 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
     intro = min(2.0 * beat, target * 0.12)
     outro = min(3.0 * beat, target * 0.16)
     raw: list[tuple[str, float, str, bool]] = [(keys[0], intro, "intro", False)]
+    tail_key = keys[0]
     if energy_groups:
         cursor = intro
         for group in energy_groups:
@@ -604,18 +605,32 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
             if cursor >= target - outro - 0.03:
                 break
     else:
-        # Preview fallback: every source appears before a repeat.
-        raw.extend((key, 1.5 * beat, "groove", False) for key in keys)
-    rotation = list(keys)
-    rng.shuffle(rotation)
-    pos = 0
-    while sum(item[1] for item in raw) + outro < target:
-        region = "breath" if len(raw) % 11 == 0 else "groove"
-        dur = (3.0 if region == "breath" else 2.0) * beat
-        remaining = target - outro - sum(item[1] for item in raw)
-        raw.append((rotation[pos % len(rotation)], min(dur, remaining), region, False))
-        pos += 1
-    raw.append((rotation[pos % len(rotation)], outro, "outro", False))
+        # Fallback (energy_map off): строгий темп по доле bpm + максимальное
+        # разнообразие пула. Каждый источник пула получает заметный слот
+        # (3-6 долей), длительности варьируются (неравномерный ритм), а порядок
+        # ре-шаффлится после каждого полного прохода по пулу — нет «карусели»
+        # одного и того же цикла и нет «молчащих» видео.
+        cycle = list(keys)
+        rng.shuffle(cycle)
+        n = len(cycle)
+        beat_choices = [3, 3, 4, 4, 5, 5, 6]
+        target_end = target - outro
+        cursor = intro
+        i = 0
+        while cursor < target_end - 0.03:
+            key = cycle[i % n]
+            if i > 0 and i % n == 0:
+                rng.shuffle(cycle)          # ре-шаффл после полного цикла по пулу
+            beats = rng.choice(beat_choices)
+            dur = min(beats * beat, target_end - cursor)
+            if dur <= 0.03:
+                break
+            region = "breath" if rng.random() < 0.10 else "groove"
+            raw.append((key, dur, region, False))
+            cursor += dur
+            i += 1
+        tail_key = cycle[i % n]
+    raw.append((tail_key, outro, "outro", False))
 
     seq = []
     for i, (key, dur, region, is_drop) in enumerate(raw):
@@ -696,8 +711,8 @@ def main():
     # preview tier 2: половинное разрешение + ultrafast → дешёвый proxy для ревью движения/плотности/ритма
     if preview:
         W, H = (W // 2) // 2 * 2, (H // 2) // 2 * 2   # half, чётное
-    seg_crf, seg_preset = ("30", "ultrafast") if preview else ("22", "veryfast")
-    body_crf, body_preset = ("30", "ultrafast") if preview else ("20", "veryfast")
+    seg_crf, seg_preset = ("24", "medium") if preview else ("22", "veryfast")
+    body_crf, body_preset = ("24", "medium") if preview else ("20", "veryfast")
 
     # Legacy jobs fetch named art roles from their job folder. A video-pool job
     # instead consumes an arbitrary YaD directory and maps filenames to stable keys.
@@ -969,9 +984,12 @@ def main():
     nz_seed  = tex.randint(1, 99999)
     scr_ss   = round(tex.uniform(0.0, 4.0), 2)   # старт scratch-петли
     grt_ss   = round(tex.uniform(0.0, 4.0), 2)   # старт grit-петли
-    # грейд+виньетка — из per-track стиля (раньше были зашиты одним луком на все треки)
-    grade = f"eq={style['eq']}"
-    if style.get("balance"):
+    # грейд+виньетка — из per-track стиля (раньше были зашиты одним луком на все треки).
+    # job["grade_override"] — точечный eq-грейд трека (напр. светлее), замещает eq стиля
+    # и отключает balance-затемнение, чтобы трек не усложнялся цветобалансом стиля.
+    grade_eq = job.get("grade_override", "") or style['eq']
+    grade = f"eq={grade_eq}"
+    if not job.get("grade_override") and style.get("balance"):
         grade += f",colorbalance={style['balance']}"
     vig = f"vignette={style['vignette']}," if style.get("vignette") else ""
     result = WORK / out_name
@@ -1027,7 +1045,7 @@ def main():
     cmd += ["-an"] if silent else ["-map", "3:a", "-af", af_chain]
     cmd += [
         "-c:v", "libx264",
-        *(["-crf", "30", "-preset", "ultrafast"] if preview
+        *(["-crf", "24", "-preset", "medium"] if preview
           else ["-crf", "23", "-preset", "fast", "-maxrate", "9M", "-bufsize", "18M"]),
         "-r", str(FPS),
         *([] if silent else ["-c:a", "aac", "-b:a", "192k"]),

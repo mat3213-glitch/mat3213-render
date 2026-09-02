@@ -185,19 +185,17 @@ def main():
     uploaded = 0
     for idx, (name, seg) in enumerate(all_work):
         out_name = f"loop_{idx:03d}.mp4"
-        dst = out_work / out_name
-        uniq_dst = out_work / f"loop_{idx:03d}_uniq.mp4"
+        out = out_work / out_name
         src = src_dir / name
-        if not split_segment(src, seg, dst):
-            print(f"  ✗ {out_name}", flush=True)
-            continue
+        s, e = seg
         chain = pick_chain(effects_db)
         try:
-            uniquize(dst, uniq_dst, effects_chain=chain, effects_db=effects_db, base=False)
-        except Exception as e:
-            print(f"  ✗ {out_name}: uniquize fail ({e})", flush=True)
+            uniquize(src, out, effects_chain=chain, effects_db=effects_db,
+                     base=False, in_ss=s, in_t=e - s, out_wh=(1280, 720), drop_audio=True)
+        except Exception as ex:
+            print(f"  ✗ {out_name}: uniquize fail ({ex})", flush=True)
             continue
-        if sh(["rclone", "copyto", str(uniq_dst),
+        if sh(["rclone", "copyto", str(out),
                f"{REMOTE}{a.out_base}/pool/{out_name}"]).returncode != 0:
             print(f"  ✗ upload {out_name}", flush=True)
             continue
