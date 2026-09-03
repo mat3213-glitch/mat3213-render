@@ -2,13 +2,17 @@
 """s2c_daily.py — автономный цикл Signal-to-Channel на GH-раннере.
 
 Поток (полностью на раннере, бук не участвует):
-  1. собрать свежие сигналы Hacker News (открытый Firebase API, без ключа),
+  1. собрать свежие сигналы из нескольких источников (HN, Lobsters, arXiv),
   2. отфильтровать по профилю канала (s2c_channel_profile.json),
-  3. отсечь уже отправленные (дедуп по item_id, состояние на ЯД),
+  3. отсечь уже отправленные (общий дедуп по namespaced-id, состояние на ЯД),
   4. для каждого отобранного — сгенерить авторский рус. пост через Qwen
-     (qwen/qwen_chat.py --stdin, тот же раннер, US-IP), SKIP если нерелевантно/мало данных,
+     (qwen/qwen_chat.py --stdin), SKIP если нерелевантно/мало данных,
   5. отправить через Cloudflare Worker POST /add (X-Worker-Secret) →
      модерация с кнопками в ЛС владельца → публикация в канале (Worker+KV).
+
+Архитектура (вариант A): ОДИН крон/одна сущность, НЕСКОЛЬКО источников,
+общий дедуп. Никаких отдельных кронов на источник — нет гонок за state.json.
+Периодичность каждого источника регулируется ВНУТРИ прогона (collected-таймстамп).
 
 Секреты/токены — только через env (GH secrets), в логи — только имена.
 """
@@ -20,7 +24,8 @@ import re
 import subprocess
 import sys
 import urllib.request
-from datetime import datetime
+import xml.etree.ElementTree as ET
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
@@ -28,12 +33,12 @@ HERE = Path(__file__).resolve().parent
 PROFILE_FILE = HERE / "s2c_channel_profile.json"
 QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"
 
-# Публичный URL Worker (не секрет). Переопределяется env S2C_WORKER_URL.
 DEFAULT_WORKER_URL = "https://s2c-moderation-1.mat3213.workers.dev"
-# Путь к файлу состояния (дедуп) на ЯД (pull/push через rclone в workflow).
 DEFAULT_YD_STATE = "Content factory/cloud_io/s2c/state.json"
 
 HN_BASE = "https://hacker-news.firebaseio.com/v0"
+LOB_BASE = "https://lobste.rs"
+ARXIV_API = "http://export.arxiv.org/api/query"
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) signal-to-channel/1.0"
 
 # Отправной редакторский промпт (голос «ИИшницы») — тот же, что в SignalToChannel writer.py.
@@ -62,35 +67,14 @@ def _load_json(path):
         return json.load(fh)
 
 
-def _http_json(url: str, timeout: int = 20):
+def _http_bytes(url: str, timeout: int = 20) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
     with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 fixed Host names
-        return json.loads(resp.read().decode("utf-8"))
+        return resp.read()
 
 
-def hn_top_ids(limit: int) -> list[int]:
-    ids = _http_json(f"{HN_BASE}/topstories.json")
-    return [int(i) for i in ids[:limit]]
-
-
-def hn_item(item_id: int) -> dict | None:
-    try:
-        item = _http_json(f"{HN_BASE}/item/{item_id}.json")
-    except (HTTPError, URLError, OSError):
-        return None
-    if not item or item.get("type") != "story":
-        return None
-    title = str(item.get("title") or "").strip()
-    url = str(item.get("url") or "").strip()
-    if not title or not url.startswith("http"):
-        return None
-    return {
-        "item_id": int(item_id),
-        "title": title,
-        "url": url,
-        "score": item.get("score") or 0,
-        "text": str(item.get("text") or "").strip() or None,
-    }
+def _http_json(url: str, timeout: int = 20):
+    return json.loads(_http_bytes(url, timeout).decode("utf-8", "replace"))
 
 
 def _domain(url: str) -> str:
@@ -101,14 +85,163 @@ def _domain(url: str) -> str:
         return ""
 
 
+# ----------------------------------------------------------------------------
+# Источники. Каждый возвращает список кандидатов:
+#   {"id": "<src>:<native_id>", "title", "url", "text", "score", "domain"}
+# id обязателен, стабилен, namespaced — служит ключом общего дедупа.
+# ----------------------------------------------------------------------------
+
+def hn_fetch(limit: int, profile: dict) -> list[dict]:
+    try:
+        ids = _http_json(f"{HN_BASE}/topstories.json")
+    except (HTTPError, URLError, OSError):
+        return []
+    out = []
+    for item_id in [int(i) for i in ids[:limit]]:
+        try:
+            item = _http_json(f"{HN_BASE}/item/{item_id}.json")
+        except (HTTPError, URLError, OSError):
+            continue
+        if not item or item.get("type") != "story":
+            continue
+        title = str(item.get("title") or "").strip()
+        url = str(item.get("url") or "").strip()
+        if not title or not url.startswith("http"):
+            continue
+        out.append({
+            "id": f"hn:{item_id}",
+            "title": title,
+            "url": url,
+            "domain": _domain(url),
+            "text": str(item.get("text") or "").strip() or None,
+            "score": item.get("score") or 0,
+        })
+    return out
+
+
+def lob_fetch(limit: int, profile: dict) -> list[dict]:
+    try:
+        stories = _http_json(f"{LOB_BASE}/newest.json?count={limit}")
+    except (HTTPError, URLError, OSError):
+        return []
+    if not isinstance(stories, list):
+        return []
+    out = []
+    for s in stories:
+        title = str(s.get("title") or "").strip()
+        url = str(s.get("url") or "").strip() or f"{LOB_BASE}/s/{s.get('short_id', '')}".strip()
+        if not title or not url.startswith("http"):
+            continue
+        out.append({
+            "id": f"lob:{s.get('short_id') or s.get('id') or title}",
+            "title": title,
+            "url": url,
+            "domain": _domain(url),
+            "text": str(s.get("description") or "").strip() or None,
+            "score": s.get("score") or 0,
+        })
+    return out
+
+
+_ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
+_ARXIV_QUERY = (
+    "search_query=cat:cs.AI+OR+cat:cs.LG+OR+cat:cs.CL"
+    "&sortBy=submittedDate&sortOrder=descending&max_results={limit}"
+)
+
+
+def _arxiv_id(entry_id: str) -> str:
+    # entry_id вида http://arxiv.org/abs/2401.01234v1 -> берём короткий id
+    m = re.search(r"/abs/([^/]+)", entry_id)
+    return m.group(1) if m else entry_id
+
+
+def arxiv_fetch(limit: int, profile: dict) -> list[dict]:
+    url = f"{ARXIV_API}?{_ARXIV_QUERY.format(limit=limit)}"
+    try:
+        root = ET.fromstring(_http_bytes(url, timeout=60))
+    except (HTTPError, URLError, OSError, ET.ParseError):
+        return []
+    out = []
+    for entry in root.findall("atom:entry", _ARXIV_NS):
+        eid = (entry.findtext("atom:id", default="", namespaces=_ARXIV_NS) or "").strip()
+        title = re.sub(r"\s+", " ", entry.findtext("atom:title", default="", namespaces=_ARXIV_NS) or "").strip()
+        summary = re.sub(r"\s+", " ", entry.findtext("atom:summary", default="", namespaces=_ARXIV_NS) or "").strip()
+        if not title or not eid:
+            continue
+        out.append({
+            "id": f"arxiv:{_arxiv_id(eid)}",
+            "title": title,
+            "url": eid,
+            "domain": "arxiv.org",
+            "text": summary or None,
+            "score": 0,
+        })
+    return out
+
+
+# Реестр источников: name -> (fetch_func, auto_relevant)
+# auto_relevant=True  — источник уже «по построению» про тему (arXiv AI), фильтруем только exclude.
+# auto_relevant=False — обычный новостной, применяем include_any фильтр (HN, Lobsters).
+SOURCES = {
+    "hn": (hn_fetch, False),
+    "lob": (lob_fetch, False),
+    "arxiv": (arxiv_fetch, True),
+}
+
+
+# ----------------------------------------------------------------------------
+# ДЕДУП / состояние
+# ----------------------------------------------------------------------------
+
+def load_state() -> dict:
+    state_path = Path("s2c_state.json")
+    if not state_path.exists():
+        return {"sent_ids": [], "collected": {}}
+    try:
+        data = _load_json(state_path)
+        if not isinstance(data, dict):
+            return {"sent_ids": [], "collected": {}}
+        data.setdefault("sent_ids", [])
+        data.setdefault("collected", {})
+        return data
+    except Exception:
+        return {"sent_ids": [], "collected": {}}
+
+
+def _normalize_sent(v) -> set:
+    # миграция старых int-id (HN) в строковые namespaced id, + сохраняем как есть
+    out = set()
+    for x in v:
+        if isinstance(x, int):
+            out.add(f"hn:{x}")
+        out.add(str(x))
+    return out
+
+
+def save_state_and_push(state: dict, yandex_state: str):
+    try:
+        with open("s2c_state.json", "w", encoding="utf-8") as fh:
+            json.dump(state, fh, ensure_ascii=False)
+        subprocess.run(["rclone", "copyto", "s2c_state.json", f"ydrive:{yandex_state}"],
+                       check=False, timeout=120)
+        print(f"[s2c] состояние обновлено: {len(state['sent_ids'])} sent; collected={state['collected']}")
+    except Exception as e:
+        print(f"[s2c] не записал состояние: {type(e).__name__}")
+
+
 def relevant(item: dict, profile: dict) -> bool:
-    hay = f"{item['title']} {_domain(item['url'])}".lower()
+    hay = f"{item['title']} {item.get('domain') or ''}".lower()
     inc = [w.lower() for w in profile.get("include_any", [])]
     exc = [w.lower() for w in profile.get("exclude_any", [])]
     if any(e in hay for e in exc):
         return False
     return any(w in hay for w in inc)
 
+
+# ----------------------------------------------------------------------------
+# Qwen / og:image / Worker
+# ----------------------------------------------------------------------------
 
 def qwen_generate(prompt: str, model: str, timeout: int = 300) -> str:
     if not QWEN_CHAT.exists():
@@ -162,66 +295,78 @@ def main() -> int:
     worker_url = os.getenv("S2C_WORKER_URL", DEFAULT_WORKER_URL).rstrip("/")
     worker_secret = os.getenv("S2C_WORKER_SECRET", "").strip()
     qwen_model = os.getenv("QWEN_MODEL", "Qwen3-Coder").strip()
-    hn_limit = int(os.getenv("HN_TOP", "60"))
-    max_drafts = int(os.getenv("S2C_MAX_DRAFTS", "1"))
+    per_source = int(os.getenv("S2C_PER_SOURCE", "12"))
+    max_drafts = int(os.getenv("S2C_MAX_DRAFTS", "2"))
     yandex_state = os.getenv("S2C_YD_STATE", DEFAULT_YD_STATE)
+    now = datetime.now(timezone.utc)
 
     profile = _load_json(PROFILE_FILE) if PROFILE_FILE.exists() else {"include_any": [], "exclude_any": []}
-
-    # дедуп: откуда уже отправляли
-    sent: list = []
-    state_path = Path("s2c_state.json")
-    if state_path.exists():
-        try:
-            sent = _load_json(state_path).get("sent_ids", [])
-        except Exception:
-            sent = []
-    sent_set = set(sent)
+    state = load_state()
+    sent_set = _normalize_sent(state.get("sent_ids", []))
     print(f"[s2c] профиль: {os.path.basename(str(PROFILE_FILE))}; уже отправлено: {len(sent_set)}")
 
-    # 1–2. собрать + отфильтровать
-    top = hn_top_ids(hn_limit)
-    candidates = []
-    for item_id in top:
-        it = hn_item(item_id)
-        if it and relevant(it, profile) and it["item_id"] not in sent_set:
-            candidates.append(it)
-    print(f"[s2c] HN top {len(top)} → релевантных новых: {len(candidates)}")
+    # 1–2. собрать + отфильтровать по каждому источнику
+    candidates: list[dict] = []
+    for name, (fetch_fn, auto_relevant) in SOURCES.items():
+        try:
+            items = fetch_fn(per_source, profile) or []
+        except Exception as e:  # noqa: BLE001
+            print(f"[s2c] {name}: ОШИБКА сбора — {type(e).__name__}: {e}")
+            state["collected"][name] = now.isoformat()
+            continue
+        fresh = []
+        for it in items:
+            if it["id"] in sent_set:
+                continue
+            if auto_relevant:
+                hay = f"{it['title']} {it.get('domain') or ''}".lower()
+                if any(e in hay for e in [w.lower() for w in profile.get("exclude_any", [])]):
+                    continue
+            else:
+                if not relevant(it, profile):
+                    continue
+            fresh.append(it)
+        fresh.sort(key=lambda x: x["score"], reverse=True)
+        fresh = fresh[:max_drafts]
+        print(f"[s2c] {name}: собрано {len(items)}, релевантных новых: {len(fresh)}")
+        candidates.extend(fresh)
+        state["collected"][name] = now.isoformat()
+
     candidates.sort(key=lambda x: x["score"], reverse=True)
     candidates = candidates[:max_drafts]
+    print(f"[s2c] ИТОГО кандидатов к генерации: {len(candidates)}")
 
     if dry:
         for c in candidates:
-            print(f"  [dry] id={c['item_id']} score={c['score']} {c['title']}")
+            print(f"  [dry] {c['id']} score={c['score']} {c['title']}")
         return 0
 
     if not worker_secret:
         print("[s2c] нет S2C_WORKER_SECRET (GH secret) — пропуск отправки")
         return 1
 
-    new_sent = list(sent_set)
+    new_sent = set(sent_set)
     for c in candidates:
         prompt = _EDITOR_PROMPT.format(title=c["title"], summary=(c["text"] or "нет"), source_url=(c["url"] or "не указан"))
         text = qwen_generate(prompt, qwen_model)
         if not text or text.strip().upper() == "SKIP":
-            print(f"  [skip] id={c['item_id']}: Qwen вернул SKIP/пусто")
+            print(f"  [skip] {c['id']}: Qwen вернул SKIP/пусто")
             continue
         img = og_image(c["url"])
-        draft = {"id": f"hn:{c['item_id']}", "title": c["title"], "text": text, "image_url": img}
+        draft = {"id": c["id"], "title": c["title"], "text": text, "image_url": img}
         ok, resp = worker_add(worker_url, worker_secret, draft)
-        print(f"  [add] id={draft['id']} ok={ok} resp={resp[:120]}")
+        print(f"  [add] {draft['id']} ok={ok} resp={resp[:120]}")
         if ok:
-            new_sent.append(int(c["item_id"]))
+            new_sent.add(c["id"])
 
-    # 6. сохранить дедуп на ЯД (rclone сделает workflow / сам)
-    if new_sent != sent_set:
-        try:
-            with open("s2c_state.json", "w", encoding="utf-8") as fh:
-                json.dump({"sent_ids": new_sent}, fh, ensure_ascii=False)
-            subprocess.run(["rclone", "copyto", "s2c_state.json", f"ydrive:{yandex_state}"], check=False, timeout=120)
-            print(f"[s2c] состояние обновлено: {len(new_sent)} id")
-        except Exception as e:
-            print(f"[s2c] не записал состояние: {type(e).__name__}")
+    # 6. сохранить дедуп + таймстампы на ЯД (rclone сделает workflow / сам)
+    if len(new_sent) != len(sent_set):
+        state["sent_ids"] = sorted(new_sent)
+        save_state_and_push(state, yandex_state)
+    else:
+        print("[s2c] новых отправленных нет")
+        # всё равно пишем collected-таймстампы, чтобы не потерять периодичность
+        save_state_and_push(state, yandex_state)
 
     return 0
 
