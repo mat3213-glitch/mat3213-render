@@ -25,7 +25,7 @@ permissions:
 jobs:
   variants:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Install ffmpeg and rclone
@@ -39,7 +39,7 @@ jobs:
           mkdir -p "$HOME/.config/rclone"
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" > "$HOME/.config/rclone/rclone.conf"
-      - name: Re-encode + queue frozen v3 (VK full, YT 4 shorts)
+      - name: Cut 4 Shorts + queue frozen v3 (VK full already on YaD)
         env:
           SOURCE: ${{ inputs.source }}
           SLUG: ${{ inputs.slug }}
@@ -47,22 +47,25 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          rclone copyto "ydrive:Content factory/$SOURCE" source_preview.mp4
-          # Four equal sections remain below one minute for Shorts.
-          # Source preview is 540x960; upscale sections to 1080x1920 for Shorts.
-          total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source_preview.mp4)
+          base="Content factory/cloud_io/publish_queue/media/${SLUG}"
+          MEDIA_DIR="ydrive:${base}"
+          # Idempotent: use the already-uploaded full file if present, else upload source preview as VK full.
+          if ! rclone lsf "$MEDIA_DIR/${SLUG}_full.mp4" 2>/dev/null | grep -q .; then
+            echo "full file missing, uploading source preview as VK full"
+            rclone copyto "ydrive:Content factory/$SOURCE" "$MEDIA_DIR/${SLUG}_full.mp4"
+          fi
+          # Source for cutting = already-uploaded full file (no re-download of original).
+          rclone copyto "$MEDIA_DIR/${SLUG}_full.mp4" source.mp4
+          total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source.mp4)
           section=$(python3 -c 'import sys; print(float(sys.argv[1]) / 4.0)' "$total")
           for n in 1 2 3 4; do
             start=$(python3 -c 'import sys; print((int(sys.argv[1])-1)*float(sys.argv[2]))' "$n" "$section")
-            ffmpeg -y -loglevel error -ss "$start" -t "$section" -i source_preview.mp4 \
+            ffmpeg -y -loglevel error -ss "$start" -t "$section" -i source.mp4 \
               -vf 'scale=-1:1920' -c:v libx264 -crf 22 -preset medium -c:a aac -b:a 160k -pix_fmt yuv420p \
               -movflags +faststart "out/${SLUG}_section_${n}.mp4"
           done
-          # VK gets the full preview as-is (540x960, 152MB).
-          rclone copyto source_preview.mp4 "ydrive:Content factory/cloud_io/publish_queue/media/${SLUG}/${SLUG}_full.mp4"
-          base="Content factory/cloud_io/publish_queue/media/${SLUG}"
           for n in 1 2 3 4; do
-            rclone copyto "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
+            rclone copyto "out/${SLUG}_section_${n}.mp4" "$MEDIA_DIR/${SLUG}_section_${n}.mp4"
           done
           rclone copyto "ydrive:Content factory/cloud_io/publish_queue/queue.json" queue.json
           python3 - "$SLUG" "$TITLE" <<'PY'
