@@ -173,11 +173,30 @@ def main():
         sys.exit("Failed to download track.mp3")
     print(f"  track.mp3  {track_file.stat().st_size//1024}KB")
 
+    # Auto-populate sources from video_source_dir when sources list is empty
+    video_source_dir = str(job.get("video_source_dir", "")).strip()
+    if not sources and video_source_dir:
+        listing = subprocess.run(
+            ["rclone", "lsf", f"{REMOTE}:{video_source_dir}"],
+            capture_output=True, text=True,
+        )
+        if listing.returncode == 0:
+            sources = [
+                Path(ln).stem for ln in listing.stdout.splitlines()
+                if ln.strip().endswith(".mp4")
+            ]
+            print(f"  auto-sources: {len(sources)} videos from {video_source_dir}")
+        else:
+            print(f"  WARNING: cannot list {video_source_dir}")
+
     src_files: dict[str, Path] = {}
     src_durations: dict[str, float] = {}
     for src in sources:
         dest = WORKDIR / f"{src}.mp4"
-        if not yd_get(f"{JOB_YD}/{src}.mp4", dest):
+        # Try job directory first, then video_source_dir fallback
+        if not yd_get(f"{JOB_YD}/{src}.mp4", dest) and video_source_dir:
+            yd_get(f"{video_source_dir}/{src}.mp4", dest)
+        if not dest.exists() or dest.stat().st_size < 1000:
             print(f"  WARNING: {src}.mp4 not found — skipping")
             continue
         dur = video_duration(dest)
