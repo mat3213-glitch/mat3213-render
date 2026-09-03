@@ -210,12 +210,13 @@ def load_state() -> dict:
 
 
 def _normalize_sent(v) -> set:
-    # миграция старых int-id (HN) в строковые namespaced id, + сохраняем как есть
+    # миграция старых int-id (HN) в строковые namespaced id
     out = set()
     for x in v:
         if isinstance(x, int):
             out.add(f"hn:{x}")
-        out.add(str(x))
+        else:
+            out.add(str(x))
     return out
 
 
@@ -306,8 +307,9 @@ def main() -> int:
     print(f"[s2c] профиль: {os.path.basename(str(PROFILE_FILE))}; уже отправлено: {len(sent_set)}")
 
     # 1–2. собрать + отфильтровать по каждому источнику
-    candidates: list[dict] = []
+    buckets: dict[str, list[dict]] = {}
     for name, (fetch_fn, auto_relevant) in SOURCES.items():
+        buckets.setdefault(name, [])
         try:
             items = fetch_fn(per_source, profile) or []
         except Exception as e:  # noqa: BLE001
@@ -327,14 +329,29 @@ def main() -> int:
                     continue
             fresh.append(it)
         fresh.sort(key=lambda x: x["score"], reverse=True)
-        fresh = fresh[:max_drafts]
+        buckets[name] = fresh
         print(f"[s2c] {name}: собрано {len(items)}, релевантных новых: {len(fresh)}")
-        candidates.extend(fresh)
         state["collected"][name] = now.isoformat()
 
-    candidates.sort(key=lambda x: x["score"], reverse=True)
-    candidates = candidates[:max_drafts]
+    # глобальный лимит max_drafts — round-robin по источникам, чтобы никто не голодал
+    candidates = []
+    order = list(buckets.keys())
+    pos = {k: 0 for k in order}
+    while len(candidates) < max_drafts:
+        added = False
+        for name in order:
+            b = buckets[name]
+            if pos[name] < len(b):
+                candidates.append(b[pos[name]])
+                pos[name] += 1
+                added = True
+                if len(candidates) >= max_drafts:
+                    break
+        if not added:
+            break
     print(f"[s2c] ИТОГО кандидатов к генерации: {len(candidates)}")
+    for c in candidates:
+        print(f"  [sel] {c['id']} score={c.get('score')} {c['title']}")
 
     if dry:
         for c in candidates:
@@ -359,14 +376,12 @@ def main() -> int:
         if ok:
             new_sent.add(c["id"])
 
-    # 6. сохранить дедуп + таймстампы на ЯД (rclone сделает workflow / сам)
-    if len(new_sent) != len(sent_set):
-        state["sent_ids"] = sorted(new_sent)
-        save_state_and_push(state, yandex_state)
-    else:
-        print("[s2c] новых отправленных нет")
-        # всё равно пишем collected-таймстампы, чтобы не потерять периодичность
-        save_state_and_push(state, yandex_state)
+    # 3. сохранить дедуп + таймстампы на ЯД (rclone сделает workflow / сам)
+    # персистим нормализованный namespaced набор, чтобы состояние было чистым
+    persisted = _normalize_sent(state.get("sent_ids", []))
+    state["sent_ids"] = sorted(persisted | new_sent)
+    print(f"[s2c] отправлено за прогон: {len(new_sent - sent_set)}; в состоянии всего: {len(state['sent_ids'])}")
+    save_state_and_push(state, yandex_state)
 
     return 0
 
