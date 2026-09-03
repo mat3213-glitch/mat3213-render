@@ -319,7 +319,11 @@ def main():
         sys.exit(f"Audio mix failed: {r.stderr[-200:]}")
 
     try:
-        media = assert_media_contract(result, expected_duration=duration)
+        # Preview: relaxed tolerance (aubio beat detection is non-deterministic
+        # across runner environments; segment total can drift 10-15% from target).
+        preview_tol = max(4.0, duration * 0.15) if render_mode == "preview" else 0.30
+        media = assert_media_contract(result, expected_duration=duration,
+                                     tolerance=preview_tol)
     except RenderContractError as exc:
         yd_put_text(f"error: media contract: {exc}", f"{JOB_YD}/status.txt")
         sys.exit(str(exc))
