@@ -2,7 +2,7 @@
 """s2c_daily.py — автономный цикл Signal-to-Channel на GH-раннере.
 
 Поток (полностью на раннере, бук не участвует):
-  1. собрать свежие сигналы из нескольких источников (HN, Lobsters, arXiv),
+  1. собрать свежие сигналы из нескольких источников (HN, Lobsters, arXiv, Grok),
   2. отфильтровать по профилю канала (s2c_channel_profile.json),
   3. отсечь уже отправленные (общий дедуп по namespaced-id, состояние на ЯД),
   4. для каждого отобранного — сгенерить авторский рус. пост через Qwen
@@ -18,6 +18,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -25,7 +26,7 @@ import subprocess
 import sys
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 
@@ -180,13 +181,99 @@ def arxiv_fetch(limit: int, profile: dict) -> list[dict]:
     return out
 
 
+# ----------------------------------------------------------------------------
+# Grok/Perplexity дневные сигналы из mat3213-signals/signals/incoming/
+# Формат: grok_YYYY-MM-DD.json → {findings:[], finding_of_the_day:{}, deep_internet:[], ...}
+# auto_relevant=True — это уже отфильтрованный AI-сигнал от разведчика.
+# ----------------------------------------------------------------------------
+
+_SIGNALS_REPO = "mat3213-glitch/mat3213-signals"
+
+
+def _gh_json(url: str, token: str, timeout: int = 25):
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"token {token}",
+        "User-Agent": _UA,
+    })
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", "replace"))
+
+
+def _sig_id(source_url: str, title: str) -> str:
+    key = source_url if source_url.startswith("http") else title
+    h = hashlib.sha1(key.encode("utf-8")).hexdigest()[:12]
+    return f"sig:{h}"
+
+
+def _finding_to_candidate(f: dict) -> dict | None:
+    if not isinstance(f, dict):
+        return None
+    title = str(f.get("title") or "").strip()
+    url = str(f.get("source_url") or f.get("url") or "").strip()
+    if not title:
+        return None
+    text = str(f.get("what_found") or f.get("what") or f.get("practical_value") or "").strip()
+    return {
+        "id": _sig_id(url, title),
+        "title": title,
+        "url": url or f"https://x.com/i/grok",
+        "domain": _domain(url) if url.startswith("http") else "grok",
+        "text": text or None,
+        "score": 50,
+    }
+
+
+def grok_fetch(limit: int, profile: dict) -> list[dict]:
+    token = os.getenv("GITHUB_TOKEN", "").strip()
+    if not token:
+        print("[s2c] grok: нет GITHUB_TOKEN — пропуск")
+        return []
+    today = datetime.now(timezone.utc)
+    dates = [(today - timedelta(days=d)).strftime("%Y-%m-%d") for d in range(2)]
+    out = []
+    for date_str in dates:
+        path = f"signals/incoming/grok_{date_str}.json"
+        url = f"https://api.github.com/repos/{_SIGNALS_REPO}/contents/{path}"
+        try:
+            raw = _gh_json(url, token)
+            data = json.loads(
+                __import__("base64").b64decode(raw["content"]).decode("utf-8", "replace")
+            )
+        except (HTTPError, URLError, OSError, KeyError, json.JSONDecodeError):
+            continue
+        # основной пул — findings
+        for f in data.get("findings", []):
+            c = _finding_to_candidate(f)
+            if c:
+                out.append(c)
+        # finding_of_the_day — приоритетный
+        fotd = data.get("finding_of_the_day")
+        if isinstance(fotd, dict) and fotd.get("title"):
+            c = _finding_to_candidate(fotd)
+            if c:
+                c["score"] = 100
+                out.append(c)
+        # deep_internet
+        for f in data.get("deep_internet", []):
+            c = _finding_to_candidate(f)
+            if c:
+                out.append(c)
+        # freebies_of_the_day
+        for f in data.get("freebies_of_the_day", []):
+            c = _finding_to_candidate(f)
+            if c:
+                out.append(c)
+    return out[:limit]
+
+
 # Реестр источников: name -> (fetch_func, auto_relevant)
-# auto_relevant=True  — источник уже «по построению» про тему (arXiv AI), фильтруем только exclude.
+# auto_relevant=True  — источник уже «по построению» про тему (arXiv AI, Grok), фильтруем только exclude.
 # auto_relevant=False — обычный новостной, применяем include_any фильтр (HN, Lobsters).
 SOURCES = {
     "hn": (hn_fetch, False),
     "lob": (lob_fetch, False),
     "arxiv": (arxiv_fetch, True),
+    "grok": (grok_fetch, True),
 }
 
 
