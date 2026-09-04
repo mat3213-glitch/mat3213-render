@@ -224,7 +224,7 @@ def _finding_to_candidate(f: dict) -> dict | None:
 
 
 def grok_fetch(limit: int, profile: dict) -> list[dict]:
-    token = os.getenv("GITHUB_TOKEN", "").strip()
+    token = os.getenv("GH_PAT", "").strip()
     if not token:
         print("[s2c] grok: нет GITHUB_TOKEN — пропуск")
         return []
