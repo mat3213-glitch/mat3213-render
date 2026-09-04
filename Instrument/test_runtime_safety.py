@@ -14,7 +14,6 @@ from runtime_safety import (
     safe_local_path,
     safe_remote_path,
 )
-from VeoFree import veofree_batch, veofree_i2v_batch
 
 
 class _Response:
@@ -88,15 +87,6 @@ class RuntimeSafetyTests(unittest.TestCase):
         self.assertIn("-nostdin", argv)
         self.assertEqual(argv[argv.index("-threads") + 1], "2")
         self.assertLess(argv.index("-ss"), argv.index("-i"))
-
-    def test_veofree_dispatch_rejects_paths_before_http(self):
-        with self.assertRaises(ValueError):
-            veofree_batch.dispatch("token", "prompt", "ydrive:escape", "clip.mp4")
-        with self.assertRaises(ValueError):
-            veofree_i2v_batch.dispatch(
-                "token", "../secret.jpg", "prompt", "jobs/ok", "clip.mp4", "9:16"
-            )
-
 
 if __name__ == "__main__":
     unittest.main()

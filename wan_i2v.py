@@ -2,7 +2,7 @@
 wan_i2v.py — Wan2.1 image-to-video на GH (US-IP) через HF Space + gradio_client.
 Watermark-free. Оживляет ОДИН стилл → клип → ЯД.
 
-Зеркалит env-контракт и rclone-хелперы veofree_i2v_gen.py; отличие — ядро генерации не Playwright,
+Использует общий env-контракт и rclone-хелперы; ядро генерации не Playwright,
 а gradio_client к HF Space (по умолчанию Wan-AI/Wan2.1-I2V-14B-720P). Сигнатура predict у Space
 может меняться → делаем РОБАСТНО: печатаем view_api в лог + перебираем кандидатные вызовы, первый
 валидный mp4 побеждает. Точный api_name можно зафиксировать env API_NAME после первого живого прогона.

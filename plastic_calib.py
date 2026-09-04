@@ -8,7 +8,7 @@ plastic_calib.py — КАЛИБРОВОЧНЫЙ прогон детекторо�
 
 Метки (CALIB_SET ниже, легко править):
   bad  = "пластик"      : flux-пул билета ("дешевизна"), Qwen ("сильнее пластмассой")
-  good = "ориентир-ОК"  : VeoFree ("менее пластмассовый")
+  good = "ориентир-ОК"  : вручную одобренные клипы
 
 Метрики-кандидаты (все CPU, считаются на кадр):
   fft_hf_ratio  — доля энергии высоких частот (AI сглаживает → ниже у пластика)
@@ -37,9 +37,6 @@ CALIB_SET = [
     {"dir": "render_jobs/2026-06-25_taste_bilet_square", "glob": "*.png", "label": 0, "source": "flux_bilet", "media": "png"},
     {"dir": "qwen_pool/2026-06-26",                        "glob": "*.png", "label": 0, "source": "qwen",       "media": "png"},
     {"dir": "render_jobs/2026-06-26_qwen_landscape_test",  "glob": "*.mp4", "label": 0, "source": "qwen_vid",   "media": "mp4"},
-    {"dir": "veofree_pool/2026-06-22",                     "glob": "*.mp4", "label": 1, "source": "veofree",    "media": "mp4"},
-    {"dir": "veofree_pool/2026-06-26",                     "glob": "vid_*.mp4", "label": 1, "source": "veofree", "media": "mp4"},
-    {"dir": "render_jobs/2026-06-26_veofree_vertical_test","glob": "*.mp4", "label": 1, "source": "veofree_vid","media": "mp4"},
 ]
 
 def sh(cmd):

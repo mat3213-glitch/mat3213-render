@@ -3,7 +3,7 @@
 
 US-IP раннер GH Actions открывает ВСЕ free-провайдеры (Groq/Cerebras тоже, которые RU-IP режет).
 Поток: читает батч с ЯД litellm_ci/in/<batch_id>.json → гоняет каждый промпт через litellm
-с ФОЛБЭК-списком LITELLM_GH_MODELS (первый живой выигрывает) → пишет массив результатов
+с ФОЛБЭК-списком LITELLM_MODELS (первый живой выигрывает) → пишет массив результатов
 на ЯД litellm_ci/out/<batch_id>.json (формат как у fanout: {id,ok,text,model,elapsed,error}).
 """
 import json
@@ -13,7 +13,7 @@ import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-MODELS = [m for m in os.environ.get("LITELLM_GH_MODELS", "").split(",") if m.strip()] or [
+MODELS = [m for m in os.environ.get("LITELLM_MODELS", "").split(",") if m.strip()] or [
     "groq/llama-3.3-70b-versatile",
     "openrouter/meta-llama/llama-3.3-70b-instruct:free",
     "gemini/gemini-2.5-flash",

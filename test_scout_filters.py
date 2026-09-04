@@ -22,37 +22,47 @@ def check(cond, msg):
         FAIL.append(msg)
 
 
-print("— насыщенные темы отсекаются:")
-for t in ["freellmpool — free LLM proxy pool, OpenAI compatible",
+def run_checks() -> int:
+    FAIL.clear()
+    print("— насыщенные темы отсекаются:")
+    for t in ["freellmpool — free LLM proxy pool, OpenAI compatible",
           "free-llm-gateway (MrFadiAi) inference router",
           "VulnClaw — AI agent for automated pentest",
           "opencode — the open source coding agent"]:
-    check(is_saturated(t), f"отсеяно: {t[:48]}")
+        check(is_saturated(t), f"отсеяно: {t[:48]}")
 
-print("— наше ремесло НЕ отсекается, даже если про агентов:")
-for t in ["browser-use/video-use — Edit videos with coding agents",
+    print("— наше ремесло НЕ отсекается, даже если про агентов:")
+    for t in ["browser-use/video-use — Edit videos with coding agents",
           "VCR — headless motion graphics renderer, YAML to video",
           "xfade-easing — ffmpeg transition easing",
           "agent that does audio-reactive music visualizer"]:
-    check(not is_saturated(t), f"сохранено: {t[:48]}")
+        check(not is_saturated(t), f"сохранено: {t[:48]}")
 
-print("— новизна:")
-check(similarity("freellmpool free llm proxy pool", "freellmpool free llm proxy pool") > 0.95,
+    print("— новизна:")
+    check(similarity("freellmpool free llm proxy pool", "freellmpool free llm proxy pool") > 0.95,
       "тот же текст ≈ 1.0")
-check(0.5 <= similarity("freellm.net + awesome-freellm-apis daily live catalog",
+    check(0.5 <= similarity("freellm.net + awesome-freellm-apis daily live catalog",
                         "awesome-free-ai-api + freellm.net daily live") <= 1.0,
       "перефразированный дубль ≥ порога 0.5")
-check(similarity("ffmpeg xfade easing transitions", "free llm gateway router") < 0.35,
+    check(similarity("ffmpeg xfade easing transitions", "free llm gateway router") < 0.35,
       "разные темы < 0.35")
 
-idx = NoveltyIndex(Path("/tmp/_nov_test.json"), threshold=0.5)
-idx.add("a/b", "ffmpeg film grain overlay generator")
-ok, sim, _ = idx.is_novel("ffmpeg film grain overlay generator")
-check(not ok, f"повтор пойман гейтом (sim={sim:.2f})")
-ok2, sim2, _ = idx.is_novel("demucs stem separation cli")
-check(ok2, f"другая тема проходит (sim={sim2:.2f})")
-Path("/tmp/_nov_test.json").unlink(missing_ok=True)
+    idx = NoveltyIndex(Path("/tmp/_nov_test.json"), threshold=0.5)
+    idx.add("a/b", "ffmpeg film grain overlay generator")
+    ok, sim, _ = idx.is_novel("ffmpeg film grain overlay generator")
+    check(not ok, f"повтор пойман гейтом (sim={sim:.2f})")
+    ok2, sim2, _ = idx.is_novel("demucs stem separation cli")
+    check(ok2, f"другая тема проходит (sim={sim2:.2f})")
+    Path("/tmp/_nov_test.json").unlink(missing_ok=True)
 
-print()
-print(f"ИТОГ: {'ВСЁ ЗЕЛЁНОЕ' if not FAIL else str(len(FAIL)) + ' ПРОВАЛОВ'}")
-sys.exit(1 if FAIL else 0)
+    print()
+    print(f"ИТОГ: {'ВСЁ ЗЕЛЁНОЕ' if not FAIL else str(len(FAIL)) + ' ПРОВАЛОВ'}")
+    return 1 if FAIL else 0
+
+
+def test_scout_filter_regressions():
+    assert run_checks() == 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(run_checks())

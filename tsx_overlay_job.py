@@ -150,7 +150,7 @@ def main():
         print(f"  ✓ alpha channel present ({pix_fmt})")
 
     # размеры базы: оверлей рендерится в FORMAT_DIMS (напр. 1080x1920), а база может
-    # быть меньше (VeoFree i2v = 720x1280). Тот же 9:16, но overlay=0:0 без скейла обрезал
+    # быть меньше исходного. Тот же 9:16, но overlay=0:0 без скейла обрезал
     # бы оверлей и увёл графику за кадр — поэтому скейлим оверлей ПОД размер базы.
     bp = run(["ffprobe", "-v", "error", "-select_streams", "v:0",
               "-show_entries", "stream=width,height", "-of", "csv=p=0:s=x", str(base)],

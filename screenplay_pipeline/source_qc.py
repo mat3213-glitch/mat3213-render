@@ -13,8 +13,8 @@ source_qc.py — детерминированный Source-QC пре-гейт (s
 И бокс НЕ поглощён круглым COCO-классом (clock/vase/sports ball/donut/frisbee).
 
 API: judge_source(path) -> dict. Модели грузятся лениво и кэшируются в модуле
-(батч не переинициализирует). Fail-open по загрузке моделей: если детектор не
-поднялся — verdict ok=True с флагом qc_skipped (не блокируем пайплайн из-за среды).
+(батч не переинициализирует). В оркестраторе проверка остаётся диагностической;
+воркфлоу генератора вызывает CLI с --strict и не публикует непроверенную сцену.
 """
 import subprocess
 import sys
@@ -115,7 +115,7 @@ def _judge_text(path: str, profile: str = "still") -> dict:
             Path(tmp).unlink(missing_ok=True)
 
 
-def judge_source(path: str, *, ocr_profile: str = "still") -> dict:
+def judge_source(path: str, *, ocr_profile: str = "still", require_checks: bool = False) -> dict:
     """Детерминированный вердикт источника. ok=False при лице крупным планом или надписи."""
     verdict = {"ok": True, "reject_reason": None, "persons": 0, "objects": [],
                "faces_kept": 0, "max_face_frac": 0.0, "closeup_face": False,
@@ -133,6 +133,10 @@ def judge_source(path: str, *, ocr_profile: str = "still") -> dict:
     if not ocr.get("available"):
         verdict["ocr_skipped"] = True
         verdict["text_reason"] = ocr.get("reason")
+        if require_checks:
+            verdict["ok"] = False
+            verdict["reject_reason"] = f"OCR недоступен: {ocr.get('reason')}"
+            return verdict
     elif ocr.get("has_text"):
         verdict["ok"] = False
         verdict["text_in_frame"] = True
@@ -144,12 +148,17 @@ def judge_source(path: str, *, ocr_profile: str = "still") -> dict:
     _load()
     if _yolo is None and _face is None:
         verdict["qc_skipped"] = True
+        if require_checks:
+            verdict["ok"] = False
+            verdict["reject_reason"] = "детекторы лиц/объектов недоступны"
         return verdict
 
     frame = _first_frame(path)
     if frame is None:
         verdict["qc_skipped"] = True
         verdict["reject_reason"] = "кадр не прочитан"
+        if require_checks:
+            verdict["ok"] = False
         return verdict
     H, W = frame.shape[:2]
     area = float(H * W)
@@ -194,5 +203,15 @@ def judge_source(path: str, *, ocr_profile: str = "still") -> dict:
 
 
 if __name__ == "__main__":
-    import sys, json
-    print(json.dumps(judge_source(sys.argv[1]), ensure_ascii=False, indent=2))
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(description="Deterministic source media QC")
+    parser.add_argument("path")
+    parser.add_argument("--profile", default="still", choices=("still", "art"))
+    parser.add_argument("--strict", action="store_true",
+                        help="reject when OCR or vision detectors are unavailable")
+    args = parser.parse_args()
+    result = judge_source(args.path, ocr_profile=args.profile, require_checks=args.strict)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    raise SystemExit(0 if result["ok"] else 1)

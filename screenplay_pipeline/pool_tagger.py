@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-pool_tagger.py — семантическое тегирование AI-пула (qwen_pool/veofree_pool).
+pool_tagger.py — семантическое тегирование AI-пула qwen_pool.
 
 Цель: превратить накопленный generic-пул в ИЩЕЙ каталог (аналог asset_catalog.py для
 footage_catalog), чтобы раскадровка могла подбирать атмосферные кадры под imagery_cues
@@ -18,7 +18,7 @@ daily-генераторы/гейт. Идемпотентно — уже тег�
 
 Запуск:
     python3 pool_tagger.py                      # untagged за сегодня/вчера, все 3 пула
-    python3 pool_tagger.py --pool veofree_pool --date 2026-07-02
+    python3 pool_tagger.py --pool qwen_pool --date 2026-07-02
     python3 pool_tagger.py --backfill           # ВСЕ даты пула (разовый прогон по истории)
 """
 import os
@@ -36,7 +36,7 @@ from art_judge import JUDGES, ask_vision
 
 YD = "ydrive:Content factory"
 CATALOG_REL = "cloud_io/ai_pool_catalog.jsonl"
-POOLS = ["qwen_pool", "veofree_pool"]
+POOLS = ["qwen_pool"]
 SCALES = ("wide", "medium", "macro", "close")
 
 TAG_RUBRIC = (
@@ -115,7 +115,7 @@ def append_catalog(entries: list[dict]):
 def media_list(pool: str, date: str) -> list[str]:
     """--max-depth 1 ОБЯЗАТЕЛЕН — иначе rclone lsf рекурсивно затянет _rejected/ (брак гейта).
     Живой баг найден в первом backfill-прогоне 2026-07-04: --include "*.png" ловил не только
-    img_01.png (реальный кадр), но и *.fail.png (скриншот НЕУДАЧНОЙ генерации VeoFree — не
+    img_01.png (реальный кадр), но и *.fail.png (скриншот неудачной генерации — не
     футаж) + rclone lsf иногда отдавал "_rejected/" САМ каталог как запись (trailing slash),
     который потом падал на copyto/tagger. Фильтруем оба класса явно."""
     r = sh(f'rclone lsf "{YD}/cloud_io/{pool}/{date}/" --max-depth 1 '

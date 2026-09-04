@@ -41,15 +41,30 @@ def download(url: str, out_path: Path):
 
 def normalize_video_ratio(path: Path, ratio: str) -> None:
     """Make the requested ratio real; Qwen may silently ignore the CLI flag."""
-    dims = {"16:9": (1920, 1080), "9:16": (1080, 1920), "1:1": (1080, 1080)}
-    if ratio not in dims or not path.exists():
+    ratios = {"16:9": 16 / 9, "9:16": 9 / 16, "1:1": 1.0}
+    if ratio not in ratios or not path.exists():
         return
-    w, h = dims[ratio]
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+         "stream=width,height", "-of", "csv=p=0", str(path)],
+        capture_output=True, text=True, timeout=30,
+    )
+    try:
+        width, height = map(int, probe.stdout.strip().split(",")[:2])
+    except (ValueError, IndexError):
+        raise RuntimeError("ratio probe failed")
+    target = ratios[ratio]
+    if height > 0 and abs(width / height - target) <= 0.01:
+        print(f"ratio уже корректный: {width}x{height}; re-encode пропущен")
+        return
     tmp = path.with_suffix(".ratio.mp4")
-    vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1"
+    num, den = ratio.split(":")
+    vf = (f"crop=w='trunc(min(iw,ih*{num}/{den})/2)*2':"
+          f"h='trunc(min(ih,iw*{den}/{num})/2)*2',setsar=1")
     r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(path),
-                        "-vf", vf, "-c:v", "libx264", "-crf", "23", "-preset", "veryfast",
-                        "-an", "-movflags", "+faststart", str(tmp)],
+                        "-map", "0:v:0", "-map", "0:a?", "-vf", vf,
+                        "-c:v", "libx264", "-crf", "23", "-preset", "veryfast",
+                        "-c:a", "copy", "-movflags", "+faststart", str(tmp)],
                        capture_output=True, text=True, timeout=300)
     if r.returncode != 0 or not tmp.exists():
         raise RuntimeError(f"ratio normalization failed: {r.stderr[-300:]}")

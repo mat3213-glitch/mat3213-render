@@ -15,7 +15,7 @@ imagery_cues beat'а (director.py: ["крупный план объекта", "�
 
 CLI (проверка):
     python3 pool_matcher.py --hero "туман, лёд, свеча" --n 5
-    python3 pool_matcher.py --hero "силуэт человека" --cues "тень, окно" --engine veofree --n 3
+    python3 pool_matcher.py --hero "силуэт человека" --cues "тень, окно" --engine qwen --n 3
 """
 from __future__ import annotations
 
@@ -131,7 +131,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--hero", required=True, help="hero_object архетипа, через запятую")
     ap.add_argument("--cues", help="imagery_cues через запятую (опционально)")
-    ap.add_argument("--engine", choices=["qwen", "veofree", "ltx"])
+    ap.add_argument("--engine", choices=["qwen", "ltx"])
     ap.add_argument("--scale", choices=["wide", "medium", "macro", "close"])
     ap.add_argument("--n", type=int, default=5)
     ap.add_argument("--seed")

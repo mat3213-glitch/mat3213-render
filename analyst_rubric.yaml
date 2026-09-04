@@ -43,7 +43,7 @@ architecture_context: |
   Узлы и связи:
   - Бук (Atom CPU, 1.8GB RAM, Linux) — слабый; тяжёлый рендер НЕ тут, только на GH Actions.
   - GH Actions (render-репо mat3213-render) — вся тяжёлая работа: рендер клипов (CLIP_PRODUCER/
-    FULL_RENDER), генерация (Qwen/Hunyuan/VeoFree/CF Workers AI), Style Scout, mimo CI.
+    FULL_RENDER), генерация (Qwen/Hunyuan/CF Workers AI), Style Scout, mimo CI.
   - ЯД (rclone ydrive:) — единое хранилище/шина: треки, пулы, очереди, отчёты, auth.
   - CF Worker — обход RU-блока Telegram (api.telegram.org заблокирован с RU-IP).
   - Публикация — ТОЛЬКО из очереди publish_from_queue.py по cron (TG/VK/OK/Pinterest/YouTube).

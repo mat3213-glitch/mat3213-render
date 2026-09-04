@@ -15,7 +15,7 @@ import os, subprocess, datetime, json, urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 GATE = os.path.join(HERE, "plastic_gate.py")
-POOLS = ["qwen_pool", "veofree_pool"]
+POOLS = ["qwen_pool"]
 THRESHOLD = os.environ.get("THRESHOLD", "55")
 FORCE = os.environ.get("FORCE", "0") == "1"
 YD = "ydrive:Content factory"
@@ -39,7 +39,7 @@ def media_count(rel):
 
 def report_is_stale(rel):
     """True если хоть один медиафайл новее gate_report.json — гейт проверял более раннюю
-    версию папки. Баг живьём 2026-07-04: veofree_daily.py теперь бьёт раз/час (24/день), а
+    версию папки.
     этот гейт — раз/сутки (13:00 NSK). Успешный клип часто прилетает ПОСЛЕ разового гейта
     и без этой проверки никогда больше не гейтится (has_report() навечно считает пул готовым)."""
     r = sh(["rclone", "lsjson", f"{YD}/{rel}/", "--max-depth", "1", "--include", "*.mp4",

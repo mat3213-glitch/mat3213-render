@@ -194,7 +194,7 @@ def main() -> None:
     parser.add_argument("--path", type=str, default=None,
                         help="Путь к медиафайлу на ЯД")
     parser.add_argument("--pool", type=str, default=None,
-                        help="Пул (qwen_pool, veofree_pool, pexels_pool и т.д.)")
+                        help="Пул (qwen_pool, pexels_pool и т.д.)")
     parser.add_argument("--type", type=str, default=None, choices=["image", "video"],
                         help="Тип контента")
     parser.add_argument("--source", type=str, default=None, choices=["gen", "external"],

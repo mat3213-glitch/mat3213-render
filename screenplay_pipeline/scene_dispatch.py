@@ -12,7 +12,7 @@ climax-шоты (несут вес истории) → свежая AI-гене�
 переходы, большинство кадров по счёту в energy-сегментированной раскадровке) → подбор из уже
 накопленного и протегированного AI-пула (pool_matcher.py/pool_tagger.py), НЕ новая генерация.
 Обоснование: LLM режиссёра сам решает число кадров по энергосегментам ПОЛНОГО трека (десятки
-шотов на 2-4-мин трек) — прогнать ВСЕ через генерацию упёрлось бы в лимит VeoFree (1 ген/IP/
+шотов на 2-4-мин трек) — прогнать ВСЕ через генерацию упёрлось бы в лимиты генераторов
 прогон) и квоту i2v-движка на первом же реальном треке (та же стена, что уже ловили).
 hero_object для пул-подбора берётся из archetypes/library.yaml по storyboard["archetype_id"]
 (passthrough уже есть в director.py::assemble(), схема storyboard.json не менялась). Пул-клип
@@ -53,11 +53,6 @@ RATIO_BY_FORMAT = {"square": "1:1", "vertical": "9:16", "landscape": "16:9"}
 ENGINE_WORKFLOWS = {
     # LTX historical wiring is intentionally not registered here. Owner paused
     # it on 2026-08-06; sp_scene_ltx.yml also fails closed at its entrypoint.
-    # ❄️ veofree ЗАМОРОЖЕН 2026-07-28 (решение yaromat): сервис доходит до «Generating Video 100%»
-    # и не отдаёт результат. Проверено владельцем с ДОМАШНЕГО IP и с регистрацией — то же самое,
-    # значит дело не в наших раннерах и не в датацентровых адресах. Ломается сам сервис.
-    # Строка оставлена закомментированной: вернуть = раскомментировать + добавить в ENGINE_ORDER.
-    # "veofree": "sp_scene_veofree.yml",
     "qwen":    "sp_scene_qwen.yml",      # t2v, квота ~4-5 видео/день
 }
 ENGINE_ORDER = ["qwen"]
@@ -73,17 +68,15 @@ LTX_WEAK_SUBJECTS = ("человек", "фигура", "person", "figure", "walk
 
 
 def engine_for(shot: dict) -> str:
-    """base.provider от режиссёра (director.assemble: veofree=макро/пик-герой, qwen=общий/тишина-
-    атмосфера) имеет ПРИОРИТЕТ, если движок подключён. Иначе round-robin по idx — распределяет
+    """base.provider от режиссёра имеет ПРИОРИТЕТ, если движок подключён.
+    Иначе round-robin по idx — распределяет
     нагрузку между движками (устойчивость: если один упёрся в дневной лимит/500, другие не встанут)."""
     prov = (shot.get("base") or {}).get("provider")
     if prov in ENGINE_WORKFLOWS:
         return prov
     idx = shot.get("idx", 0)
     engine = ENGINE_ORDER[idx % len(ENGINE_ORDER)]
-    # ltx не умеет человека (см. LTX_WEAK_SUBJECTS). Раньше такие шоты уходили на veofree,
-    # но он заморожен → остаётся qwen. ⚠️ Он t2v: сгенерит сцену заново, а НЕ оживит стилл.
-    # Пока veofree мёртв, шотов с человеком крупнее силуэта делать по сути нечем.
+    # ltx не умеет человека (см. LTX_WEAK_SUBJECTS), поэтому остаётся qwen.
     if engine == "ltx":
         text = " ".join(str(shot.get(k, "")) for k in ("visual", "intent")).lower()
         if any(w in text for w in LTX_WEAK_SUBJECTS):
@@ -103,8 +96,6 @@ def engine_inputs(engine: str, idx: int, prompt: str, still_query: str, ratio: s
     """У каждого движка свой набор workflow_dispatch inputs — gh CLI падает на незаявленных -f."""
     if engine == "ltx":
         return {"scene_idx": str(idx), "prompt": prompt, "still_query": still_query}
-    if engine == "veofree":
-        return {"scene_idx": str(idx), "prompt": prompt, "still_query": still_query, "aspect": "9:16"}
     if engine == "qwen":
         qwen_prompt = QWEN_TEXT_SUPPRESS_PREFIX + prompt + QWEN_TEXT_SUPPRESS_SUFFIX
         return {"scene_idx": str(idx), "prompt": qwen_prompt, "ratio": ratio}
@@ -177,7 +168,9 @@ def pool_fill_shot(job_id: str, idx: int, shot: dict, hero_object: str,
 
     for entry in cand[:3]:  # пробуем до 3 кандидатов, если первый не пройдёт гейт
         local = pool_matcher.fetch(entry, tmpdir)
-        sq = source_qc.judge_source(str(local))  # L4: детерминир. пре-гейт ДО VLM
+        # Пул наполняется в GH Actions со строгими source-гейтами. Здесь дешёвая
+        # повторная диагностика: отсутствие тяжёлых моделей на Atom не блокирует job.
+        sq = source_qc.judge_source(str(local))
         if not sq["ok"]:
             print(f"  scene {idx} [pool:{entry['engine']}] {entry['id']}: "
                   f"source_qc REJECT — {sq['reject_reason']}")
@@ -255,7 +248,8 @@ def dispatch_and_gate(job_id: str, idx: int, shot: dict, ratio: str, timeout: in
         if not local:
             continue
 
-        sq = source_qc.judge_source(str(local))  # L4: детерминир. пре-гейт ДО VLM
+        # Qwen workflow уже fail-closed проверил сцену до загрузки на ЯД.
+        sq = source_qc.judge_source(str(local))
         if not sq["ok"]:
             print(f"  scene {idx}: source_qc REJECT — {sq['reject_reason']}")
             subprocess.run(["rclone", "deletefile",
@@ -284,9 +278,6 @@ def main():
     ap.add_argument("--max-retries", type=int, default=MAX_RETRIES_DEFAULT)
     ap.add_argument("--poll", type=int, default=15, help="интервал поллинга ЯД (с)")
     ap.add_argument("--timeout", type=int, default=1200, help="таймаут на сцену (с)")
-    ap.add_argument("--max-ltx-per-run", type=int, default=8,
-                    help="потолок вызовов LTX за прогон. LTX жжёт квоту Kaggle GPU (30ч/неделю), "
-                         "~11 мин на клип → 8 вызовов ≈ 1.5ч. Не даём одному треку съесть неделю.")
     ap.add_argument("--all-generated", action="store_true",
                     help="старое поведение: ВСЕ шоты через AI-генерацию, пул не участвует "
                          "(дорого — упрётся в лимиты на реальном треке, см. докстринг)")
@@ -306,7 +297,7 @@ def main():
 
     tmpdir = Path(tempfile.mkdtemp(prefix="scene_dispatch_"))
     used_pool_ids: set = set()
-    ok, failed, ltx_calls = 0, 0, 0
+    ok, failed = 0, 0
     for shot in shots:
         idx = shot.get("idx")
         if idx is None:
@@ -317,18 +308,8 @@ def main():
         if use_pool:
             base = pool_fill_shot(args.job_id, idx, shot, hero_object, tmpdir, used_pool_ids)
         else:
-            engine = engine_for(shot)
-            # LTX жжёт общую квоту Kaggle GPU (30ч/нед) — потолок ЗА ПРОГОН, чтобы один трек
-            # не съел неделю. Каждая попытка (включая ретраи) считается отдельным вызовом.
-            if engine == "ltx" and ltx_calls + args.max_retries > args.max_ltx_per_run:
-                print(f"  scene {idx}: потолок LTX за прогон исчерпан "
-                      f"({ltx_calls}/{args.max_ltx_per_run}) — пропуск", file=sys.stderr)
-                failed += 1
-                continue
             base = dispatch_and_gate(args.job_id, idx, shot, ratio, args.timeout, args.poll,
                                      args.max_retries, tmpdir)
-            if engine == "ltx":
-                ltx_calls += args.max_retries  # верхняя оценка (сколько попыток реально ушло — не знаем)
 
         if base:
             shot["base"] = base

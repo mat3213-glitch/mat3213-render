@@ -59,7 +59,7 @@ ENERGY_MOTIONS = {
 }
 
 # Словарь движений камеры (aicameramovements.com, 46 приёмов, разбор 2026-07-09) — заземлённые
-# строки под i2v (Seedance/VeoFree/Kling). Маппим наши 7 motion → строку камеры и инжектим её
+# строки под i2v/t2v. Маппим наши 7 motion → строку камеры и инжектим её
 # в i2v-промпт (base.kind=="generate"). Обратно совместимо: нет файла/ключа → no-op.
 _CAM_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "camera_moves.json")
 try:
@@ -360,14 +360,9 @@ def assemble(treatment: dict, bpm: float, segs: list[dict], shots: list[dict],
             if cam and cam.split(".")[0].lower() not in base["prompt"].lower():
                 base = {**base, "prompt": f"{base['prompt'].rstrip('. ')}. Camera: {cam}"}
 
-        # провайдер-роутинг для generate-кадров: veofree = i2v-герой (макро/пик, 9:16),
-        # qwen = t2v-атмосфера (общий/средний план в тишине, 16:9). [[project_video_gen_veofree]] [[project_qwen]]
+        # Единственный активный генератор сцен — Qwen.
         if base.get("kind") == "generate" and "provider" not in base:
-            _e = seg.get("energy", "")
-            if scale == "macro" or _e == "high":
-                base = {**base, "provider": "veofree"}
-            elif scale in ("wide", "medium") and _e == "low":
-                base = {**base, "provider": "qwen"}
+            base = {**base, "provider": "qwen"}
 
         # ПРАВИЛО [[feedback_no_footage_on_footage]]: НЕ мешаем оверлей поверх футажа.
         # Целевое наложение = заливка зелёной зоны (chroma) фоном — это делает рендер.

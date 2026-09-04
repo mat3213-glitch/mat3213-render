@@ -45,15 +45,11 @@ from collections import Counter
 
 OR_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
 
-# АНСАМБЛЬ ИЗ ТРЁХ РАЗНЫХ ПРОВАЙДЕРОВ (решение yaromat 30.07). Раньше стояли три модели
-# GitHub Models — и они умерли ОДНОЙ общей квотой: gpt-4o и gpt-4.1 отдавали 429 с
-# Retry-After 40+ мин, вердикт выносил один выживший mini. Пул (90 артов × 2 рубрики =
-# 180 запросов НА МОДЕЛЬ) в суточную квоту GH Models не влезает в принципе.
+# АНСАМБЛЬ ИЗ ТРЁХ РАЗНЫХ ПРОВАЙДЕРОВ (решение yaromat 30.07). Разные транспорты
+# нужны, чтобы одна общая квота не выключала сразу весь судейский ансамбль.
 # Gemini отклонён (yaromat: «быстро тратятся токены»), Qwen отклонён (2 мин/кадр через браузер).
 # Замеры 30.07 на реальном арте: CF 1.3с, nemotron 3с, gpt-4o-mini ~2с; JSON отдают все.
-# 🔴 ПЕРЕСБОРКА 05.08 — GH Models СВОРАЧИВАЮТ (HTTP 410 `github_models_retirement_brownout`
-# на любой модели и с любым токеном). Третий голос ансамбля умер не по квоте, а вместе с
-# площадкой. Замер кандидатов на 4 размеченных кадрах (портрет маслом / логотип на пианино /
+# Замер кандидатов на 4 размеченных кадрах (портрет маслом / логотип на пианино /
 # лесная тропа / вода с бликами):
 #   gemma-4-26b  — 2/2 пойманных браков, 6–14с. Ложняки были ТОЛЬКО на `text_in_frame`,
 #                  а его теперь судит OCR (см. aggregate) → лучший голос из живых.
@@ -191,7 +187,7 @@ def _post(url, payload, headers, timeout=90):
 
 
 def _chat_completions(url, token, model, prompt, b64, timeout=90):
-    """Общий формат OpenAI-совместимых API: и GitHub Models, и OpenRouter говорят одинаково."""
+    """Общий формат OpenAI-совместимого API OpenRouter."""
     payload = {
         "model": model,
         "messages": [{"role": "user", "content": [
@@ -222,7 +218,7 @@ def ask_vision(judge, prompt, b64, token=None):
     """Один vision-вызов → (распарсенный JSON, None) либо (None, причина).
 
     `judge` — «провайдер:модель»: `cf:` (наш CF Worker /analyze-frame) или
-    `or:` (OpenRouter). GitHub Models удалён. Транспорты разные, контракт один:
+    `or:` (OpenRouter). Транспорты разные, контракт один:
     JSON по рубрике.
     """
     prov, _, model = judge.partition(":")
@@ -257,8 +253,6 @@ def ask_vision(judge, prompt, b64, token=None):
                 time.sleep(wait)
                 continue
             if e.code == 410:
-                # GitHub Models выключают («github_models_retirement_brownout», 05.08).
-                # Ретраить нечего: это не квота, а снятая площадка.
                 return None, "провайдер снят (410)"
             return None, f"HTTP {e.code}"
         except _ProviderError as e:
@@ -579,7 +573,7 @@ def main():
          f"- ✅ Годных: **{len(ok)}**  ·  🔴 Бренд-брак: **{len(rej)}**  ·  "
          f"🟡 Флаг пластика: **{len(flg)}**  ·  Ошибок: {len(err)}",
          (f"- ⚠️ **Неполный ансамбль (1 голос из 3): {len(part)}** — вердикт по ним НЕ засчитан, "
-          f"порог бренда требует большинства. Причина обычно одна: rate-limit GH Models."
+          f"порог бренда требует большинства. Причина обычно одна: rate-limit провайдера."
           if part else "- Ансамбль отработал полностью на всех артах."),
          f"- Коридорная перспектива: **{corridors}** из {len(rows)}"
          f" ({100*corridors//max(len(rows),1)}%) — в пуле v1 это было 14/26 и выжгло монтаж",

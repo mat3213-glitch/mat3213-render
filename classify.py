@@ -52,7 +52,7 @@ def classify_generated(
     date: str,
 ) -> dict:
     """
-    Классифицировать сгенерированный контент (Qwen/VeoFree/LTX).
+    Классифицировать сгенерированный контент (Qwen/LTX).
     Теги берутся ИЗ промпта через catalog_tagger.
     """
     tags = _normalize_tags_from_prompt(prompt)
@@ -156,7 +156,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--pool", type=str, default=None,
-        help="Пул (qwen_pool, veofree_pool, pexels_pool, openverse_pool, footage_catalog)"
+        help="Пул (qwen_pool, pexels_pool, openverse_pool, footage_catalog)"
     )
     parser.add_argument(
         "--type", type=str, default=None, choices=["image", "video"],
@@ -260,8 +260,8 @@ def run_self_test() -> bool:
 
         # --- Тест 2: gen с промптом glitch/flare ---
         r2 = classify_generated(
-            path="veofree_pool/2026-06-16/vid_42.mp4",
-            pool="veofree_pool",
+            path="qwen_pool/2026-06-16/vid_42.mp4",
+            pool="qwen_pool",
             type_="video",
             prompt="digital noise scanlines, chromatic distortion, lens flare at night",
             date="2026-06-16",

@@ -26,7 +26,6 @@ SHEET = "cloud_io/preview/2026-07-29/art_gate"
 CASES = [
     # (rel_path, ожидание ok, метка)
     ("cloud_io/qwen_pool/2026-06-18/img_01.png", True, "ЧАСЫ (не должны быть лицом)"),
-    ("cloud_io/veofree_pool/2026-07-04/vid_01.mp4", True, "силуэты людей (фигуры ок)"),
     (f"{SHEET}/reject/text_in_frame__child.png", False, "НАДПИСЬ (псевдотекст на бирке)"),
     # разрешён владельцем: размытый номер машины вдали — один мелкий регион, не два
     (f"{SHEET}/ok/texture__art1.png", True, "номер машины вдали (yaromat разрешил)"),

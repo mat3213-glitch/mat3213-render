@@ -7,7 +7,7 @@ style_judge.py — Фаза 1 агента-разнообразия: ГЛАЗ+С
 пишет style_judge.json (вердикт/скор/причина на каждый лук) → постит рекомендацию в TG-тред 634.
 
 Транспорт — живой CF Workers AI + OpenRouter ансамбль из
-`art_judge.ask_vision`. Mimo и GitHub Models удалены.
+`art_judge.ask_vision`.
 
 ВАЖНО: judge НЕ мерджит в прод. styles.json не трогается. Последнее слово — за yaromat
 (он запускает style_scout_merge.py по рекомендации). Best-effort: не валит воркфлоу.

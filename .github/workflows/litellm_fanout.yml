@@ -51,5 +51,5 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           GROQ_API_KEY:       ${{ secrets.GROQ_API_KEY }}
           GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
-          LITELLM_GH_MODELS:  ${{ vars.LITELLM_GH_MODELS }}
+          LITELLM_MODELS:     ${{ vars.LITELLM_MODELS }}
         run: python3 litellm_runner.py "$INPUT_BATCH_ID"
