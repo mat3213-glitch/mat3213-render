@@ -38,6 +38,8 @@ from render_contract import (
     require_complete,
     validate_render_job,
     write_render_receipt,
+    ffmpeg_version,
+    sha256_files,
 )
 
 JOB_ID = os.environ.get("JOB_ID", "")
@@ -487,6 +489,14 @@ def main():
         metadata={
             "effect_registry_version": registry_version(),
             "effects_applied": effect_receipt,
+            "ffmpeg_version": ffmpeg_version(),
+            "seed": sb.get("seed"),
+            "format": fmt,
+            "duration_requested": reel_dur,
+            "input_sha256": sha256_files([track, *CLIPS.glob("*")]),
+            "rendered_chunk_sha256": sha256_files(paths),
+            "transition_names": names_log if len(rendered) >= 2 else [],
+            "shot_count": len(rendered),
         },
     )
     if not yd_put(receipt_file, f"{JOB_YD}/render_receipt.json"):

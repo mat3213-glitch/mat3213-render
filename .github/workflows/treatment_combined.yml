@@ -33,6 +33,11 @@ on:
         required: false
         default: "6.0"
         type: string
+      style:
+        description: "Имя Grade B из styles.json (например cold_steel или scout_neutral_night_soft)"
+        required: false
+        default: "cold_steel"
+        type: string
 
 permissions:
   contents: read
@@ -67,13 +72,35 @@ jobs:
           H=$(ffprobe -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 base.mp4)
           echo "W=$W H=$H" | tee dims.txt
 
-      - name: Step 1 — B grade (texture_pass cold_steel)
+      - name: Resolve Grade B style from styles.json
+        env:
+          STYLE: ${{ inputs.style }}
+        run: |
+          python3 - "$STYLE" <<'PY'
+          import json, os, sys
+          name = sys.argv[1]
+          styles = json.load(open("styles.json", encoding="utf-8"))["styles"]
+          match = next((s for s in styles if s.get("name") == name), None)
+          if not match:
+              raise SystemExit(f"unknown style: {name}")
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as out:
+              for key in ("name", "eq", "balance", "vignette"):
+                  value = match.get(key) or ""
+                  out.write(f"GRADE_{key.upper()}<<STYLE_EOF\n{value}\nSTYLE_EOF\n")
+              grain = match.get("grain") or []
+              out.write(f"GRADE_GRAIN_MIN={grain[0] if grain else ''}\n")
+              out.write(f"GRADE_GRAIN_MAX={grain[1] if grain else ''}\n")
+          print(f"Grade B: {name} (styles.json _version={json.load(open('styles.json'))['_version']})")
+          PY
+
+      - name: Step 1 — B grade (styles.json)
         run: |
           W=$(cut -d' ' -f1 dims.txt | cut -d= -f2); H=$(cut -d' ' -f2 dims.txt | cut -d= -f2)
-          python3 screenplay_pipeline/texture_pass.py base.mp4 graded.mp4 \
-            --seed 42 --w "$W" --h "$H" --fps 24 \
-            --eq "contrast=1.14:saturation=0.9:brightness=-0.02:gamma=0.96" \
-            --vignette "angle=PI/4.5" --grain-min 10 --grain-max 15
+          args=(--seed 42 --w "$W" --h "$H" --fps 24 --eq "$GRADE_EQ")
+          [ -n "$GRADE_BALANCE" ] && args+=(--balance "$GRADE_BALANCE")
+          [ -n "$GRADE_VIGNETTE" ] && args+=(--vignette "$GRADE_VIGNETTE")
+          [ -n "$GRADE_GRAIN_MIN" ] && args+=(--grain-min "$GRADE_GRAIN_MIN" --grain-max "$GRADE_GRAIN_MAX")
+          python3 screenplay_pipeline/texture_pass.py base.mp4 graded.mp4 "${args[@]}"
 
       - name: Step 2 — extended film-burn at seam (burn-only)
         env:

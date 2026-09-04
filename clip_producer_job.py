@@ -30,6 +30,8 @@ from render_contract import (
     require_complete,
     validate_render_job,
     write_render_receipt,
+    ffmpeg_version,
+    sha256_files,
 )
 
 JOB_ID  = os.environ.get("JOB_ID", "")
@@ -359,6 +361,15 @@ def main():
     receipt = write_render_receipt(
         receipt_file, output_path=result, job_id=JOB_ID,
         mode=render_mode, pipeline="clip_producer",
+        metadata={
+            "ffmpeg_version": ffmpeg_version(),
+            "seed": seed,
+            "format": fmt,
+            "duration_requested": duration,
+            "input_sha256": sha256_files([track_file, *src_files.values()]),
+            "rendered_chunk_sha256": sha256_files(seg_files),
+            "segment_count": len(seg_files),
+        },
     )
     if not yd_put(receipt_file, f"{JOB_YD}/render_receipt.json"):
         sys.exit("render receipt upload failed")

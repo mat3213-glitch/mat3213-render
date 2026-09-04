@@ -161,6 +161,22 @@ def sha256_file(path: str | Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_files(paths: list[str | Path]) -> dict[str, str]:
+    """Stable, additive lineage map for inputs/chunks used by a render."""
+    return {Path(path).name: sha256_file(path) for path in sorted(paths, key=lambda p: str(p))
+            if Path(path).is_file()}
+
+
+def ffmpeg_version() -> str:
+    """Return a short FFmpeg build identity without making receipts fragile."""
+    try:
+        r = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True,
+                           timeout=10)
+        return (r.stdout.splitlines()[0] if r.stdout else "unknown")[:240]
+    except Exception as exc:
+        return f"unavailable: {exc}"
+
+
 def write_render_receipt(
     receipt_path: str | Path,
     *,

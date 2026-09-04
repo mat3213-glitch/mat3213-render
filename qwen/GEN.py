@@ -17,6 +17,7 @@ import json
 import time
 import argparse
 import asyncio
+import subprocess
 import requests
 from pathlib import Path
 from playwright.async_api import async_playwright
@@ -36,6 +37,23 @@ def download(url: str, out_path: Path):
             f.write(chunk)
     size_kb = out_path.stat().st_size // 1024
     print(f"Сохранено → {out_path} ({size_kb} KB)")
+
+
+def normalize_video_ratio(path: Path, ratio: str) -> None:
+    """Make the requested ratio real; Qwen may silently ignore the CLI flag."""
+    dims = {"16:9": (1920, 1080), "9:16": (1080, 1920), "1:1": (1080, 1080)}
+    if ratio not in dims or not path.exists():
+        return
+    w, h = dims[ratio]
+    tmp = path.with_suffix(".ratio.mp4")
+    vf = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1"
+    r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(path),
+                        "-vf", vf, "-c:v", "libx264", "-crf", "23", "-preset", "veryfast",
+                        "-an", "-movflags", "+faststart", str(tmp)],
+                       capture_output=True, text=True, timeout=300)
+    if r.returncode != 0 or not tmp.exists():
+        raise RuntimeError(f"ratio normalization failed: {r.stderr[-300:]}")
+    tmp.replace(path)
 
 
 def poll_for_url(cookies: dict, chat_id: str, timeout: int = 600) -> str:
@@ -93,7 +111,13 @@ async def generate(mode: str, prompt: str, ratio: str, out_path: Path,
     chat_mode_label = "Создать видео" if mode == "video" else "Создать изображение"
     chat_type_expected = "t2v" if mode == "video" else "t2i"
 
-    print(f"Запускаю {mode} генерацию [{model}]: «{prompt[:60]}»")
+    ratio_hint = {
+        "9:16": " Output must be a true vertical portrait video, 9:16 aspect ratio.",
+        "16:9": " Output must be a true horizontal landscape video, 16:9 aspect ratio.",
+        "1:1": " Output must be a true square video, 1:1 aspect ratio.",
+    }.get(ratio, "")
+    ui_prompt = prompt + ratio_hint if mode == "video" else prompt
+    print(f"Запускаю {mode} генерацию [{model}] ratio={ratio}: «{prompt[:60]}»")
 
     async with async_playwright() as p:
         try:
@@ -166,7 +190,7 @@ async def generate(mode: str, prompt: str, ratio: str, out_path: Path,
         # Вводим промпт в textarea (после переключения режима placeholder меняется)
         textarea = page.locator("textarea").first
         await textarea.click()
-        await textarea.fill(prompt)
+        await textarea.fill(ui_prompt)
         await page.wait_for_timeout(300)
 
         # Enter для отправки
@@ -198,6 +222,8 @@ async def generate(mode: str, prompt: str, ratio: str, out_path: Path,
     media_url = poll_for_url(cookies, chat_id, timeout=eff_timeout)
     print(f"URL: {media_url[:80]}...")
     download(media_url, out_path)
+    if mode == "video":
+        normalize_video_ratio(out_path, ratio)
 
 
 def main():

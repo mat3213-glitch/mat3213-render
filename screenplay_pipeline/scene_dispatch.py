@@ -112,6 +112,12 @@ def engine_inputs(engine: str, idx: int, prompt: str, still_query: str, ratio: s
 
 
 def build_scene_prompt(shot: dict) -> str:
+    # prompt_writer is an optional refinement stage; when present its authored
+    # English prompt is the source of truth for the generator.  Legacy
+    # storyboards keep the deterministic visual/intent fallback below.
+    authored = str(shot.get("gen_prompt") or "").strip()
+    if authored:
+        return authored[:800]
     intent = shot.get("intent", "")
     visual = shot.get("visual", "") or shot.get("base", {}).get("query", "")
     cues = shot.get("imagery_cues") or []
@@ -189,7 +195,8 @@ def pool_fill_shot(job_id: str, idx: int, shot: dict, hero_object: str,
             print(f"  scene {idx}: не залил pool-клип на ЯД: {r.stderr[:120]}", file=sys.stderr)
             return None
         return {"kind": "generated", "path": f"generated/scene_{idx}.mp4",
-                "engine": f"pool:{entry['engine']}", "pool_id": entry["id"]}
+                "engine": f"pool:{entry['engine']}", "pool_id": entry["id"],
+                "source_qc": sq}
 
     print(f"  scene {idx}: все пул-кандидаты REJECT на гейте", file=sys.stderr)
     return None
@@ -259,7 +266,8 @@ def dispatch_and_gate(job_id: str, idx: int, shot: dict, ratio: str, timeout: in
         verdict = pgc.judge_media(str(local), threshold=GATE_THRESHOLD)
         print(f"  scene {idx}: gate={verdict['verdict']} score={verdict['score']} ({verdict['reason']})")
         if verdict["verdict"] != "REJECT":
-            return {"kind": "generated", "path": f"generated/scene_{idx}.mp4", "engine": engine}
+            return {"kind": "generated", "path": f"generated/scene_{idx}.mp4", "engine": engine,
+                    "source_qc": sq}
         # реджект → почистить перед ретраем, чтобы след. попытка не подобрала старый файл по ошибке
         subprocess.run(["rclone", "deletefile",
                        f"{YD_ROOT}/cloud_io/render_jobs/{job_id}/generated/scene_{idx}.mp4"],
