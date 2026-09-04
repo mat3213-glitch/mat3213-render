@@ -44,17 +44,19 @@ _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) signal-to-channel/1.0"
 
 # Отправной редакторский промпт (голос «ИИшницы») — тот же, что в SignalToChannel writer.py.
 _EDITOR_PROMPT = """Ты редактор русскоязычного Telegram-канала «ИИшница» про нейросети, AI-инструменты, роботов и технологии.
-Сделай самостоятельный короткий пост по публичному сигналу. Пиши как живой наблюдательный редактор, а не как пресс-релиз или нейросеть.
+Сделай самостоятельный короткий пост по публичному сигналу. Пиши как живой наблюдательный редактор с характером.
 
-Обязательные правила:
-* 4–6 коротких абзацев с пустой строкой между ними; никаких стен текста.
-* Начни с конкретной новости или пользы. Допускается 1–2 ироничных, бытовых, очень конкретных сравнения.
-* Закончи отдельным абзацем с выводом: зачем новость нужна обычному читателю, что она меняет или что за ней наблюдать.
+Стиль и формат:
+* Заголовок — КАПС-кликбейт на русском (1 строка, без #), цепляет. Примеры: «ЭТО БЕСПЛАТНО?!», «РОБОТЫ УКРАЛИ РАБОТУ МОДЕРАТОРАМ», «GPT-5.6 РАЗДАЁТ БЕСПЛАТНЫЙ ДОСТУП»
+* 3–5 коротких абзацев с пустой строкой между ними. Живой язык, хуки, лёгкий юмор или ирония.
+* Хватай за внимание: конкретные цифры, неожиданные сравнения, бытовые аналогии.
 * Не используй штампы «революционный», «заслуживает внимания», «в эпоху», «это не просто».
 * Не добавляй фактов, которых нет в исходнике. Не обещай доходность и не давай инвестиционных советов.
-* Если данных мало или тема не относится к ИИ/роботам/технологиям, ответь ровно: SKIP.
+* Последний абзац — вывод/мораль: 1–2 предложения, зачем это важно обычному читателю.
 * Последняя строка: «Источник: <ссылка>».
-* Перед ответом молча проверь: мысль закончена, есть вывод, есть ссылка.
+* Если данных мало или тема не относится к ИИ/роботам/технологиям, ответь ровно: SKIP.
+* Перед ответом молча проверь: заголовок цепляет, есть хук, есть юмор/irony, есть мораль, есть ссылка.
+* Весь текст ТОЛЬКО на русском языке. Никакого английского в теле поста.
 
 Заголовок сигнала: {title}
 Описание: {summary}
@@ -266,14 +268,113 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
     return out[:limit]
 
 
+# ----------------------------------------------------------------------------
+# ChatGPT дневные сигналы из mat3213-signals/signals/incoming/chatgpt_YYYY-MM-DD.json
+# Формат: {date, source:"chatgpt", findings:[{title, source_url, ...}], ...}
+# ----------------------------------------------------------------------------
+
+def chatgpt_fetch(limit: int, profile: dict) -> list[dict]:
+    token = os.getenv("GH_PAT", "").strip()
+    if not token:
+        return []
+    today = datetime.now(timezone.utc)
+    dates = [(today - timedelta(days=d)).strftime("%Y-%m-%d") for d in range(2)]
+    out = []
+    for date_str in dates:
+        path = f"signals/incoming/chatgpt_{date_str}.json"
+        url = f"https://api.github.com/repos/{_SIGNALS_REPO}/contents/{path}"
+        try:
+            raw = _gh_json(url, token)
+            data = json.loads(
+                __import__("base64").b64decode(raw["content"]).decode("utf-8", "replace")
+            )
+        except (HTTPError, URLError, OSError, KeyError, json.JSONDecodeError):
+            continue
+        for f in data.get("findings", []):
+            c = _finding_to_candidate(f)
+            if c:
+                c["score"] = 80
+                out.append(c)
+    return out[:limit]
+
+
+# ----------------------------------------------------------------------------
+# RSS из Telegram-каналов (публичный t.me/s/ HTML)
+# Список каналов задаётся через env S2C_TG_CHANNELS (через запятую) или по умолчанию.
+# auto_relevant=False — фильтруем по include_any (тематика канала не гарантирована).
+# ----------------------------------------------------------------------------
+
+_DEFAULT_TG_CHANNELS = [
+    "neuraldvig",
+    "AI_Chad",
+    "AI_to_business",
+    "age_of_it",
+    "svodkaai_ai",
+    "NeuroRazvedka",
+    "cryptoperchikk",
+    "ai2smm",
+    "inclient",
+]
+
+
+def _parse_tg_channel_slug(val: str) -> str:
+    val = val.strip()
+    val = re.sub(r"^https?://t\.me/", "", val)
+    val = val.strip("/")
+    return val.split("/")[-1] if val else ""
+
+
+def _rss_candidate_from_post(link: str, title: str, text: str) -> dict | None:
+    if not link or not title:
+        return None
+    domain = "t.me"
+    m = re.search(r"t\.me/([^/]+)/\d+", link)
+    chan = m.group(1) if m else ""
+    return {
+        "id": f"rss:{chan}:{link.split('/')[-1]}",
+        "title": title.strip(),
+        "url": link.strip(),
+        "domain": domain,
+        "text": text.strip() or None,
+        "score": 10,
+    }
+
+
+def rss_fetch(limit: int, profile: dict) -> list[dict]:
+    raw = os.getenv("S2C_TG_CHANNELS", "").strip()
+    channels = [_parse_tg_channel_slug(c) for c in raw.split(",") if c.strip()] if raw else list(_DEFAULT_TG_CHANNELS)
+    out = []
+    for chan in channels:
+        url = f"https://t.me/s/{chan}"
+        try:
+            html = _http_bytes(url, timeout=20).decode("utf-8", "replace")
+        except (HTTPError, URLError, OSError):
+            continue
+        # парсим dev.to-style divs: class="tgme_widget_message_wrap"
+        blocks = re.findall(
+            r'<a\s+class="tgme_widget_message_wrap[^"]*"\s+href="(https://t\.me/[^"]+)"[^>]*>.*?'
+            r'<div\s+class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>',
+            html, re.S,
+        )
+        for link, body in blocks[:20]:
+            clean = re.sub(r"<[^>]+>", "", body).strip()
+            first_line = clean.split("\n")[0][:200] if clean else ""
+            c = _rss_candidate_from_post(link, first_line, clean)
+            if c:
+                out.append(c)
+    return out[:limit]
+
+
 # Реестр источников: name -> (fetch_func, auto_relevant)
-# auto_relevant=True  — источник уже «по построению» про тему (arXiv AI, Grok), фильтруем только exclude.
-# auto_relevant=False — обычный новостной, применяем include_any фильтр (HN, Lobsters).
+# auto_relevant=True  — источник уже «по построению» про тему (arXiv AI, Grok, ChatGPT), фильтруем только exclude.
+# auto_relevant=False — обычный новостной, применяем include_any фильтр (HN, Lobsters, RSS).
 SOURCES = {
     "hn": (hn_fetch, False),
     "lob": (lob_fetch, False),
     "arxiv": (arxiv_fetch, True),
     "grok": (grok_fetch, True),
+    "chatgpt": (chatgpt_fetch, True),
+    "rss": (rss_fetch, False),
 }
 
 
