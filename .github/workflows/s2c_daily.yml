@@ -7,7 +7,10 @@ name: s2c daily (signals -> qwen -> worker)
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 6 * * *"   # 06:00 UTC = 13:00 НСК — 1 раз/сутки
+    - cron: "0 6 * * *"
+    - cron: "0 14 * * *"
+    - cron: "0 22 * * *"
+  # 06:00/14:00/22:00 UTC = 13:00/21:00/05:00 НСК — 3 раза/сутки   # 06:00/14:00/22:00 UTC = 13:00/21:00/05:00 НСК — 3 раза/сутки
 
 concurrency:
   group: qwen-shared-session
