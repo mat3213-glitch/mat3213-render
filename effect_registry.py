@@ -76,15 +76,16 @@ def resolve_spec(name: str | None, *, consumer: str, fmt: str) -> dict[str, Any]
         raise EffectRegistryError(f"invalid type for effect {effect_name!r}")
     if not isinstance(filt, str) or not isinstance(generator, str) or (not filt and not generator):
         raise EffectRegistryError(f"effect {effect_name!r} has no filter or generator")
+    hash_source = filt or json.dumps(spec, sort_keys=True, separators=(",", ":"))
     resolved = {
         "name": effect_name,
         "type": effect_type,
         "filter": filt,
         "generator": generator,
         "policy": policy,
-        "filter_hash": hashlib.sha256(
-            json.dumps(spec, sort_keys=True, separators=(",", ":")).encode("utf-8")
-        ).hexdigest(),
+        # Literal profiles hash the actual filtergraph; generator profiles hash
+        # their stable declaration until the runtime generator emits a graph.
+        "filter_hash": hashlib.sha256(hash_source.encode("utf-8")).hexdigest(),
     }
     if "flash_pct_range" in spec:
         resolved["flash_pct_range"] = spec["flash_pct_range"]

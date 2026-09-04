@@ -107,3 +107,9 @@ def test_landscape_unknown_effect_fails_closed():
     except registry.EffectRegistryError:
         return
     raise AssertionError("unknown uniquize effect silently resolved")
+
+
+def test_literal_filter_hash_is_hash_of_filtergraph_only():
+    resolved = registry.resolve("faded_film", consumer="storyboard", fmt="vertical")
+    import hashlib
+    assert resolved["filter_hash"] == hashlib.sha256(resolved["filter"].encode()).hexdigest()
