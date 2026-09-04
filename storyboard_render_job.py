@@ -23,6 +23,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from effect_registry import receipt_entry as effect_receipt_entry
+from effect_registry import registry_version
+from effect_registry import resolve as resolve_effect
 sys.path.insert(0, str(Path(__file__).resolve().parent / "screenplay_pipeline"))
 import transition_router as _tr        # L6: выбор приёма стыка
 import transition_render as _trn       # L6: xfade-цепочка с сохранением тайминга
@@ -91,6 +94,9 @@ def blurpad_cover(bfile: Path, fmt: str) -> str | None:
     return None
 OVERLAY_OPACITY = 0.45
 
+# Legacy fixture for test_effect_registry.py. Runtime resolves the matching
+# consumer-aware profile from effects.json; keep this literal until the GH
+# compatibility smoke is green.
 # One named effect per shot: the EDL shuffles the full approved effects.json
 # palette before reuse.  These vertical-safe recipes intentionally cap every
 # synthetic crop/zoom below 2x.  `flash` is assigned only to kick-aligned drop
@@ -199,7 +205,9 @@ def render_shot(i: int, shot: dict, cover: str, fill: Path | None, fmt: str) -> 
     speed = float(shot.get("speed") or 1.0)
     speed_vf = f"setpts=PTS/{speed:.4f}," if speed != 1.0 else ""
     effect = str(shot.get("effect") or "").strip()
-    effect_vf = EFFECT_VF.get(effect, "")
+    # Compatibility-first registry: legacy vertical recipes live in effects.json
+    # under storyboard/vertical and must resolve byte-for-byte to EFFECT_VF.
+    effect_vf = resolve_effect(effect, consumer="storyboard", fmt=fmt)["filter"]
     common = ["-t", f"{dur:.3f}", "-r", "25", "-pix_fmt", "yuv420p",
               "-c:v", "libx264", "-preset", "veryfast", "-crf", "22", "-an", str(out)]
     if chroma and fill:
@@ -467,9 +475,19 @@ def main():
         yd_put_status("FAIL: result upload")
         sys.exit("result upload failed")
     receipt_file = WORKDIR / "render_receipt.json"
+    effect_receipt = [
+        {"shot_index": index, **effect_receipt_entry(
+            shot.get("effect"), consumer="storyboard", fmt=fmt
+        )}
+        for index, (_, shot, _) in enumerate(rendered)
+    ]
     receipt = write_render_receipt(
         receipt_file, output_path=result, job_id=JOB_ID,
         mode=render_mode, pipeline="storyboard_render",
+        metadata={
+            "effect_registry_version": registry_version(),
+            "effects_applied": effect_receipt,
+        },
     )
     if not yd_put(receipt_file, f"{JOB_YD}/render_receipt.json"):
         yd_put_status("FAIL: render receipt upload")

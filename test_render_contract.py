@@ -27,7 +27,7 @@ class RenderContractTests(unittest.TestCase):
 
     def test_preview_must_be_a_real_proxy(self):
         with self.assertRaisesRegex(RenderContractError, "proxy limit"):
-            validate_render_job({"render_mode": "preview", "duration": 15.01}, pipeline="test")
+            validate_render_job({"render_mode": "preview", "duration": 30.01}, pipeline="test")
 
     def test_storyboard_preview_duration_is_derived_from_shots(self):
         job = {"shots": [{"t_dur": 5}, {"t_dur": 7.5}]}
@@ -102,6 +102,21 @@ class RenderContractTests(unittest.TestCase):
                 receipt["approval_template"]["preview_sha256"], receipt["sha256"]
             )
             self.assertEqual(json.loads(receipt_path.read_text())["mode"], "preview")
+
+    def test_receipt_accepts_additive_metadata_only(self):
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / "preview.mp4"
+            output.write_bytes(b"preview bytes")
+            receipt = write_render_receipt(
+                Path(td) / "receipt.json", output_path=output, job_id="p1",
+                mode="preview", pipeline="test", metadata={"registry_version": "abc"},
+            )
+            self.assertEqual(receipt["metadata"]["registry_version"], "abc")
+            with self.assertRaisesRegex(RenderContractError, "overwrite identity"):
+                write_render_receipt(
+                    Path(td) / "bad.json", output_path=output, job_id="p1",
+                    mode="preview", pipeline="test", metadata={"sha256": "bad"},
+                )
 
     def test_preview_qc_is_advisory_but_full_qc_blocks(self):
         self.assertEqual(creative_qc_policy("preview", 2),

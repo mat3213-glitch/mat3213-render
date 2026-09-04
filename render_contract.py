@@ -168,6 +168,7 @@ def write_render_receipt(
     job_id: str,
     mode: str,
     pipeline: str,
+    metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Write the immutable identity that a later full-render approval references."""
     if mode not in _ALLOWED_MODES:
@@ -185,6 +186,11 @@ def write_render_receipt(
         "sha256": digest,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    if metadata:
+        overlap = set(receipt).intersection(metadata)
+        if overlap:
+            raise RenderContractError(f"receipt metadata cannot overwrite identity: {sorted(overlap)}")
+        receipt["metadata"] = metadata
     if mode == "preview":
         receipt["approval_template"] = {
             "approved": True,

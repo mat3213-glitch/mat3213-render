@@ -18,6 +18,8 @@ import sys
 import tempfile
 from pathlib import Path
 
+from effect_registry import resolve_spec as resolve_registry_spec
+
 EFFECTS_JSON = Path(__file__).parent / "effects.json"
 
 def sh(cmd: list[str], *, timeout: int = 300) -> subprocess.CompletedProcess:
@@ -162,8 +164,9 @@ COMPLEX_GENERATORS = {
 }
 
 
-def resolve_effect_filter(name: str, effects_db: dict, fps: float, duration: float) -> tuple[str, str]:
-    """Возвращает (type, filter_string) для эффекта. type = 'vf' | 'complex'."""
+def _legacy_resolve_effect_filter(name: str, effects_db: dict, fps: float,
+                                  duration: float) -> tuple[str, str]:
+    """Compatibility oracle for tests; not used by the runtime path."""
     if name in effects_db.get("vf", {}):
         eff = effects_db["vf"][name]
         if "_generator" in eff:
@@ -184,6 +187,37 @@ def resolve_effect_filter(name: str, effects_db: dict, fps: float, duration: flo
             return "complex", eff["complex"]
         return "complex", eff.get("filter", "")
     raise ValueError(f"unknown effect: {name}")
+
+
+def resolve_effect_filter(name: str, effects_db: dict, fps: float, duration: float) -> tuple[str, str]:
+    """Resolve the landscape declaration; legacy random generator calls stay intact."""
+    del effects_db  # Selection keeps the legacy flat lists; resolution is registry-owned.
+    spec = resolve_registry_spec(name, consumer="uniquize", fmt="landscape")
+    if spec["generator"]:
+        generator_name = spec["generator"]
+        vf_generators = {
+            "parallax_filter": VF_GENERATORS["parallax"],
+            "slide_crop_filter": VF_GENERATORS["slide_crop"],
+            "corner_sweep_filter": VF_GENERATORS["corner_sweep"],
+            "zoom_drift_filter": VF_GENERATORS["zoom_drift"],
+            "diagonal_crop_filter": VF_GENERATORS["diagonal_crop"],
+        }
+        complex_generators = {
+            "split_drift_filter": COMPLEX_GENERATORS["split_drift"],
+            "grid_2x2_filter": COMPLEX_GENERATORS["grid_2x2"],
+            "split_converge_filter": COMPLEX_GENERATORS["split_converge"],
+        }
+        if generator_name in vf_generators:
+            return "vf", vf_generators[generator_name]()
+        if generator_name == "strobo_graph":
+            fp_range = spec["flash_pct_range"]
+            fp = round(random.uniform(fp_range[0], fp_range[1]), 2)
+            graph, _ = strobo_graph(duration, fps, flash_pct=fp)
+            return "complex", graph
+        if generator_name in complex_generators:
+            return "complex", complex_generators[generator_name]()
+        raise ValueError(f"unknown uniquize generator: {generator_name}")
+    return spec["type"], spec["filter"]
 
 
 def color_chain(kind: str, fps: float) -> str:
