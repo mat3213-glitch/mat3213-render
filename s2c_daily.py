@@ -485,7 +485,7 @@ def main() -> int:
     worker_secret = os.getenv("S2C_WORKER_SECRET", "").strip()
     qwen_model = os.getenv("QWEN_MODEL", "Qwen3-Coder").strip()
     per_source = int(os.getenv("S2C_PER_SOURCE", "12"))
-    max_drafts = int(os.getenv("S2C_MAX_DRAFTS", "2"))
+    max_drafts = int(os.getenv("S2C_MAX_DRAFTS", "3"))
     yandex_state = os.getenv("S2C_YD_STATE", DEFAULT_YD_STATE)
     now = datetime.now(timezone.utc)
 
