@@ -51,26 +51,6 @@ jobs:
           pip install -q requests playwright
           python -m playwright install --with-deps chromium
 
-      - name: Dump TG HTML structure
-        run: |
-          curl -s --max-time 15 "https://t.me/s/neuraldvig" > /tmp/tg_sample.html
-          echo "=== tgme classes ==="
-          grep -oP 'class="[^"]*tgme[^"]*"' /tmp/tg_sample.html | sort -u | head -20
-          echo "=== post links ==="
-          grep -oP 'href="https://t\.me/neuraldvig/\d+"' /tmp/tg_sample.html | head -5
-          echo "=== message text blocks ==="
-          python3 -c "
-          import re
-          h=open('/tmp/tg_sample.html').read()
-          blocks=re.findall(r'class=\"tgme_widget_message_wrap[^"]*\"[^>]*>(.*?)</div>\s*</div>\s*</div>', h, re.S)
-          print(f'wrap blocks: {len(blocks)}')
-          texts=re.findall(r'<div class=\"tgme_widget_message_text[^"]*\"[^>]*>(.*?)</div>', h, re.S)
-          print(f'text blocks: {len(texts)}')
-          for t in texts[:2]:
-              c=re.sub(r'<[^>]+>','',t).strip()[:150]
-              print(f'  > {c}')
-          "
-
       - name: Run s2c daily cycle
         env:
           S2C_WORKER_SECRET: ${{ secrets.S2C_WORKER_SECRET }}
