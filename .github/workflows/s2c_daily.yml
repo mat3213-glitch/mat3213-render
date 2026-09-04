@@ -51,4 +51,5 @@ jobs:
       - name: Run s2c daily cycle
         env:
           S2C_WORKER_SECRET: ${{ secrets.S2C_WORKER_SECRET }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python3 s2c_daily.py
