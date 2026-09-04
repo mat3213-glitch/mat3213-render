@@ -51,6 +51,11 @@ jobs:
           pip install -q requests playwright
           python -m playwright install --with-deps chromium
 
+      - name: Test TG access
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://t.me/s/neuraldvig" | xargs -I{} echo "t.me/s/neuraldvig HTTP: {}"
+          curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://t.me/neuraldvig" | xargs -I{} echo "t.me/neuraldvig HTTP: {}"
+
       - name: Run s2c daily cycle
         env:
           S2C_WORKER_SECRET: ${{ secrets.S2C_WORKER_SECRET }}
