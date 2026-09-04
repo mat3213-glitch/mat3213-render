@@ -211,7 +211,7 @@ def _finding_to_candidate(f: dict) -> dict | None:
     if not isinstance(f, dict):
         return None
     title = str(f.get("title") or "").strip()
-    url = str(f.get("source_url") or f.get("url") or "").strip()
+    url = str(f.get("source_url") or f.get("url") or f.get("source_link") or f.get("link") or "").strip()
     if not title:
         return None
     text = str(f.get("what_found") or f.get("what") or f.get("practical_value") or "").strip()
@@ -243,28 +243,45 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
             )
         except (HTTPError, URLError, OSError, KeyError, json.JSONDecodeError):
             continue
-        # основной пул — findings
-        for f in data.get("findings", []):
+        # основной пул — candidates (Grok) или findings (legacy)
+        for f in data.get("candidates", data.get("findings", [])):
             c = _finding_to_candidate(f)
             if c:
                 out.append(c)
-        # finding_of_the_day — приоритетный
-        fotd = data.get("finding_of_the_day")
+        # find_of_the_day / finding_of_the_day — приоритетный
+        fotd = data.get("find_of_the_day") or data.get("finding_of_the_day")
         if isinstance(fotd, dict) and fotd.get("title"):
             c = _finding_to_candidate(fotd)
             if c:
                 c["score"] = 100
                 out.append(c)
-        # deep_internet
-        for f in data.get("deep_internet", []):
+        # from_the_depths / deep_internet
+        for f in data.get("from_the_depths", data.get("deep_internet", [])):
             c = _finding_to_candidate(f)
             if c:
                 out.append(c)
-        # freebies_of_the_day
-        for f in data.get("freebies_of_the_day", []):
-            c = _finding_to_candidate(f)
-            if c:
-                out.append(c)
+        # freebies_today / freebies_of_the_day
+        for f in data.get("freebies_today", data.get("freebies_of_the_day", [])):
+            if isinstance(f, dict):
+                c = _finding_to_candidate(f)
+                if c:
+                    out.append(c)
+            elif isinstance(f, str) and f.strip():
+                out.append({
+                    "id": _sig_id("grok-freebie", f),
+                    "title": f.strip(),
+                    "url": "https://x.com/i/grok",
+                    "domain": "grok",
+                    "text": None,
+                    "score": 40,
+                })
+        # build_today — extra Grok field
+        for f in data.get("build_today", []):
+            if isinstance(f, dict):
+                c = _finding_to_candidate(f)
+                if c:
+                    c["score"] = 60
+                    out.append(c)
     return out[:limit]
 
 
