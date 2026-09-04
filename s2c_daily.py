@@ -207,7 +207,7 @@ def _sig_id(source_url: str, title: str) -> str:
     return f"sig:{h}"
 
 
-def _finding_to_candidate(f: dict) -> dict | None:
+def _finding_to_candidate(f: dict, source: str = "") -> dict | None:
     if not isinstance(f, dict):
         return None
     title = str(f.get("title") or "").strip()
@@ -219,9 +219,10 @@ def _finding_to_candidate(f: dict) -> dict | None:
         "id": _sig_id(url, title),
         "title": title,
         "url": url or f"https://x.com/i/grok",
-        "domain": _domain(url) if url.startswith("http") else "grok",
+        "domain": _domain(url) if url.startswith("http") else source or "grok",
         "text": text or None,
         "score": 50,
+        "source": source,
     }
 
 
@@ -245,25 +246,25 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
             continue
         # основной пул — candidates (Grok) или findings (legacy)
         for f in data.get("candidates", data.get("findings", [])):
-            c = _finding_to_candidate(f)
+            c = _finding_to_candidate(f, source="grok")
             if c:
                 out.append(c)
         # find_of_the_day / finding_of_the_day — приоритетный
         fotd = data.get("find_of_the_day") or data.get("finding_of_the_day")
         if isinstance(fotd, dict) and fotd.get("title"):
-            c = _finding_to_candidate(fotd)
+            c = _finding_to_candidate(fotd, source="grok")
             if c:
                 c["score"] = 100
                 out.append(c)
         # from_the_depths / deep_internet
         for f in data.get("from_the_depths", data.get("deep_internet", [])):
-            c = _finding_to_candidate(f)
+            c = _finding_to_candidate(f, source="grok")
             if c:
                 out.append(c)
         # freebies_today / freebies_of_the_day
         for f in data.get("freebies_today", data.get("freebies_of_the_day", [])):
             if isinstance(f, dict):
-                c = _finding_to_candidate(f)
+                c = _finding_to_candidate(f, source="grok")
                 if c:
                     out.append(c)
             elif isinstance(f, str) and f.strip():
@@ -278,7 +279,7 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
         # build_today — extra Grok field
         for f in data.get("build_today", []):
             if isinstance(f, dict):
-                c = _finding_to_candidate(f)
+                c = _finding_to_candidate(f, source="grok")
                 if c:
                     c["score"] = 60
                     out.append(c)
@@ -308,7 +309,7 @@ def chatgpt_fetch(limit: int, profile: dict) -> list[dict]:
         except (HTTPError, URLError, OSError, KeyError, json.JSONDecodeError):
             continue
         for f in data.get("findings", []):
-            c = _finding_to_candidate(f)
+            c = _finding_to_candidate(f, source="chatgpt")
             if c:
                 c["score"] = 80
                 out.append(c)
