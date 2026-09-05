@@ -4,6 +4,30 @@ __pycache__/
 # session/test artifacts
 screenplay_pipeline/analysis.json
 
+# Медиа-бинарники: в git НЕ добавляем (AGENTS.md; уже tracked-файлы гранфатерены,
+# blob_gate блокирует НОВЫЕ). Медиа живёт на диске/ЯД/бэкапах.
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.mp3
+*.flac
+*.m4a
+*.wav
+*.aac
+*.ogg
+*.opus
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.heic
+*.bmp
+*.tif
+*.tiff
+
 # живые сессии воркеров — качаются на раннер с ЯД, в репо НИКОГДА (репо публичный!)
 kimi_session.json
 .kimi_access.json
