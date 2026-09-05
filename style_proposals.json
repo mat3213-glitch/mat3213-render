@@ -1,19 +1,7 @@
 {
-  "_generated": "2026-09-04",
+  "_generated": "2026-09-05",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
-    {
-      "name": "scout_neutral_night_muted",
-      "note": "scout: neutral night muted",
-      "eq": "contrast=1.01:saturation=0.68:brightness=-0.064:gamma=1.068",
-      "balance": "rm=-0.02:rh=0.024:bh=-0.036",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "47830729.jpg"
-    },
     {
       "name": "scout_neutral_mid_muted",
       "note": "scout: neutral mid muted",
@@ -24,10 +12,10 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "54985781.jpg"
+      "_src": "3238022.jpg"
     },
     {
-      "name": "scout_neutral_night_muted_2",
+      "name": "scout_neutral_night_muted",
       "note": "scout: neutral night muted",
       "eq": "contrast=0.9:saturation=0.69:brightness=-0.052:gamma=1.056",
       "balance": "rm=0.061:bm=-0.068:rh=0.058:bh=-0.072",
@@ -36,7 +24,19 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "8505795.jpg"
+      "_src": "41127398.jpg"
+    },
+    {
+      "name": "scout_neutral_bright_muted",
+      "note": "scout: neutral bright muted",
+      "eq": "contrast=0.9:saturation=0.64:brightness=0.06:gamma=0.9",
+      "balance": "rm=0.088:bm=-0.087:rh=0.042:bh=-0.052",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "87430203.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "60626662.jpg"
+      "_src": "39769243.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,7 +60,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "2562485.jpg"
+      "_src": "86505048.jpg"
     },
     {
       "name": "scout_green_mid_soft",
@@ -72,7 +72,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "60896024.jpg"
+      "_src": "4023457.jpg"
     }
   ]
 }

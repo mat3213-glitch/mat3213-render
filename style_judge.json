@@ -1,64 +1,63 @@
 {
   "verdicts": [
     {
-      "name": "scout_neutral_night_muted",
-      "keep": true,
-      "score": 8.5,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "близок к deep teal, тени холодные, дымка серая, световой акцент не белый"
-    },
-    {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "близок к deep teal, но тени не чёрно-зелёные"
+      "keep": false,
+      "score": 5.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Грязный, не наш cold teal."
     },
     {
-      "name": "scout_neutral_night_muted_2",
-      "keep": true,
-      "score": 7.0,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "близок к deep teal, но тени не чёрно-зелёные"
-    },
-    {
-      "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 6.0,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "близок к deep teal, но световой акцент не мягкий не-белый"
-    },
-    {
-      "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 6.5,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "близок к deep teal, но световой акцент не мягкий не-белый"
-    },
-    {
-      "name": "scout_green_mid_soft",
+      "name": "scout_neutral_night_muted",
       "keep": false,
       "score": 5.5,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "близок к deep teal, но световой акцент не мягкий не-белый"
+      "reason": "Слишком тёмный, не наш cold teal."
+    },
+    {
+      "name": "scout_neutral_bright_muted",
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Близок к deep teal, но слишком светлый."
+    },
+    {
+      "name": "scout_neutral_night_soft",
+      "keep": false,
+      "score": 5.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Слишком тёмный и грязный."
+    },
+    {
+      "name": "scout_neutral_night_soft_2",
+      "keep": false,
+      "score": 4.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Слишком тёмный и грязный."
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Близок к deep teal, но с мягким сдвигом."
     }
   ],
-  "recommend_merge": [
-    "scout_neutral_night_muted",
-    "scout_neutral_mid_muted",
-    "scout_neutral_night_muted_2",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
-  ],
+  "recommend_merge": [],
   "disputed": [
+    "scout_neutral_mid_muted",
+    "scout_neutral_night_muted",
+    "scout_neutral_bright_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2",
     "scout_green_mid_soft"
   ],
-  "_generated": "2026-09-04",
+  "_generated": "2026-09-05",
   "_judge": "gh-vision-ensemble(2/5)"
 }
