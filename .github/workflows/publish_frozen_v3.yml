@@ -22,6 +22,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish_frozen_v3
+  cancel-in-progress: false
+
 jobs:
   variants:
     runs-on: ubuntu-latest
@@ -67,29 +71,9 @@ jobs:
           for n in 1 2 3 4; do
             rclone copyto "out/${SLUG}_section_${n}.mp4" "$MEDIA_DIR/${SLUG}_section_${n}.mp4"
           done
-          rclone copyto "ydrive:Content factory/cloud_io/publish_queue/queue.json" queue.json
-          python3 - "$SLUG" "$TITLE" <<'PY'
-          import json, sys
-          slug, title = sys.argv[1:]
-          q = json.load(open("queue.json"))
-          caption = "тишина — это не пустота. внутри всегда есть точка покоя.\n\nyaromat — Frozen Space\nвключи звук"
-          vk_id = f"{slug}_vk"
-          q.setdefault("vk", [])
-          if not any(x.get("id") == vk_id for x in q["vk"]):
-              q["vk"].append({"id": vk_id, "media": f"{slug}/{slug}_full.mp4",
-                              "type": "video", "caption": caption, "own_track": True})
-          q.setdefault("youtube", [])
-          for n in range(1, 5):
-              item_id = f"{slug}_short_{n}"
-              if not any(x.get("id") == item_id for x in q["youtube"]):
-                  q["youtube"].append({
-                      "id": item_id,
-                      "media": f"{slug}/{slug}_section_{n}.mp4",
-                      "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
-                      "description": caption + f"\n\n#Shorts #futuregarage #downtempo #yaromat",
-                      "own_track": True})
-          json.dump(q, open("queue.json", "w"), ensure_ascii=False, indent=2)
-          PY
-          rclone copyto queue.json "ydrive:Content factory/cloud_io/publish_queue/queue.json"
+          # CAS-обновление общей очереди: скрипт сам тянет queue.json, идемпотентно
+          # дополняет vk+youtube и перед загрузкой перепроверяет, что её никто не изменил.
+          QUEUE_DST="Content factory/cloud_io/publish_queue/queue.json"
+          python3 queue_enqueue.py --queue-dst "$QUEUE_DST" --slug "$SLUG" --title "$TITLE"
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_section_1.mp4
           ls -lh out/
