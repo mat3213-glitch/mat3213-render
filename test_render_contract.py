@@ -10,6 +10,7 @@ from render_contract import (
     assert_media_contract,
     creative_qc_policy,
     load_approval,
+    post_qc_decision,
     require_complete,
     validate_render_job,
     write_render_receipt,
@@ -127,6 +128,23 @@ class RenderContractTests(unittest.TestCase):
                          (True, "full_qc_failed"))
         self.assertEqual(creative_qc_policy("full", 0),
                          (False, "full_qc_pass"))
+
+    def test_flash_override_excuses_only_creative_rejection(self):
+        # rc=2 is a genuine creative rejection the declared flash grammar may excuse.
+        self.assertEqual(post_qc_decision("full", 2, allow_rhythmic_flash=True),
+                         (False, "full_qc_pass_flash_override"))
+        # Without the declared grammar the rejection still blocks.
+        self.assertEqual(post_qc_decision("full", 2, allow_rhythmic_flash=False),
+                         (True, "full_qc_failed"))
+        # Infrastructure failures (judge unavailable = 1) and timeouts (124) mean
+        # the clip was never reviewed: flash grammar must NOT release them.
+        self.assertEqual(post_qc_decision("full", 1, allow_rhythmic_flash=True),
+                         (True, "full_qc_failed"))
+        self.assertEqual(post_qc_decision("full", 124, allow_rhythmic_flash=True),
+                         (True, "full_qc_failed"))
+        # A preview stays advisory regardless of the judge return code.
+        self.assertEqual(post_qc_decision("preview", 1, allow_rhythmic_flash=True),
+                         (False, "preview_ready_manual_qc"))
 
     @patch("render_contract.subprocess.run")
     def test_media_contract(self, run):

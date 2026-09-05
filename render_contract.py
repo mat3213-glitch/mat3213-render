@@ -153,6 +153,21 @@ def creative_qc_policy(mode: str, returncode: int) -> tuple[bool, str]:
     raise RenderContractError(f"creative QC received unknown mode {mode!r}")
 
 
+def post_qc_decision(mode: str, returncode: int, *, allow_rhythmic_flash: bool = False) -> tuple[bool, str]:
+    """Fail-closed verdict after the fallible creative judge.
+
+    ``allow_rhythmic_flash`` excuses only a genuine creative rejection (rc=2):
+    beat-synchronous kick flashes intentionally produce exposure ramps that the
+    plastic judge flags generically.  It never excuses an unavailable QC —
+    rc=1 (missing clip/frames/strip, judge failed) and rc=124 (timeout) mean the
+    clip was not actually reviewed, so a full render must still block.
+    """
+    qc_blocks, qc_status = creative_qc_policy(mode, returncode)
+    if mode == "full" and qc_blocks and returncode == 2 and allow_rhythmic_flash:
+        return (False, "full_qc_pass_flash_override")
+    return qc_blocks, qc_status
+
+
 def sha256_file(path: str | Path) -> str:
     digest = hashlib.sha256()
     with Path(path).open("rb") as handle:
