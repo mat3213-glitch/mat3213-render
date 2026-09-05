@@ -1,11 +1,10 @@
-# Repo Scout — 2026-09-04T14:02:07.524569
+# Repo Scout — 2026-09-05T13:16:28.314564
 Всего в шортлисте: 1
-- **aivrar/mediabuddy** ⭐1 [source]
-  - https://github.com/aivrar/mediabuddy
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+- **Mezee/coscript-webmcp** ⭐0 [video]
+  - https://github.com/Mezee/coscript-webmcp
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: transcript based video editing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Репозиторий aivrar/mediabuddy предлагает API для поиска и скачивания стоковых фото/видео с Pixabay, Pexels и Unsplash, что частично закрывает потребность в headless-адаптерах для легального контента. Хотя интеграция обещает быть простой, риск дублирования функционала высок, поскольку уже используются аналогичные источники, и неясно, насколько полно будут передаваться метаданные происхождения.
-  - 📄 Portable Windows app to search, download, organize, preview, and AI-caption stock photos/videos from Pixabay, Pexels, and Unsplash with Florence-2 and REST API.
+  - ♻ duplicate-risk: medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Репозиторий Mezee/coscript-webmcp позволяет редактировать видео, используя его текстовую расшифровку. Это закрывает потребность в компактном представлении таймлайна/транскрипта для дешевого ревью режиссуры, не передавая видео целиком в LLM. Низкая стоимость интеграции оправдана, так как его уникальная ценность в компактном интерфейсе для ревью перевешивает средний риск дублирования функций.
+  - 📄 coscript — transcript-based video editing with WebMCP
