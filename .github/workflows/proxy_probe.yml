@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Tailscale up (ephemeral node)
-        uses: tailscale/github-action@4e4c49acaa9818630ce0bd7a564372c17e33fb4d # was v2
+        uses: tailscale/github-action@306e68a486fd2350f2bfc3b19fcd143891a4a2d8 # was v4.1.2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
