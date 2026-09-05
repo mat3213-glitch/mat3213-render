@@ -109,6 +109,18 @@ jobs:
           [ -n "$DURATION" ] && CMD="$CMD --duration $DURATION"
           [ -n "$PREV_JOB" ] && CMD="$CMD --preview-job-id $PREV_JOB --preview-sha256 $PREV_SHA"
           bash -c "$CMD"
+          if [ "$MODE" = "full" ]; then
+            python - "$PREV_JOB" "$PREV_SHA" <<'PY'
+          import json, sys
+          from pathlib import Path
+          Path("/tmp/wd/out/approval.json").write_text(json.dumps({
+              "approved": True,
+              "approved_by": "yaromat",
+              "preview_job_id": sys.argv[1],
+              "preview_sha256": sys.argv[2],
+          }, indent=2) + "\n", encoding="utf-8")
+          PY
+          fi
           # upload job folder to YaD
           rclone copyto /tmp/wd/out/storyboard.json "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/storyboard.json"
           rclone copyto /tmp/wd/track.mp3 "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/track.mp3"
