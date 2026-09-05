@@ -125,6 +125,9 @@ jobs:
           rclone copyto /tmp/wd/out/storyboard.json "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/storyboard.json"
           rclone copyto /tmp/wd/track.mp3 "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/track.mp3"
           rclone copy /tmp/wd/out/generated "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/generated"
+          if [ -f /tmp/wd/out/approval.json ]; then
+            rclone copyto /tmp/wd/out/approval.json "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/approval.json"
+          fi
       - name: Render
         env:
           JOB_ID: ${{ inputs.job_id }}
