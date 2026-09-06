@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,9 +22,10 @@ from queue_enqueue import (
     reconcile,
     submit_patch,
     validate_slug,
+    require_writer_context,
+    main,
+    QUEUE_DST,
 )
-
-QUEUE_DST = "xxx/queue.json"
 
 
 def base_queue() -> dict:
@@ -93,6 +95,14 @@ class QueueEnqueueTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.work = Path(self.tmp.name)
+        self.env = patch.dict(os.environ, {
+            "GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": "owner/render",
+            "GITHUB_WORKFLOW_REF": "owner/render/.github/workflows/reconcile_publish_queue.yml@refs/heads/main",
+            "GITHUB_REF": "refs/heads/main", "GITHUB_JOB": "reconcile",
+            "RUNNER_ENVIRONMENT": "github-hosted", "GITHUB_EVENT_NAME": "workflow_dispatch",
+        })
+        self.env.start()
+        self.addCleanup(self.env.stop)
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -139,7 +149,7 @@ class QueueEnqueueTests(unittest.TestCase):
         with patch("queue_enqueue.rclone", side_effect=runner):
             name, _ = submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"),
                                    "frozen_v3", work=self.work)
-            self.assertIn(f"xxx/queue.d/{name}", remote.store)
+            self.assertIn(f"{QUEUE_DST.rsplit('/', 1)[0]}/queue.d/{name}", remote.store)
             added, code = reconcile(QUEUE_DST, work=self.work)
         self.assertEqual(added, 5)
         self.assertEqual(code, 0)
@@ -160,27 +170,34 @@ class QueueEnqueueTests(unittest.TestCase):
         self.assertEqual((added, code), (0, 0))
         self.assertEqual(len(json.loads(remote.store[QUEUE_DST])["youtube"]), 4)
 
-    def test_two_writers_converge_no_lost_update(self) -> None:
-        """Гонка двух writers: даже «протухший» reconcile, записавший меньший набор
-        ПОСЛЕ бОльшего, не теряет элементы навсегда — durable-патчи восстанавливают union."""
+    def test_second_writer_blocked_before_read_and_existing_prefix_preserved(self) -> None:
         remote = RemoteStore()
         other = {"platform": "youtube", "entry": {
             "id": "other_slug_short_1", "media": "other/section_1.mp4",
             "type": "video", "title": "Other", "own_track": True}}
         runner = RemoteSubprocess(remote)
-        with patch("queue_enqueue.rclone", side_effect=runner):
+        other_work = self.work / "other"
+        other_work.mkdir()
+        attempted = False
+        def interleave(argv, **kwargs):
+            nonlocal attempted
+            if argv[0] == "copyto" and argv[2] == "ydrive:" + QUEUE_DST and not attempted:
+                attempted = True
+                submit_patch(QUEUE_DST, [other], "other_slug", work=other_work)
+                with self.assertRaisesRegex(RuntimeError, "another reconcile"):
+                    reconcile(QUEUE_DST, work=other_work)
+                self.assertFalse((other_work / "queue.json").exists())
+            return runner(argv, **kwargs)
+        with patch("queue_enqueue.rclone", side_effect=interleave):
             submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"), "frozen_v3",
                          work=self.work)
-            submit_patch(QUEUE_DST, [other], "other_slug", work=self.work)
             added, code = reconcile(QUEUE_DST, work=self.work)
-            self.assertEqual(added, 6)
-            # Протухший reconcile: читал только патч frozen_v3 и переписывает им сейчас.
-            stale_queue = base_queue()
-            fold(stale_queue, frozen_items("frozen_v3", "T"))
-            remote.store[QUEUE_DST] = json.dumps(stale_queue, ensure_ascii=False, indent=2)
-            # Следующий reconcile видит ВСЕ патчи (никто их не удаляет) → union вернулся.
-            added, code = reconcile(QUEUE_DST, work=self.work)
+            self.assertEqual((added, code), (5, 0))
+            prefix = load_queue(remote.store[QUEUE_DST])["youtube"]
+            added, code = reconcile(QUEUE_DST, work=other_work)
         self.assertEqual((added, code), (1, 0))
+        self.assertTrue(attempted)
+        self.assertEqual(load_queue(remote.store[QUEUE_DST])["youtube"][:len(prefix)], prefix)
         youtube = [x["id"] for x in json.loads(remote.store[QUEUE_DST])["youtube"]]
         self.assertIn("frozen_v3_short_1", youtube)
         self.assertIn("other_slug_short_1", youtube)
@@ -212,6 +229,75 @@ class QueueEnqueueTests(unittest.TestCase):
             added, code = reconcile(QUEUE_DST, work=self.work)
             self.assertEqual((added, code), (0, 2))
             self.assertEqual(remote.store[QUEUE_DST], before)
+
+    def test_local_and_foreign_workflow_fail_before_remote_io(self):
+        for key in ("GITHUB_ACTIONS", "GITHUB_WORKFLOW_REF", "GITHUB_REF", "GITHUB_JOB", "RUNNER_ENVIRONMENT"):
+            with patch.dict(os.environ, {key: "wrong"}), patch("queue_enqueue.rclone") as remote:
+                with self.assertRaises(RuntimeError):
+                    reconcile(QUEUE_DST, work=self.work)
+                remote.assert_not_called()
+        with self.assertRaises(RuntimeError):
+            require_writer_context("other/queue.json")
+
+    def test_cli_matches_workflow_argument_order(self):
+        remote = RemoteStore()
+        with patch("queue_enqueue.rclone", side_effect=RemoteSubprocess(remote)):
+            self.assertEqual(main(["submit", "--queue-dst", QUEUE_DST, "--slug", "cli", "--title", "T"]), 0)
+            self.assertEqual(main(["reconcile", "--queue-dst", QUEUE_DST]), 0)
+
+    def test_crash_during_write_releases_lock_and_retry_is_idempotent(self):
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        def crash(argv, **kwargs):
+            result = runner(argv, **kwargs)
+            if argv[0] == "copyto" and argv[2] == "ydrive:" + QUEUE_DST:
+                raise RuntimeError("crash after accepted upload")
+            return result
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            submit_patch(QUEUE_DST, frozen_items("retry", "T"), "retry", work=self.work)
+        with patch("queue_enqueue.rclone", side_effect=crash), self.assertRaises(RuntimeError):
+            reconcile(QUEUE_DST, work=self.work)
+        before = remote.store[QUEUE_DST]
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            self.assertEqual(reconcile(QUEUE_DST, work=self.work), (0, 0))
+        self.assertEqual(remote.store[QUEUE_DST], before)
+
+    def test_listing_failure_and_broken_patch_do_not_write_queue(self):
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        def fail_list(argv, **kwargs):
+            if argv[0] == "lsf":
+                raise RuntimeError("unavailable")
+            return runner(argv, **kwargs)
+        with patch("queue_enqueue.rclone", side_effect=fail_list), self.assertRaises(RuntimeError):
+            reconcile(QUEUE_DST, work=self.work)
+        remote.store[QUEUE_DST.rsplit('/', 1)[0] + "/queue.d/broken.json"] = "{broken"
+        with patch("queue_enqueue.rclone", side_effect=runner), self.assertRaises(ValueError):
+            reconcile(QUEUE_DST, work=self.work)
+        self.assertEqual(remote.store[QUEUE_DST], sample())
+
+    def test_workflow_has_one_serialized_writer_and_recovery_triggers(self):
+        import yaml
+        folder = Path(__file__).parent / ".github/workflows"
+        writer = yaml.safe_load((folder / "reconcile_publish_queue.yml").read_text())
+        triggers = writer.get("on", writer.get(True))
+        self.assertIn("schedule", triggers)
+        self.assertIn("workflow_dispatch", triggers)
+        self.assertEqual(writer["concurrency"], {"group": "publish_queue_write", "cancel-in-progress": False})
+        self.assertEqual(list(writer["jobs"]), ["reconcile"])
+        self.assertEqual(writer["jobs"]["reconcile"]["runs-on"], "ubuntu-latest")
+        for filename in ("publish_frozen_v3.yml", "platform_variants.yml"):
+            producer = yaml.safe_load((folder / filename).read_text())
+            self.assertIn(producer["name"], triggers["workflow_run"]["workflows"])
+            self.assertNotEqual(producer["concurrency"]["group"], writer["concurrency"]["group"])
+        writers = []
+        for path in folder.glob("*.yml"):
+            data = yaml.safe_load(path.read_text())
+            for job in (data.get("jobs", {}) if isinstance(data, dict) else {}).values():
+                for step in job.get("steps", []):
+                    if "queue_enqueue.py reconcile" in step.get("run", ""):
+                        writers.append(path.name)
+        self.assertEqual(writers, ["reconcile_publish_queue.yml"])
 
 
 if __name__ == "__main__":

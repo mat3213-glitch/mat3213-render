@@ -1,11 +1,42 @@
 #!/usr/bin/env python3
 import unittest
+import json
+import sys
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from screenplay_pipeline import final_qc
 
 
 class FinalQcTests(unittest.TestCase):
+    def test_report_contains_local_caller_identity_and_actual_clip_hash(self):
+        from render_contract import sha256_file, post_qc_decision
+        with tempfile.TemporaryDirectory() as td:
+            directory = Path(td)
+            clip = directory / "result.mp4"
+            clip.write_bytes(b"synthetic clip; no ffmpeg")
+            local_report = directory / "bound.json"
+            identity = dict(job_id="job", clip=clip.name, clip_sha256=sha256_file(clip), check_id="unique")
+            verdict = dict(cuts_ok=True, texture_consistent=True, fonts_ok=True,
+                           plastic_score=75, reject_reason="rhythmic_flash", reason="flash")
+            argv = ["final_qc", "--clip", str(clip), "--job-id", "job",
+                    "--check-id", "unique", "--report-path", str(local_report)]
+            with patch.object(sys, "argv", argv), patch.object(final_qc, "WORK", td), \
+                 patch.object(final_qc, "frames_of", return_value=["mock frame"]), \
+                 patch.object(final_qc, "make_strip", return_value="mock strip"), \
+                 patch.object(final_qc, "judge", return_value=(verdict, "ok")), \
+                 patch.object(final_qc, "upload_yd") as upload, \
+                 self.assertRaises(SystemExit) as stopped:
+                final_qc.main()
+            self.assertEqual(stopped.exception.code, 2)
+            upload.assert_called_once()
+            report = json.loads(local_report.read_text())
+            for key, value in identity.items():
+                self.assertEqual(report[key], value)
+            self.assertFalse(post_qc_decision("full", 2, qc_report=report,
+                expected_identity=identity, allow_rhythmic_flash=True)[0])
+
     @patch.object(final_qc, "JUDGES", ["mock"])
     @patch.object(final_qc, "ask_vision")
     @patch("pathlib.Path.read_bytes", return_value=b"image")

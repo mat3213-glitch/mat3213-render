@@ -1,0 +1,47 @@
+name: Reconcile publish queue
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Publish frozen v3 preview (VK + YT shorts)", "Prepare platform variants"]
+    types: [completed]
+    branches: [main]
+  # Recovery for a producer that uploaded its patch before failing/cancellation.
+  schedule:
+    - cron: '17 * * * *'
+
+permissions:
+  contents: read
+
+# This is the only workflow allowed to write queue.json. Keep the old group
+# during migration so an already-running producer/reconciler is also serialized.
+concurrency:
+  group: publish_queue_write
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends rclone
+      - name: Configure Yandex Disk
+        env:
+          YDRIVE_CLIENT_ID: ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN: ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          umask 077
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" > "$HOME/.config/rclone/rclone.conf"
+      - name: Reconcile durable patches without changing existing positions
+        run: |
+          rclone mkdir 'ydrive:Content factory/cloud_io/publish_queue/queue.d'
+          python3 queue_enqueue.py reconcile --queue-dst 'Content factory/cloud_io/publish_queue/queue.json'

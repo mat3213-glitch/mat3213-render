@@ -41,6 +41,7 @@ from render_contract import (
     ffmpeg_version,
     sha256_files,
     post_qc_decision,
+    run_final_qc,
 )
 
 JOB_ID = os.environ.get("JOB_ID", "")
@@ -449,28 +450,12 @@ def main():
         sys.exit(str(exc))
     print(f"  media contract: {media}", flush=True)
 
-    try:
-        qc_run = subprocess.run([
-            sys.executable,
-            str(Path(__file__).resolve().parent / "screenplay_pipeline" / "final_qc.py"),
-            "--clip", str(result), "--job-id", JOB_ID,
-        ], timeout=180)
-        qc_rc = qc_run.returncode
-    except subprocess.TimeoutExpired:
-        qc_rc = 124
-    # final_qc сам заливает qc_report.json на ЯД. Тянем его: flash-override допускается
-    # только по структурированному отчёту, а не по одному rc=2.
-    qc_report = None
-    report_file = WORKDIR / "qc_report.json"
-    if yd_get(f"{JOB_YD}/qc_report.json", report_file) and report_file.is_file():
-        try:
-            qc_report = json.loads(report_file.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            qc_report = None
+    qc_rc, qc_report, qc_identity = run_final_qc(result, JOB_ID)
     qc_blocks, qc_status = post_qc_decision(
         render_mode,
         qc_rc,
         qc_report=qc_report,
+        expected_identity=qc_identity,
         allow_rhythmic_flash=sb.get("allow_rhythmic_flash") is True,
     )
     if qc_blocks:

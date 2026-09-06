@@ -16,9 +16,10 @@
   reconcile — единственный, кто переписывает queue.json: тянет его, фолдит
               патчи (детерминированно, идемпотентно по (platform,id)),
               сверяет текущую очередь непосредственно перед записью и
-              verify-после-записи. Патчи НЕ удаляются, поэтому fold монотонный:
-              если два reconcile разошлись во времени, следующий reconcile
-              восстанавливает объединение — постоянного lost update нет.
+              verify-после-записи. Запуск разрешён только выделенному workflow
+              reconcile_publish_queue.yml с concurrency publish_queue_write.
+              Локальные/другие workflow writers запрещены до чтения очереди.
+              Патчи НЕ удаляются: повтор после падения не теряет заявки.
               Повреждённый queue.json → отказ БЕЗ перезаписи.
 
 Идемпотентно: повторный submit/reconcile не дублирует элементы, чужие
@@ -27,8 +28,10 @@ platform-позиции сохраняются как есть.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -42,7 +45,8 @@ REMOTE = "ydrive:"
 CAPTION = "тишина — это не пустота. внутри всегда есть точка покоя.\n\nyaromat — Frozen Space\nвключи звук"
 
 PATCH_DIRNAME = "queue.d"
-MAX_RECONCILE_ATTEMPTS = 5
+QUEUE_DST = "Content factory/cloud_io/publish_queue/queue.json"
+WRITER_WORKFLOW = "reconcile_publish_queue.yml"
 
 
 def validate_slug(slug: str) -> str:
@@ -80,6 +84,12 @@ def load_queue(text: str) -> dict:
         raise ValueError(f"queue.json повреждён: {exc}")
     if not isinstance(queue, dict):
         raise ValueError("queue.json должен быть объектом")
+    for platform, bucket in queue.items():
+        if (not isinstance(bucket, list) or any(not isinstance(entry, dict)
+                or not isinstance(entry.get("id"), str) or not entry["id"] for entry in bucket)):
+            raise ValueError(f"queue.json: invalid bucket {platform}")
+        if len({entry["id"] for entry in bucket}) != len(bucket):
+            raise ValueError(f"queue.json: duplicate ids in {platform}")
     return queue
 
 
@@ -152,10 +162,11 @@ def push_file(local: Path, dst: str) -> None:
 def list_patch_names(queue_dst: str) -> list[str]:
     """Имена файлов в queue.d/ рядом с queue.json, без подкаталогов."""
     folder = f"{'/'.join(queue_dst.split('/')[:-1])}/{PATCH_DIRNAME}"
-    result = rclone(["lsf", "--files-only", f"{REMOTE}{folder}"], check=False)
-    if result.returncode != 0:
-        return []
-    return sorted(name.strip() for name in result.stdout.splitlines() if name.strip())
+    result = rclone(["lsf", "--files-only", f"{REMOTE}{folder}"])
+    names = sorted(name.strip() for name in result.stdout.splitlines() if name.strip())
+    if any(not re.fullmatch(r"[A-Za-z0-9_-]+\.json", name) for name in names):
+        raise ValueError("queue.d contains an invalid patch name")
+    return names
 
 
 def patch_remote_path(queue_dst: str, name: str) -> str:
@@ -176,15 +187,32 @@ def submit_patch(queue_dst: str, items: list[dict], slug: str, *, work: Path) ->
     return name, remote
 
 
-def reconcile(queue_dst: str, *, work: Path, max_attempts: int = MAX_RECONCILE_ATTEMPTS
-              ) -> tuple[int, int]:
-    """Фолдит патчи в queue.json. Возвращает (added, exit_code); >0 при необходимости ручного retry.
+def require_writer_context(queue_dst: str) -> None:
+    """Operational guard; credentials/workflow permissions remain the trust boundary."""
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    expected = f"{repo}/.github/workflows/{WRITER_WORKFLOW}@refs/heads/main"
+    if (queue_dst != QUEUE_DST or not repo or os.environ.get("GITHUB_ACTIONS") != "true"
+            or os.environ.get("GITHUB_WORKFLOW_REF") != expected
+            or os.environ.get("GITHUB_REF") != "refs/heads/main"
+            or os.environ.get("GITHUB_JOB") != "reconcile"
+            or os.environ.get("RUNNER_ENVIRONMENT") != "github-hosted"
+            or os.environ.get("GITHUB_EVENT_NAME") not in {"schedule", "workflow_dispatch", "workflow_run"}):
+        raise RuntimeError(f"queue writes require the serialized {WRITER_WORKFLOW} on main")
 
-    Единственный writer queue.json. Гарантия отсутствия постоянного lost update:
-    патчи в queue.d/ вечны (не удаляются), fold монотонный и идемпотентный, поэтому
-    любой reconcile начинает с текущей очереди и заново накладывает ВСЕ патчи —
-    разойдшиеся reconcile сходятся к объединению на следующем проходе.
-    """
+
+def reconcile(queue_dst: str, *, work: Path) -> tuple[int, int]:
+    """Serialize before reading. Never repair an overwritten queue after readers saw it."""
+    require_writer_context(queue_dst)
+    lock_path = Path(tempfile.gettempdir()) / ("queue-reconcile-" + sha256_bytes(queue_dst.encode()) + ".lock")
+    with lock_path.open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError("another reconcile is running on this runner") from exc
+        return _reconcile_locked(queue_dst, work=work)
+
+
+def _reconcile_locked(queue_dst: str, *, work: Path) -> tuple[int, int]:
     qfile = work / "queue.json"
     cur = work / "queue_current.json"
 
@@ -204,41 +232,23 @@ def reconcile(queue_dst: str, *, work: Path, max_attempts: int = MAX_RECONCILE_A
         except ValueError as exc:
             broken.append(f"{name}: {exc}")
     if broken:
-        print("WARN: пропущены повреждённые патчи: " + "; ".join(broken))
+        raise ValueError("invalid patches; queue unchanged: " + "; ".join(broken))
 
-    for attempt in range(max_attempts):
-        added = fold(queue, items)
-        if added == 0:
-            print("queue уже в актуальном состоянии (added=0)")
-            return 0, 0
-
-        staged = work / "queue_staged.json"
-        staged.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
-
-        pull_file(queue_dst, cur)
-        if sha256_file(cur) != sha256_file(qfile):
-            # очередь изменилась с момента чтения — пересчитываем от текущей версии.
-            print(f"reconcile: очередь изменилась — повторный fold ({attempt + 1})")
-            queue = load_queue(cur.read_text(encoding="utf-8"))
-            qfile.write_bytes(cur.read_bytes())
-            continue
-
-        push_file(staged, queue_dst)
-        verified = work / "queue_verified.json"
-        pull_file(queue_dst, verified)
-        if sha256_file(verified) == sha256_file(staged):
-            print(f"reconciled {added} items из {len(items)} в патчах (vk+youtube и др. сохранены)")
-            return added, 0
-        # Запись разошлась с локальной версией — кто-то успел перезаписать между
-        # проверкой и записью. Пересчитываем union из текущей очереди и повторяем.
-        print(f"reconcile: verify-расхождение — повторный fold ({attempt + 1})")
-        pulled = load_queue(verified.read_text(encoding="utf-8"))
-        queue = pulled
-        qfile.write_bytes(verified.read_bytes())
-        continue
-
-    print("FAIL: очередь продолжает меняться — конфликт, требуются ручное действие")
-    return 0, 3
+    added = fold(queue, items)
+    if added == 0:
+        return 0, 0
+    staged = work / "queue_staged.json"
+    staged.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
+    pull_file(queue_dst, cur)
+    if sha256_file(cur) != sha256_file(qfile):
+        raise RuntimeError("queue changed outside serialized writer; refusing overwrite")
+    push_file(staged, queue_dst)
+    verified = work / "queue_verified.json"
+    pull_file(queue_dst, verified)
+    if sha256_file(verified) != sha256_file(staged):
+        raise RuntimeError("queue verification failed; inspect external writer before retry")
+    print(f"reconciled {added} items; existing queue order preserved")
+    return added, 0
 
 
 def cmd_submit(args: argparse.Namespace) -> int:
@@ -268,18 +278,15 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
         work = Path(args.workdir) if args.workdir else Path(td)
         work.mkdir(parents=True, exist_ok=True)
         try:
-            _, code = reconcile(args.queue_dst, work=work, max_attempts=args.max_attempts)
-        except RuntimeError as exc:
+            _, code = reconcile(args.queue_dst, work=work)
+        except (RuntimeError, ValueError) as exc:
             print(f"FAIL: {exc}")
             return 2
         return code
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Патч-аппенд + reconcile publish-очереди ЯД")
-    ap.add_argument("--queue-dst", required=True,
-                    help="rclone путь queue.json без REMOTE, e.g. Content factory/cloud_io/publish_queue/queue.json")
-    ap.add_argument("--workdir", default=None, help="куда писать временные файлы (default: tmp)")
     sub = ap.add_subparsers(dest="command", required=True)
 
     sub_p = sub.add_parser("submit", help="положить патч в queue.d/ (без чтения queue.json)")
@@ -289,10 +296,13 @@ def main() -> int:
     sub_p.set_defaults(func=cmd_submit)
 
     sub_r = sub.add_parser("reconcile", help="свести патчи queue.d/ в queue.json")
-    sub_r.add_argument("--max-attempts", type=int, default=MAX_RECONCILE_ATTEMPTS)
     sub_r.set_defaults(func=cmd_reconcile)
 
-    args = ap.parse_args()
+    for parser in (sub_p, sub_r):
+        parser.add_argument("--queue-dst", required=True, help="rclone queue.json path without REMOTE")
+        parser.add_argument("--workdir", default=None, help="temporary working directory")
+
+    args = ap.parse_args(argv)
     return args.func(args)
 
 

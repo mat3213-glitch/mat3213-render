@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,8 @@ from render_contract import (
     parse_qc_report,
     post_qc_decision,
     qc_report_flash_only,
+    run_final_qc,
+    sha256_file,
     require_complete,
     validate_render_job,
     write_render_receipt,
@@ -20,10 +23,12 @@ from render_contract import (
 
 
 SHA = "a" * 64
+IDENTITY = {"job_id": "job-1", "clip": "result.mp4", "clip_sha256": SHA, "check_id": "check-1"}
 
 
 def flash_report(**overrides):
     report = {
+        **IDENTITY,
         "cuts_ok": True, "texture_consistent": True, "fonts_ok": True,
         "plastic_score": 82, "reject_reason": "rhythmic_flash",
         "reason": "kick flash ramps",
@@ -145,6 +150,7 @@ class RenderContractTests(unittest.TestCase):
         rc2 = 2
         # Чистый flash по структурированному отчёту — единственный разрешённый случай.
         self.assertEqual(post_qc_decision("full", rc2, qc_report=flash_report(),
+                                          expected_identity=IDENTITY,
                                           allow_rhythmic_flash=True),
                          (False, "full_qc_pass_flash_override"))
         # Без декларированного флэша отказ блокируется.
@@ -172,21 +178,21 @@ class RenderContractTests(unittest.TestCase):
         # Независимый дефект даже рядом с флэшем → блок.
         self.assertEqual(post_qc_decision(
             "full", rc2, qc_report=flash_report(fonts_ok=False),
-            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+            expected_identity=IDENTITY, allow_rhythmic_flash=True), (True, "full_qc_failed"))
         self.assertEqual(post_qc_decision(
             "full", rc2, qc_report=flash_report(texture_consistent=False),
-            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+            expected_identity=IDENTITY, allow_rhythmic_flash=True), (True, "full_qc_failed"))
         self.assertEqual(post_qc_decision(
             "full", rc2, qc_report=flash_report(cuts_ok=False),
-            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+            expected_identity=IDENTITY, allow_rhythmic_flash=True), (True, "full_qc_failed"))
         # Причина не «rhythmic_flash», а пластик без декларации — блок.
         self.assertEqual(post_qc_decision(
             "full", rc2, qc_report=flash_report(reject_reason="other"),
-            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+            expected_identity=IDENTITY, allow_rhythmic_flash=True), (True, "full_qc_failed"))
         # Низкий plastic при декларации flash — это не расход, блок.
         self.assertEqual(post_qc_decision(
             "full", rc2, qc_report=flash_report(plastic_score=40),
-            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+            expected_identity=IDENTITY, allow_rhythmic_flash=True), (True, "full_qc_failed"))
 
     def test_flash_override_rejects_missing_broken_or_foreign_report(self):
         rc2 = 2
@@ -200,6 +206,7 @@ class RenderContractTests(unittest.TestCase):
                     flash_report(reject_reason="flashy")):
             with self.subTest(bad=bad):
                 self.assertEqual(post_qc_decision("full", rc2, qc_report=bad,
+                                                  expected_identity=IDENTITY,
                                                   allow_rhythmic_flash=True),
                                  (True, "full_qc_failed"))
 
@@ -226,6 +233,55 @@ class RenderContractTests(unittest.TestCase):
             with self.subTest(bad=bad):
                 with self.assertRaises(RenderContractError):
                     parse_qc_report(bad)
+
+    def test_foreign_or_stale_identity_blocks_override(self):
+        for key in IDENTITY:
+            for value in (None, "foreign-value"):
+                with self.subTest(key=key, value=value):
+                    self.assertTrue(post_qc_decision(
+                        "full", 2, qc_report=flash_report(**{key: value}),
+                        expected_identity=IDENTITY, allow_rhythmic_flash=True)[0])
+        self.assertTrue(post_qc_decision("full", 2, qc_report=flash_report(),
+                                        allow_rhythmic_flash=True)[0])
+
+    def test_invalid_scores_block_even_with_matching_identity(self):
+        for score in (float("inf"), float("nan"), -1, 101):
+            self.assertTrue(post_qc_decision(
+                "full", 2, qc_report=flash_report(plastic_score=score),
+                expected_identity=IDENTITY, allow_rhythmic_flash=True)[0])
+
+    def test_bound_qc_reads_this_invocation_only(self):
+        with tempfile.TemporaryDirectory() as td:
+            clip = Path(td) / "result.mp4"
+            clip.write_bytes(b"synthetic clip")
+            def judge(argv, **kwargs):
+                report = flash_report(job_id="job", clip_sha256=sha256_file(clip),
+                                      check_id=argv[argv.index("--check-id") + 1])
+                Path(argv[argv.index("--report-path") + 1]).write_text(json.dumps(report))
+                return subprocess.CompletedProcess(argv, 2)
+            with patch("render_contract.subprocess.run", side_effect=judge):
+                rc, report, identity = run_final_qc(clip, "job")
+            self.assertFalse(post_qc_decision("full", rc, qc_report=report,
+                expected_identity=identity, allow_rhythmic_flash=True)[0])
+            with patch("render_contract.subprocess.run", return_value=subprocess.CompletedProcess([], 2)):
+                rc, report, second = run_final_qc(clip, "job")
+            self.assertNotEqual(identity["check_id"], second["check_id"])
+            self.assertIsNone(report)
+            self.assertTrue(post_qc_decision("full", rc, qc_report=report,
+                expected_identity=second, allow_rhythmic_flash=True)[0])
+
+    def test_bound_qc_timeout_and_changed_clip_fail_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            clip = Path(td) / "result.mp4"
+            clip.write_bytes(b"before")
+            with patch("render_contract.subprocess.run", side_effect=subprocess.TimeoutExpired([], 180)):
+                self.assertEqual(run_final_qc(clip, "job")[0], 124)
+            def judge(argv, **kwargs):
+                Path(argv[argv.index("--report-path") + 1]).write_text(json.dumps(flash_report()))
+                clip.write_bytes(b"after")
+                return subprocess.CompletedProcess(argv, 2)
+            with patch("render_contract.subprocess.run", side_effect=judge):
+                self.assertEqual(run_final_qc(clip, "job")[0], 1)
 
     @patch("render_contract.subprocess.run")
     def test_media_contract(self, run):

@@ -25,6 +25,7 @@ from pathlib import Path
 from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from art_judge import JUDGES, ask_vision
+from render_contract import sha256_file
 WORK = tempfile.mkdtemp(prefix="qc_")
 STRIPS = os.path.join(WORK, "strips")
 os.makedirs(STRIPS, exist_ok=True)
@@ -192,6 +193,8 @@ def main():
     parser = argparse.ArgumentParser(description="Final QC for assembled clip.")
     parser.add_argument("--clip", required=True, help="Path to the final clip (MP4)")
     parser.add_argument("--job-id", required=True, help="Job ID for Yandex Disk upload")
+    parser.add_argument("--check-id", default=None, help="Unique identity supplied by this QC caller")
+    parser.add_argument("--report-path", default=None, help="Local report for this invocation")
     args = parser.parse_args()
 
     if not os.path.exists(args.clip):
@@ -199,6 +202,7 @@ def main():
         sys.exit(1)
 
     print(f"Processing QC for: {args.clip}")
+    clip_hash = sha256_file(Path(args.clip))
     frames = frames_of(args.clip)
     if not frames:
         print("Error: Could not extract frames from clip.", file=sys.stderr)
@@ -226,6 +230,8 @@ def main():
     report = {
         "clip": os.path.basename(args.clip),
         "job_id": args.job_id,
+        "clip_sha256": clip_hash,
+        "check_id": args.check_id,
         "cuts_ok": result["cuts_ok"],
         "texture_consistent": result["texture_consistent"],
         "fonts_ok": result["fonts_ok"],
@@ -238,6 +244,10 @@ def main():
     rp = os.path.join(WORK, "qc_report.json")
     with open(rp, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
+    if args.report_path:
+        # The caller supplies a new path inside its private temporary directory.
+        with open(args.report_path, "x", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
     
     print(f"QC Result: {'PASS' if final_pass else 'FAIL'} (plastic={result['plastic_score']})")
     print(json.dumps(report, ensure_ascii=False, indent=2))

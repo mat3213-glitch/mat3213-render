@@ -11,8 +11,12 @@ from __future__ import annotations
 
 import json
 import hashlib
+import math
 import re
 import subprocess
+import sys
+import tempfile
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -172,6 +176,8 @@ def parse_qc_report(data: Any) -> dict[str, Any]:
     plastic = data.get("plastic_score")
     if isinstance(plastic, bool) or not isinstance(plastic, (int, float)):
         raise RenderContractError("qc_report.plastic_score must be a number")
+    if not math.isfinite(plastic) or not 0 <= plastic <= 100:
+        raise RenderContractError("qc_report.plastic_score must be finite, between 0 and 100")
     reject = data.get("reject_reason")
     if reject is not None and reject not in QC_REJECT_REASONS:
         raise RenderContractError(
@@ -201,6 +207,7 @@ def qc_report_flash_only(report: dict[str, Any]) -> bool:
 
 
 def post_qc_decision(mode: str, returncode: int, *, qc_report: dict[str, Any] | None = None,
+                     expected_identity: dict[str, str] | None = None,
                      allow_rhythmic_flash: bool = False) -> tuple[bool, str]:
     """Fail-closed verdict after the fallible creative judge.
 
@@ -217,12 +224,45 @@ def post_qc_decision(mode: str, returncode: int, *, qc_report: dict[str, Any] | 
         return qc_blocks, qc_status
     if returncode == 2 and allow_rhythmic_flash:
         try:
+            keys = ("job_id", "clip", "clip_sha256", "check_id")
+            if (not isinstance(expected_identity, dict) or not isinstance(qc_report, dict)
+                    or any(not isinstance(expected_identity.get(k), str)
+                           or not expected_identity[k]
+                           or qc_report.get(k) != expected_identity[k] for k in keys)
+                    or not _SHA256.fullmatch(expected_identity["clip_sha256"])):
+                raise RenderContractError("QC report does not identify this render/check")
             report = parse_qc_report(qc_report)
         except (RenderContractError, TypeError):
             report = None
         if report is not None and qc_report_flash_only(report):
             return (False, "full_qc_pass_flash_override")
     return qc_blocks, qc_status
+
+
+def run_final_qc(clip: Path, job_id: str) -> tuple[int, Any, dict[str, str]]:
+    """Use only this invocation's local report, never a previous remote report."""
+    identity = {"job_id": job_id, "clip": clip.name,
+                "clip_sha256": sha256_file(clip), "check_id": uuid.uuid4().hex}
+    with tempfile.TemporaryDirectory(prefix="bound_qc_") as directory:
+        report_path = Path(directory) / "report.json"
+        try:
+            run = subprocess.run([
+                sys.executable, str(Path(__file__).parent / "screenplay_pipeline/final_qc.py"),
+                "--clip", str(clip), "--job-id", job_id,
+                "--check-id", identity["check_id"], "--report-path", str(report_path),
+            ], timeout=180)
+            rc = run.returncode
+        except subprocess.TimeoutExpired:
+            return 124, None, identity
+        except OSError:
+            return 1, None, identity
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            if sha256_file(clip) != identity["clip_sha256"]:
+                return 1, None, identity
+        except (OSError, ValueError):
+            report = None
+        return rc, report, identity
 
 
 def sha256_file(path: str | Path) -> str:

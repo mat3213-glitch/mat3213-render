@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish_queue_write
+  group: publish_media_${{ inputs.slug }}
   cancel-in-progress: false
 
 jobs:
@@ -92,6 +92,7 @@ jobs:
           PY
           QUEUE_DST="Content factory/cloud_io/publish_queue/queue.json"
           python3 queue_enqueue.py submit --queue-dst "$QUEUE_DST" --slug "$SLUG" --items-file items.json
-          python3 queue_enqueue.py reconcile --queue-dst "$QUEUE_DST"
+          # The dedicated workflow_run reconciler consumes durable patches.
+          # This producer never writes queue.json.
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_full_720.mp4
           ls -lh out/
