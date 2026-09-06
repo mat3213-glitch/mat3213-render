@@ -29,6 +29,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin
 
 HERE = Path(__file__).resolve().parent
 PROFILE_FILE = HERE / "s2c_channel_profile.json"
@@ -473,11 +474,14 @@ def og_image(url: str, timeout: int = 15) -> str | None:
         return None
     pat = re.compile(r'property=["\']og:image["\'][^>]+content=["\']([^"\']+)["\']', re.I)
     m = pat.search(html)
-    if m:
-        return m.group(1).strip()
-    m2 = re.compile(r'content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', re.I)
-    m2 = m2.search(html)
-    return m2.group(1).strip() if m2 else None
+    img = m.group(1).strip() if m else None
+    if not img:
+        m2 = re.compile(r'content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']', re.I)
+        m2 = m2.search(html)
+        img = m2.group(1).strip() if m2 else None
+    if img:
+        img = urljoin(url, img)
+    return img
 
 
 def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, str]:
