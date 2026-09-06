@@ -40,10 +40,16 @@ RUBRIC = (
     "3. fonts_ok (bool): Если в кадре есть текст — он читаем, шрифты целостные, нет артефактов?\n"
     "4. plastic_score (0-100): ОБЩАЯ пластмассовость (AI-implausibility). "
     "Используй шкалу: 0-30 (норма, атмосферно), 40-70 (средний пластик, несовершенства), "
-    "70-100 (высокий пластик, неправдоподобно).\n\n"
+    "70-100 (высокий пластик, неправдоподобно).\n"
+    "5. reject_reason: Строго одно значение. ПРИ pass=false: \"rhythmic_flash\", ЕСЛИ И ТОЛЬКО "
+    "ЕСЛИ ЕДИНСТВЕННАЯ причина отказа — ритмичный флэш по биту (экспозиционные вспышки на киках), "
+    "а cuts_ok/texture_consistent/fonts_ok все равны true (иных дефектов нет). Во всех остальных "
+    "случаях pass=false — \"other\". При pass=true — укажи null.\n\n"
     "Верни СТРОГО JSON:\n"
-    '{"cuts_ok": bool, "texture_consistent": bool, "fonts_ok": bool, "plastic_score": 0-100, "pass": bool, "reason": "краткое пояснение"}\n'
-    "pass = true ТОЛЬКО если cuts_ok AND texture_consistent AND fonts_ok AND plastic_score < 55."
+    '{"cuts_ok": bool, "texture_consistent": bool, "fonts_ok": bool, "plastic_score": 0-100, '
+    '"pass": bool, "reject_reason": "rhythmic_flash" | "other" | null, "reason": "краткое пояснение"}\n'
+    "pass = true ТОЛЬКО если cuts_ok AND texture_consistent AND fonts_ok AND plastic_score < 55 "
+    "и reject_reason=null."
 )
 
 
@@ -141,22 +147,34 @@ def judge(strip, timeout=180):
     for key in ("cuts_ok", "texture_consistent", "fonts_ok"):
         if type(d.get(key)) is not bool:
             return None, f"bad-{key}-type"
-        
+
     # Валидация типов и значений
     try:
         plastic = float(d["plastic_score"])
         plastic = max(0.0, min(100.0, plastic))
     except Exception:
         return None, "bad-plastic-score"
-        
+
+    # Структурированная причина отказа: rhythmic_flash допустим ТОЛЬКО как
+    # единственная причина (все три булевых вердикта true) — см. RUBRIC.
+    reject_reason = d.get("reject_reason")
+    if reject_reason is None:
+        reject_reason = None
+    elif reject_reason not in ("rhythmic_flash", "other"):
+        return None, "bad-reject-reason"
+    elif reject_reason == "rhythmic_flash" and not (
+            d["cuts_ok"] and d["texture_consistent"] and d["fonts_ok"]):
+        return None, "mixed-reject"
+
     # pass вычисляется на стороне вызывающего кода.
     reason = str(d.get("reason", "N/A"))[:100]
-    
+
     return {
         "cuts_ok": d["cuts_ok"],
         "texture_consistent": d["texture_consistent"],
         "fonts_ok": d["fonts_ok"],
         "plastic_score": plastic,
+        "reject_reason": reject_reason,
         "reason": reason
     }, "ok"
 
@@ -213,6 +231,7 @@ def main():
         "fonts_ok": result["fonts_ok"],
         "plastic_score": result["plastic_score"],
         "pass": final_pass,
+        "reject_reason": result.get("reject_reason"),
         "reason": result["reason"]
     }
 

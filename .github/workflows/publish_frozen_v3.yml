@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: publish_frozen_v3
+  group: publish_queue_write
   cancel-in-progress: false
 
 jobs:
@@ -71,9 +71,11 @@ jobs:
           for n in 1 2 3 4; do
             rclone copyto "out/${SLUG}_section_${n}.mp4" "$MEDIA_DIR/${SLUG}_section_${n}.mp4"
           done
-          # CAS-обновление общей очереди: скрипт сам тянет queue.json, идемпотентно
-          # дополняет vk+youtube и перед загрузкой перепроверяет, что её никто не изменил.
+          # Патч-аппенд + reconcile: submit пишет уникально-именованный патч в
+          # queue.d/ (новое имя = нет lost update), reconcile — единственный
+          # writer queue.json: фолдит патчи детерминированно/идемпотентно.
           QUEUE_DST="Content factory/cloud_io/publish_queue/queue.json"
-          python3 queue_enqueue.py --queue-dst "$QUEUE_DST" --slug "$SLUG" --title "$TITLE"
+          python3 queue_enqueue.py submit --queue-dst "$QUEUE_DST" --slug "$SLUG" --title "$TITLE"
+          python3 queue_enqueue.py reconcile --queue-dst "$QUEUE_DST"
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_section_1.mp4
           ls -lh out/

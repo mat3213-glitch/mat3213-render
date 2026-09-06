@@ -458,13 +458,26 @@ def main():
         qc_rc = qc_run.returncode
     except subprocess.TimeoutExpired:
         qc_rc = 124
+    # final_qc сам заливает qc_report.json на ЯД. Тянем его: flash-override допускается
+    # только по структурированному отчёту, а не по одному rc=2.
+    qc_report = None
+    report_file = WORKDIR / "qc_report.json"
+    if yd_get(f"{JOB_YD}/qc_report.json", report_file) and report_file.is_file():
+        try:
+            qc_report = json.loads(report_file.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            qc_report = None
     qc_blocks, qc_status = post_qc_decision(
         render_mode,
         qc_rc,
+        qc_report=qc_report,
         allow_rhythmic_flash=sb.get("allow_rhythmic_flash") is True,
     )
     if qc_blocks:
-        yd_put_status("FAIL: final_qc rejected render")
+        reason_hint = ""
+        if qc_rc == 2 and sb.get("allow_rhythmic_flash") is True:
+            reason_hint = " (flash-override требует структурированный отчёт с reject_reason=rhythmic_flash)"
+        yd_put_status(f"FAIL: final_qc rejected render{reason_hint}")
         sys.exit("final_qc rejected render")
     if qc_rc != 0:
         print(f"  final_qc advisory for preview: rc={qc_rc}; manual review required",

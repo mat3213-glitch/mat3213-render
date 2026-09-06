@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-"""Тесты CAS-обновления publish-очереди (P1.5b): идемпотентность, сохранение
-других platform-позиций и conflict/mismatch без молчаливой перезаписи queue.json."""
+"""Тесты патч-аппенда + reconcile publish-очереди (аудит 2026-09-06, P1):
+- оба набора элементов двух writers сохраняются (гонка не теряет элемент навсегда);
+- идемпотентность, сохранение чужих platform-позиций;
+- повреждённый queue.json НЕ перезаписывается;
+- crash после submit без reconcile добирается следующим reconcile."""
 from __future__ import annotations
 
 import json
@@ -9,9 +12,18 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from queue_enqueue import cas_update, enqueue_frozen, load_queue, validate_slug
+from queue_enqueue import (
+    enqueue_frozen,
+    fold,
+    frozen_items,
+    load_queue,
+    parse_patch,
+    reconcile,
+    submit_patch,
+    validate_slug,
+)
 
-REMOTE_KEY = "xxx/queue.json"
+QUEUE_DST = "xxx/queue.json"
 
 
 def base_queue() -> dict:
@@ -26,25 +38,65 @@ def sample() -> str:
     return json.dumps(base_queue(), ensure_ascii=False, indent=2)
 
 
-class FakeRemote:
-    """In-memory rclone-копия: download copyto remote→local, upload copyto local→remote."""
-
+class RemoteStore:
     def __init__(self) -> None:
-        self.store: dict[str, str] = {REMOTE_KEY: sample()}
+        self.store: dict[str, str] = {QUEUE_DST: sample()}
+        self.uploads: list[str] = []
 
-    def run(self, argv: list[str]) -> int:
-        if argv[0] != "copyto":
-            raise AssertionError(f"неожиданная команда rclone: {argv}")
-        if argv[1] == f"ydrive:{REMOTE_KEY}":
-            Path(argv[2]).write_text(self.store[REMOTE_KEY], encoding="utf-8")
-        elif argv[2] == f"ydrive:{REMOTE_KEY}":
-            self.store[REMOTE_KEY] = Path(argv[1]).read_text(encoding="utf-8")
+
+class RemoteSubprocess(object):
+    """FakeRemote в форме subprocess.CompletedProcess (stdout/stderr/returncode)."""
+
+    def __init__(self, remote: FakeRemote) -> None:
+        self.remote = remote
+
+    def __call__(self, argv: list[str], *, check: bool = True):
+        op = argv[0]
+        if op == "copyto":
+            if argv[1].startswith("ydrive:"):
+                key = argv[1].removeprefix("ydrive:")
+                if key not in self.remote.store:
+                    raise AssertionError(f"copyto несуществующего файла: {key}")
+                Path(argv[2]).write_text(self.remote.store[key], encoding="utf-8")
+            elif argv[2].startswith("ydrive:"):
+                self.remote.store[argv[2].removeprefix("ydrive:")] = \
+                    Path(argv[1]).read_text(encoding="utf-8")
+                self.remote.uploads.append(argv[1])
+            else:
+                raise AssertionError(f"неизвестный copyto-путь: {argv}")
+        elif op == "cat":
+            path = argv[1].removeprefix("ydrive:")
+            if path not in self.remote.store:
+                raise AssertionError(f"cat несуществующего файла: {path}")
+            return self._result(self.remote.store[path])
+        elif op == "lsf":
+            folder = argv[-1].removeprefix("ydrive:") + "/"
+            names = [name for name in self.remote.store if name.startswith(folder)
+                     and "/" not in name[len(folder):]]
+            return self._result("\n".join(name.rsplit("/", 1)[-1] + "\n" for name in names))
         else:
-            raise AssertionError(f"неизвестный путь: {argv}")
-        return 0
+            raise AssertionError(f"неожиданная команда: {argv}")
+        return self._result("")
+
+    @staticmethod
+    def _result(out: str):
+        class _CP:
+            pass
+        cp = _CP()
+        cp.returncode = 0
+        cp.stdout = out
+        cp.stderr = ""
+        return cp
 
 
 class QueueEnqueueTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.work = Path(self.tmp.name)
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
     def test_enqueue_adds_vk_and_4_shorts_keeping_others(self) -> None:
         q = base_queue()
         added = enqueue_frozen(q, "frozen_v3", "yaromat — Frozen Space")
@@ -55,10 +107,11 @@ class QueueEnqueueTests(unittest.TestCase):
         self.assertEqual([x["id"] for x in q["youtube"]],
                          [f"frozen_v3_short_{n}" for n in range(1, 5)])
 
-    def test_enqueue_is_idempotent(self) -> None:
+    def test_fold_is_idempotent(self) -> None:
         q = base_queue()
-        enqueue_frozen(q, "frozen_v3", "T")
-        self.assertEqual(enqueue_frozen(q, "frozen_v3", "T"), 0)
+        items = frozen_items("frozen_v3", "T")
+        self.assertEqual(fold(q, items), 5)
+        self.assertEqual(fold(q, items), 0)
         self.assertEqual(len(q["vk"]), 2)
         self.assertEqual(len(q["youtube"]), 4)
 
@@ -73,83 +126,92 @@ class QueueEnqueueTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "повреждён"):
             load_queue("{broken")
 
-    def test_cas_ok_path(self) -> None:
-        remote = FakeRemote()
-        with patch("queue_enqueue.rclone", side_effect=remote.run):
-            with tempfile.TemporaryDirectory() as td:
-                added, code = cas_update(REMOTE_KEY, "frozen_v3", "T", work=Path(td))
+    def test_parse_patch_rejects_bad_ids(self) -> None:
+        self.assertEqual(len(parse_patch(json.dumps({"items": [
+            {"platform": "vk", "entry": {"id": "ok_1", "media": "m"}}]}))), 1)
+        with self.assertRaisesRegex(ValueError, "безопасный"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "vk", "entry": {"id": "../up", "media": "m"}}]}))
+
+    def test_submit_then_reconcile(self) -> None:
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            name, _ = submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"),
+                                   "frozen_v3", work=self.work)
+            self.assertIn(f"xxx/queue.d/{name}", remote.store)
+            added, code = reconcile(QUEUE_DST, work=self.work)
         self.assertEqual(added, 5)
         self.assertEqual(code, 0)
-        self.assertEqual([x["id"] for x in json.loads(remote.store[REMOTE_KEY])["youtube"]],
+        q = load_queue(remote.store[QUEUE_DST])
+        self.assertEqual([x["id"] for x in q["youtube"]],
                          [f"frozen_v3_short_{n}" for n in range(1, 5)])
+        self.assertEqual(q["tg"], [{"id": "keep_tg", "media": "a/1.mp4"}])
+        self.assertTrue(remote.uploads)
 
-    def test_cas_conflict_aborts_without_upload(self) -> None:
-        store = {"before": sample(), "now": json.dumps({"youtube": [{"id": "intruder"}]})}
-        uploads: list[list[str]] = []
-
-        def fake_rclone(argv: list[str]) -> int:
-            if argv[0] != "copyto":
-                raise AssertionError(argv)
-            if argv[1] == f"ydrive:{REMOTE_KEY}":
-                key = "before" if "queue_before" in argv[2] else "now"
-                Path(argv[2]).write_text(store[key], encoding="utf-8")
-            else:
-                uploads.append(argv)
-            return 0
-
-        with patch("queue_enqueue.rclone", side_effect=fake_rclone):
-            with tempfile.TemporaryDirectory() as td:
-                added, code = cas_update(REMOTE_KEY, "frozen_v3", "T", work=Path(td))
-        self.assertEqual(added, 5)
-        self.assertEqual(code, 3)
-        self.assertEqual(uploads, [])
-
-    def test_cas_upload_mismatch_reports_manual_review(self) -> None:
-        staged_content: dict[str, str] = {}
-
-        def fake_rclone(argv: list[str]) -> int:
-            if argv[0] != "copyto":
-                raise AssertionError(argv)
-            if argv[1] == f"ydrive:{REMOTE_KEY}":
-                # download: before/current/verified фазы
-                if "queue_before" in argv[2] or "queue_current" in argv[2]:
-                    Path(argv[2]).write_text(sample(), encoding="utf-8")
-                else:
-                    # verified: эмулируем порчу после аплоада (глюк без проверки)
-                    Path(argv[2]).write_text(json.dumps({"youtube": [{"id": "corrupt"}]}),
-                                             encoding="utf-8")
-            else:
-                staged_content["queue_staged.json"] = Path(argv[1]).read_text(encoding="utf-8")
-            return 0
-
-        with patch("queue_enqueue.rclone", side_effect=fake_rclone):
-            with tempfile.TemporaryDirectory() as td:
-                added, code = cas_update(REMOTE_KEY, "frozen_v3", "T", work=Path(td))
-        self.assertEqual(added, 5)
-        self.assertEqual(code, 4)
-        self.assertIn("queue_staged.json", staged_content)
-
-    def test_broken_remote_queue_skips_without_write(self) -> None:
-        downloads = 0
-        uploads = 0
-
-        def fake_rclone(argv: list[str]) -> int:
-            nonlocal downloads, uploads
-            if argv[0] != "copyto":
-                raise AssertionError(argv)
-            if argv[1] == f"ydrive:{REMOTE_KEY}":
-                downloads += 1
-                Path(argv[2]).write_text("{broken", encoding="utf-8")
-            else:
-                uploads += 1
-            return 0
-
-        with patch("queue_enqueue.rclone", side_effect=fake_rclone):
-            with tempfile.TemporaryDirectory() as td:
-                added, code = cas_update(REMOTE_KEY, "frozen_v3", "T", work=Path(td))
+    def test_reconcile_is_idempotent(self) -> None:
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"), "frozen_v3",
+                         work=self.work)
+            reconcile(QUEUE_DST, work=self.work)
+            added, code = reconcile(QUEUE_DST, work=self.work)
         self.assertEqual((added, code), (0, 0))
-        self.assertEqual(downloads, 1)
-        self.assertEqual(uploads, 0)
+        self.assertEqual(len(json.loads(remote.store[QUEUE_DST])["youtube"]), 4)
+
+    def test_two_writers_converge_no_lost_update(self) -> None:
+        """Гонка двух writers: даже «протухший» reconcile, записавший меньший набор
+        ПОСЛЕ бОльшего, не теряет элементы навсегда — durable-патчи восстанавливают union."""
+        remote = RemoteStore()
+        other = {"platform": "youtube", "entry": {
+            "id": "other_slug_short_1", "media": "other/section_1.mp4",
+            "type": "video", "title": "Other", "own_track": True}}
+        runner = RemoteSubprocess(remote)
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"), "frozen_v3",
+                         work=self.work)
+            submit_patch(QUEUE_DST, [other], "other_slug", work=self.work)
+            added, code = reconcile(QUEUE_DST, work=self.work)
+            self.assertEqual(added, 6)
+            # Протухший reconcile: читал только патч frozen_v3 и переписывает им сейчас.
+            stale_queue = base_queue()
+            fold(stale_queue, frozen_items("frozen_v3", "T"))
+            remote.store[QUEUE_DST] = json.dumps(stale_queue, ensure_ascii=False, indent=2)
+            # Следующий reconcile видит ВСЕ патчи (никто их не удаляет) → union вернулся.
+            added, code = reconcile(QUEUE_DST, work=self.work)
+        self.assertEqual((added, code), (1, 0))
+        youtube = [x["id"] for x in json.loads(remote.store[QUEUE_DST])["youtube"]]
+        self.assertIn("frozen_v3_short_1", youtube)
+        self.assertIn("other_slug_short_1", youtube)
+        self.assertEqual(json.loads(remote.store[QUEUE_DST])["tg"],
+                         [{"id": "keep_tg", "media": "a/1.mp4"}])
+
+    def test_crash_after_submit_is_picked_up_later(self) -> None:
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"), "frozen_v3",
+                         work=self.work)
+            # writer упал до reconcile → queue.json не тронут.
+        self.assertEqual(json.loads(remote.store[QUEUE_DST])["vk"],
+                         [{"id": "old_vk", "media": "old/full.mp4"}])
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            added, code = reconcile(QUEUE_DST, work=self.work)
+        self.assertEqual((added, code), (5, 0))
+        self.assertEqual(len(json.loads(remote.store[QUEUE_DST])["youtube"]), 4)
+
+    def test_broken_remote_queue_not_overwritten(self) -> None:
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"), "frozen_v3",
+                         work=self.work)
+            remote.store[QUEUE_DST] = "{broken"
+            before = remote.store[QUEUE_DST]
+            added, code = reconcile(QUEUE_DST, work=self.work)
+            self.assertEqual((added, code), (0, 2))
+            self.assertEqual(remote.store[QUEUE_DST], before)
 
 
 if __name__ == "__main__":

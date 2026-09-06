@@ -10,7 +10,9 @@ from render_contract import (
     assert_media_contract,
     creative_qc_policy,
     load_approval,
+    parse_qc_report,
     post_qc_decision,
+    qc_report_flash_only,
     require_complete,
     validate_render_job,
     write_render_receipt,
@@ -18,6 +20,16 @@ from render_contract import (
 
 
 SHA = "a" * 64
+
+
+def flash_report(**overrides):
+    report = {
+        "cuts_ok": True, "texture_consistent": True, "fonts_ok": True,
+        "plastic_score": 82, "reject_reason": "rhythmic_flash",
+        "reason": "kick flash ramps",
+    }
+    report.update(overrides)
+    return report
 
 
 class RenderContractTests(unittest.TestCase):
@@ -129,22 +141,91 @@ class RenderContractTests(unittest.TestCase):
         self.assertEqual(creative_qc_policy("full", 0),
                          (False, "full_qc_pass"))
 
-    def test_flash_override_excuses_only_creative_rejection(self):
-        # rc=2 is a genuine creative rejection the declared flash grammar may excuse.
-        self.assertEqual(post_qc_decision("full", 2, allow_rhythmic_flash=True),
+    def test_flash_override_excuses_only_structured_flash_report(self):
+        rc2 = 2
+        # Чистый flash по структурированному отчёту — единственный разрешённый случай.
+        self.assertEqual(post_qc_decision("full", rc2, qc_report=flash_report(),
+                                          allow_rhythmic_flash=True),
                          (False, "full_qc_pass_flash_override"))
-        # Without the declared grammar the rejection still blocks.
-        self.assertEqual(post_qc_decision("full", 2, allow_rhythmic_flash=False),
+        # Без декларированного флэша отказ блокируется.
+        self.assertEqual(post_qc_decision("full", rc2, allow_rhythmic_flash=False),
                          (True, "full_qc_failed"))
-        # Infrastructure failures (judge unavailable = 1) and timeouts (124) mean
-        # the clip was never reviewed: flash grammar must NOT release them.
-        self.assertEqual(post_qc_decision("full", 1, allow_rhythmic_flash=True),
+        # Инфраструктурные сбои (судья недоступен = 1) и timeout (124) — клип не
+        # ревьюился: flash-грамматика не снимает блок.
+        self.assertEqual(post_qc_decision("full", 1, qc_report=flash_report(),
+                                          allow_rhythmic_flash=True),
                          (True, "full_qc_failed"))
-        self.assertEqual(post_qc_decision("full", 124, allow_rhythmic_flash=True),
+        self.assertEqual(post_qc_decision("full", 124, qc_report=flash_report(),
+                                          allow_rhythmic_flash=True),
                          (True, "full_qc_failed"))
-        # A preview stays advisory regardless of the judge return code.
-        self.assertEqual(post_qc_decision("preview", 1, allow_rhythmic_flash=True),
+        # Превью остаётся advisory независимо от кода судьи.
+        self.assertEqual(post_qc_decision("preview", 1, qc_report=flash_report(),
+                                          allow_rhythmic_flash=True),
                          (False, "preview_ready_manual_qc"))
+        # Обычный успешный QC остаётся успешным.
+        self.assertEqual(post_qc_decision("full", 0, qc_report=flash_report(),
+                                          allow_rhythmic_flash=True),
+                         (False, "full_qc_pass"))
+
+    def test_flash_override_requires_absence_of_other_defects(self):
+        rc2 = 2
+        # Независимый дефект даже рядом с флэшем → блок.
+        self.assertEqual(post_qc_decision(
+            "full", rc2, qc_report=flash_report(fonts_ok=False),
+            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+        self.assertEqual(post_qc_decision(
+            "full", rc2, qc_report=flash_report(texture_consistent=False),
+            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+        self.assertEqual(post_qc_decision(
+            "full", rc2, qc_report=flash_report(cuts_ok=False),
+            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+        # Причина не «rhythmic_flash», а пластик без декларации — блок.
+        self.assertEqual(post_qc_decision(
+            "full", rc2, qc_report=flash_report(reject_reason="other"),
+            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+        # Низкий plastic при декларации flash — это не расход, блок.
+        self.assertEqual(post_qc_decision(
+            "full", rc2, qc_report=flash_report(plastic_score=40),
+            allow_rhythmic_flash=True), (True, "full_qc_failed"))
+
+    def test_flash_override_rejects_missing_broken_or_foreign_report(self):
+        rc2 = 2
+        # Свободного rc=2 без отчёта недостаточно.
+        self.assertEqual(post_qc_decision("full", rc2, allow_rhythmic_flash=True),
+                         (True, "full_qc_failed"))
+        # Повреждённый / чужой / не-объект отчёт → блок (fail-closed).
+        for bad in (None, "not-a-dict", {"bogus": True},
+                    flash_report(cuts_ok="false"),
+                    flash_report(plastic_score="high"),
+                    flash_report(reject_reason="flashy")):
+            with self.subTest(bad=bad):
+                self.assertEqual(post_qc_decision("full", rc2, qc_report=bad,
+                                                  allow_rhythmic_flash=True),
+                                 (True, "full_qc_failed"))
+
+    def test_parse_qc_report_contract(self):
+        self.assertEqual(parse_qc_report(flash_report())[
+            "reject_reason"], "rhythmic_flash")
+        self.assertTrue(qc_report_flash_only(parse_qc_report(flash_report())))
+        # Независимый дефект / другая причина / низкий plastic — структурно
+        # валидны, но НЕ flash-only (override им не даётся).
+        self.assertFalse(qc_report_flash_only(
+            parse_qc_report(flash_report(fonts_ok=False))))
+        self.assertFalse(qc_report_flash_only(
+            parse_qc_report(flash_report(reject_reason="other"))))
+        self.assertFalse(qc_report_flash_only(
+            parse_qc_report(flash_report(plastic_score=40))))
+        # Смешанный отчёт (флэш + независимый дефект) структурно валиден, но не flash-only.
+        mixed = {"cuts_ok": False, "texture_consistent": True, "fonts_ok": True,
+                 "plastic_score": 70, "reject_reason": "rhythmic_flash"}
+        self.assertFalse(qc_report_flash_only(parse_qc_report(mixed)))
+        # Структурный брак — RenderContractError (fail-closed).
+        for bad in ("not-a-dict", flash_report(cuts_ok="false"),
+                    flash_report(plastic_score="high"),
+                    flash_report(reject_reason="flashy")):
+            with self.subTest(bad=bad):
+                with self.assertRaises(RenderContractError):
+                    parse_qc_report(bad)
 
     @patch("render_contract.subprocess.run")
     def test_media_contract(self, run):

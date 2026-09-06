@@ -27,6 +27,9 @@ _JOB_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$")
 _ALLOWED_MODES = {"preview", "full"}
 MAX_PREVIEW_SECONDS = 30.0
 
+# Структурированные причины отклонения creative-QC (не свободный текст).
+QC_REJECT_REASONS = {"rhythmic_flash", "other"}
+
 
 def requested_duration(job: dict[str, Any]) -> float:
     raw = job.get("duration")
@@ -153,18 +156,72 @@ def creative_qc_policy(mode: str, returncode: int) -> tuple[bool, str]:
     raise RenderContractError(f"creative QC received unknown mode {mode!r}")
 
 
-def post_qc_decision(mode: str, returncode: int, *, allow_rhythmic_flash: bool = False) -> tuple[bool, str]:
+def parse_qc_report(data: Any) -> dict[str, Any]:
+    """Strictly validate a final_qc report; raise RenderContractError when malformed.
+
+    The contract is the machine-usable part of the report: three boolean verdicts,
+    a numeric plastic score and an optional structured ``reject_reason`` from
+    QC_REJECT_REASONS.  Free-text ``reason`` is described, never trusted for policy.
+    """
+    if not isinstance(data, dict):
+        raise RenderContractError("qc_report must contain a JSON object")
+    for key in ("cuts_ok", "texture_consistent", "fonts_ok"):
+        value = data.get(key)
+        if type(value) is not bool:
+            raise RenderContractError(f"qc_report.{key} must be a boolean")
+    plastic = data.get("plastic_score")
+    if isinstance(plastic, bool) or not isinstance(plastic, (int, float)):
+        raise RenderContractError("qc_report.plastic_score must be a number")
+    reject = data.get("reject_reason")
+    if reject is not None and reject not in QC_REJECT_REASONS:
+        raise RenderContractError(
+            f"qc_report.reject_reason must be one of {sorted(QC_REJECT_REASONS)}, got {reject!r}"
+        )
+    return {
+        "cuts_ok": data["cuts_ok"],
+        "texture_consistent": data["texture_consistent"],
+        "fonts_ok": data["fonts_ok"],
+        "plastic_score": float(plastic),
+        "reject_reason": reject,
+    }
+
+
+def qc_report_flash_only(report: dict[str, Any]) -> bool:
+    """True only when the creative rejection is PURELY the declared rhythmic flash.
+
+    No independent creative defect may be present: cuts/texture/fonts all pass and
+    the only failing gate is plastic_score (the ramp the flash induces), declared
+    structuredly as ``rhythmic_flash``.
+    """
+    if not report.get("cuts_ok") or not report.get("texture_consistent") or not report.get("fonts_ok"):
+        return False
+    if report.get("reject_reason") != "rhythmic_flash":
+        return False
+    return report.get("plastic_score", 0.0) >= 55.0
+
+
+def post_qc_decision(mode: str, returncode: int, *, qc_report: dict[str, Any] | None = None,
+                     allow_rhythmic_flash: bool = False) -> tuple[bool, str]:
     """Fail-closed verdict after the fallible creative judge.
 
-    ``allow_rhythmic_flash`` excuses only a genuine creative rejection (rc=2):
-    beat-synchronous kick flashes intentionally produce exposure ramps that the
-    plastic judge flags generically.  It never excuses an unavailable QC —
-    rc=1 (missing clip/frames/strip, judge failed) and rc=124 (timeout) mean the
-    clip was not actually reviewed, so a full render must still block.
+    ``allow_rhythmic_flash`` excuses ONLY a genuine creative rejection (rc=2) that
+    a structured final_qc report proves to be caused solely by a beat-synchronous
+    kick flash (see :func:`qc_report_flash_only`).  It never excuses: an unavailable
+    QC (rc=1), a timeout (rc=124), a rejection with free-text/no report, or a
+    rejection carrying any independent defect (fonts/texture/cuts).
     """
+    if mode == "preview":
+        return creative_qc_policy(mode, returncode)
     qc_blocks, qc_status = creative_qc_policy(mode, returncode)
-    if mode == "full" and qc_blocks and returncode == 2 and allow_rhythmic_flash:
-        return (False, "full_qc_pass_flash_override")
+    if not qc_blocks:
+        return qc_blocks, qc_status
+    if returncode == 2 and allow_rhythmic_flash:
+        try:
+            report = parse_qc_report(qc_report)
+        except (RenderContractError, TypeError):
+            report = None
+        if report is not None and qc_report_flash_only(report):
+            return (False, "full_qc_pass_flash_override")
     return qc_blocks, qc_status
 
 

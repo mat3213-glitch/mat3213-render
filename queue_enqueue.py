@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
-"""queue_enqueue.py — дополняет общую publish-очередь ЯД items frozen-v3.
+"""queue_enqueue.py — патч-аппенд + детерминированный reconcile publish-очереди ЯД.
 
-`Content factory/cloud_io/publish_queue/queue.json` — общий read-modify-write
-артефакт. Скрипт обновляет его с CAS-защитой: перед загрузкой ещё раз тянет
-текущую очередь и отказывается перезаписывать, если её изменил другой writer
-(конфликт, retryable, exit 3). После загрузки тянет файл обратно и сверяет hash
-(exit 4 при расхождении) — как relay из P0.
+`Content factory/cloud_io/publish_queue/queue.json` — общий артефакт: читают
+`publish_gh/publish_gh.py` и `publish_gh/watchdog.py`, пишут GH-воркфлоу
+`publish_frozen_v3.yml` и `platform_variants.yml`. Единственный локальный писатель
+не зарегистрирован (проверено 2026-09-06).
 
-Идемпотентно: уже присутствующие id не дублируются, чужие/иные platform-позиции
-сохраняются как есть.
+Старый read-modify-write с CAS не устранял окно «повторное чтение → запись»
+(rclone на Яндекс.Диске не даёт атомарной условной записи), поэтому writers
+НИКОГДА не правят queue.json напрямую:
+
+  submit    — кладёт уникально-именованный патч в queue.d/<slug>_<stamp>.json.
+              Новое имя = нет lost update: одному писателю не нужно наблюдать
+              чужую запись, чтобы не потерять свою.
+  reconcile — единственный, кто переписывает queue.json: тянет его, фолдит
+              патчи (детерминированно, идемпотентно по (platform,id)),
+              сверяет текущую очередь непосредственно перед записью и
+              verify-после-записи. Патчи НЕ удаляются, поэтому fold монотонный:
+              если два reconcile разошлись во времени, следующий reconcile
+              восстанавливает объединение — постоянного lost update нет.
+              Повреждённый queue.json → отказ БЕЗ перезаписи.
+
+Идемпотентно: повторный submit/reconcile не дублирует элементы, чужие
+platform-позиции сохраняются как есть.
 """
 from __future__ import annotations
 
@@ -19,11 +33,16 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
+import uuid
 from pathlib import Path
 
 SLUG_RE = re.compile(r"^[A-Za-z0-9_-]+$")
 REMOTE = "ydrive:"
 CAPTION = "тишина — это не пустота. внутри всегда есть точка покоя.\n\nyaromat — Frozen Space\nвключи звук"
+
+PATCH_DIRNAME = "queue.d"
+MAX_RECONCILE_ATTEMPTS = 5
 
 
 def validate_slug(slug: str) -> str:
@@ -32,26 +51,71 @@ def validate_slug(slug: str) -> str:
     return slug
 
 
-def enqueue_frozen(queue: dict, slug: str, title: str) -> int:
-    """Дополняет очередь vk-full + 4 youtube-shorts для slug. Возвращает число добавленных."""
+def frozen_items(slug: str, title: str) -> list[dict]:
+    """Элементы frozen-v3: vk-full + 4 youtube-shorts (схема патча platform/entry)."""
     validate_slug(slug)
-    vk_id = f"{slug}_vk"
-    added = 0
-    vk = queue.setdefault("vk", [])
-    if all(isinstance(x, dict) and x.get("id") != vk_id for x in vk):
-        vk.append({"id": vk_id, "media": f"{slug}/{slug}_full.mp4",
-                   "type": "video", "caption": CAPTION, "own_track": True})
-        added += 1
-    yt = queue.setdefault("youtube", [])
+    items = [
+        {"platform": "vk", "entry": {
+            "id": f"{slug}_vk", "media": f"{slug}/{slug}_full.mp4",
+            "type": "video", "caption": CAPTION, "own_track": True}},
+    ]
     for n in range(1, 5):
-        item_id = f"{slug}_short_{n}"
-        if all(isinstance(x, dict) and x.get("id") != item_id for x in yt):
-            yt.append({
-                "id": item_id,
-                "media": f"{slug}/{slug}_section_{n}.mp4",
-                "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
-                "description": CAPTION + "\n\n#Shorts #futuregarage #downtempo #yaromat",
-                "own_track": True})
+        items.append({"platform": "youtube", "entry": {
+            "id": f"{slug}_short_{n}", "media": f"{slug}/{slug}_section_{n}.mp4",
+            "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
+            "description": CAPTION + "\n\n#Shorts #futuregarage #downtempo #yaromat",
+            "own_track": True}})
+    return items
+
+
+def enqueue_frozen(queue: dict, slug: str, title: str) -> int:
+    """Backward-совместимый fold frozen-items в локальную очередь. Возвращает число добавленных."""
+    return fold(queue, frozen_items(slug, title))
+
+
+def load_queue(text: str) -> dict:
+    try:
+        queue = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"queue.json повреждён: {exc}")
+    if not isinstance(queue, dict):
+        raise ValueError("queue.json должен быть объектом")
+    return queue
+
+
+def parse_patch(text: str) -> list[dict]:
+    """Валидирует патч и возвращает список items [{"platform", "entry"}, ...]."""
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"патч повреждён: {exc}")
+    if not isinstance(data, dict) or not isinstance(data.get("items"), list):
+        raise ValueError("патч должен содержать объект с списком 'items'")
+    items: list[dict] = []
+    for item in data["items"]:
+        if not isinstance(item, dict):
+            raise ValueError("элемент патча должен быть объектом")
+        platform = item.get("platform")
+        entry = item.get("entry")
+        if not isinstance(platform, str) or not platform or not isinstance(entry, dict):
+            raise ValueError("элемент патча требует platform (str) и entry (dict)")
+        if not isinstance(entry.get("id"), str) or not entry["id"]:
+            raise ValueError("entry.id обязателен")
+        if not re.fullmatch(r"[A-Za-z0-9_.-]+", entry["id"]):
+            raise ValueError(f"небезопасный entry.id: {entry['id']!r}")
+        items.append({"platform": platform, "entry": entry})
+    return items
+
+
+def fold(queue: dict, items: list[dict]) -> int:
+    """Дополняет очередь элементами (force-add по (platform,id)); чужие позиции сохраняются."""
+    added = 0
+    for item in items:
+        platform = item["platform"]
+        entry = item["entry"]
+        bucket = queue.setdefault(platform, [])
+        if all(isinstance(x, dict) and x.get("id") != entry["id"] for x in bucket):
+            bucket.append(entry)
             added += 1
     return added
 
@@ -72,70 +136,164 @@ def rclone(argv: list[str], *, check: bool = True) -> subprocess.CompletedProces
     return result
 
 
-def load_queue(text: str) -> dict:
-    try:
-        queue = json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise ValueError(f"queue.json повреждён: {exc}")
-    if not isinstance(queue, dict):
-        raise ValueError("queue.json должен быть объектом")
-    return queue
+def pull_text(dst: str) -> str:
+    """rclone cat удалённого файла; возвращает его текст."""
+    return rclone(["cat", f"{REMOTE}{dst}"]).stdout
 
 
-def cas_update(queue_dst: str, slug: str, title: str, *, work: Path) -> tuple[int, int]:
-    """Полный CAS-цикл. Возвращает (added, exit_code); >0 при необходимости ручного retry."""
-    before = work / "queue_before.json"
-    rclone(["copyto", f"{REMOTE}{queue_dst}", str(before)])
+def pull_file(dst: str, local: Path) -> None:
+    rclone(["copyto", f"{REMOTE}{dst}", str(local)])
+
+
+def push_file(local: Path, dst: str) -> None:
+    rclone(["copyto", str(local), f"{REMOTE}{dst}"])
+
+
+def list_patch_names(queue_dst: str) -> list[str]:
+    """Имена файлов в queue.d/ рядом с queue.json, без подкаталогов."""
+    folder = f"{'/'.join(queue_dst.split('/')[:-1])}/{PATCH_DIRNAME}"
+    result = rclone(["lsf", "--files-only", f"{REMOTE}{folder}"], check=False)
+    if result.returncode != 0:
+        return []
+    return sorted(name.strip() for name in result.stdout.splitlines() if name.strip())
+
+
+def patch_remote_path(queue_dst: str, name: str) -> str:
+    folder = "/".join(queue_dst.split("/")[:-1])
+    return f"{folder}/{PATCH_DIRNAME}/{name}"
+
+
+def submit_patch(queue_dst: str, items: list[dict], slug: str, *, work: Path) -> tuple[str, str]:
+    """Пишет патч в queue.d/<slug>_<stamp>_<rand>.json. Возвращает (имя, remote-путь)."""
+    validate_slug(slug)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    name = f"{slug}_{stamp}_{uuid.uuid4().hex[:8]}.json"
+    patch = {"items": items, "created_at": stamp}
+    local = work / name
+    local.write_text(json.dumps(patch, ensure_ascii=False, indent=2), encoding="utf-8")
+    remote = patch_remote_path(queue_dst, name)
+    push_file(local, remote)
+    return name, remote
+
+
+def reconcile(queue_dst: str, *, work: Path, max_attempts: int = MAX_RECONCILE_ATTEMPTS
+              ) -> tuple[int, int]:
+    """Фолдит патчи в queue.json. Возвращает (added, exit_code); >0 при необходимости ручного retry.
+
+    Единственный writer queue.json. Гарантия отсутствия постоянного lost update:
+    патчи в queue.d/ вечны (не удаляются), fold монотонный и идемпотентный, поэтому
+    любой reconcile начинает с текущей очереди и заново накладывает ВСЕ патчи —
+    разойдшиеся reconcile сходятся к объединению на следующем проходе.
+    """
+    qfile = work / "queue.json"
+    cur = work / "queue_current.json"
+
+    pull_file(queue_dst, qfile)
     try:
-        queue = load_queue(before.read_text(encoding="utf-8"))
-        added = enqueue_frozen(queue, slug, title)
+        queue = load_queue(qfile.read_text(encoding="utf-8"))
     except ValueError as exc:
-        print(f"CONFLICT/SKIP: {exc}")
-        return 0, 0
+        print(f"FAIL: {exc} — очередь повреждена, НЕ перезаписываю")
+        return 0, 2
 
-    if added == 0:
-        print(f"items уже в очереди (added=0) — обновление не требуется")
-        return 0, 0
+    requested = list_patch_names(queue_dst)
+    items: list[dict] = []
+    broken: list[str] = []
+    for name in requested:
+        try:
+            items.extend(parse_patch(pull_text(patch_remote_path(queue_dst, name))))
+        except ValueError as exc:
+            broken.append(f"{name}: {exc}")
+    if broken:
+        print("WARN: пропущены повреждённые патчи: " + "; ".join(broken))
 
-    staged = work / "queue_staged.json"
-    staged.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
+    for attempt in range(max_attempts):
+        added = fold(queue, items)
+        if added == 0:
+            print("queue уже в актуальном состоянии (added=0)")
+            return 0, 0
 
-    current = work / "queue_current.json"
-    rclone(["copyto", f"{REMOTE}{queue_dst}", str(current)])
-    if sha256_file(current) != sha256_file(before):
-        print("CAS CONFLICT: очередь изменена другим writer — НЕ перезаписываю. "
-              "Повтори dispatch.")
-        return added, 3
+        staged = work / "queue_staged.json"
+        staged.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    rclone(["copyto", str(staged), f"{REMOTE}{queue_dst}"])
-    verified = work / "queue_verified.json"
-    rclone(["copyto", f"{REMOTE}{queue_dst}", str(verified)])
-    if sha256_file(verified) != sha256_file(staged):
-        print("UPLOAD MISMATCH: загруженный файл отличается от локального — "
-              "состояние требует ручной проверки.")
-        return added, 4
-    print(f"enqueued {added} items (vk={slug}_vk, youtube={slug}_short_1..4)")
-    return added, 0
+        pull_file(queue_dst, cur)
+        if sha256_file(cur) != sha256_file(qfile):
+            # очередь изменилась с момента чтения — пересчитываем от текущей версии.
+            print(f"reconcile: очередь изменилась — повторный fold ({attempt + 1})")
+            queue = load_queue(cur.read_text(encoding="utf-8"))
+            qfile.write_bytes(cur.read_bytes())
+            continue
+
+        push_file(staged, queue_dst)
+        verified = work / "queue_verified.json"
+        pull_file(queue_dst, verified)
+        if sha256_file(verified) == sha256_file(staged):
+            print(f"reconciled {added} items из {len(items)} в патчах (vk+youtube и др. сохранены)")
+            return added, 0
+        # Запись разошлась с локальной версией — кто-то успел перезаписать между
+        # проверкой и записью. Пересчитываем union из текущей очереди и повторяем.
+        print(f"reconcile: verify-расхождение — повторный fold ({attempt + 1})")
+        pulled = load_queue(verified.read_text(encoding="utf-8"))
+        queue = pulled
+        qfile.write_bytes(verified.read_bytes())
+        continue
+
+    print("FAIL: очередь продолжает меняться — конфликт, требуются ручное действие")
+    return 0, 3
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser(description="CAS-дополнение publish-очереди ЯД")
-    ap.add_argument("--queue-dst", required=True,
-                    help="rclone путь queue.json без REMOTE, e.g. Content factory/cloud_io/publish_queue/queue.json")
-    ap.add_argument("--slug", required=True)
-    ap.add_argument("--title", required=True)
-    ap.add_argument("--workdir", default=None, help="куда писать временные файлы (default: tmp)")
-    args = ap.parse_args()
+def cmd_submit(args: argparse.Namespace) -> int:
+    with tempfile.TemporaryDirectory() as td:
+        work = Path(args.workdir) if args.workdir else Path(td)
+        work.mkdir(parents=True, exist_ok=True)
+        if args.items_file:
+            items = parse_patch(Path(args.items_file).read_text(encoding="utf-8"))
+            slug = args.slug or "patch"
+        else:
+            if not args.slug or not args.title:
+                print("FAIL: submit требует --slug/--title или --items-file")
+                return 2
+            items = frozen_items(args.slug, args.title)
+            slug = args.slug
+        try:
+            name, remote = submit_patch(args.queue_dst, items, slug, work=work)
+        except (RuntimeError, ValueError) as exc:
+            print(f"FAIL: {exc}")
+            return 2
+        print(f"patched {len(items)} items → {remote}")
+        return 0
 
+
+def cmd_reconcile(args: argparse.Namespace) -> int:
     with tempfile.TemporaryDirectory() as td:
         work = Path(args.workdir) if args.workdir else Path(td)
         work.mkdir(parents=True, exist_ok=True)
         try:
-            _, code = cas_update(args.queue_dst, args.slug, args.title, work=work)
+            _, code = reconcile(args.queue_dst, work=work, max_attempts=args.max_attempts)
         except RuntimeError as exc:
             print(f"FAIL: {exc}")
             return 2
         return code
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="Патч-аппенд + reconcile publish-очереди ЯД")
+    ap.add_argument("--queue-dst", required=True,
+                    help="rclone путь queue.json без REMOTE, e.g. Content factory/cloud_io/publish_queue/queue.json")
+    ap.add_argument("--workdir", default=None, help="куда писать временные файлы (default: tmp)")
+    sub = ap.add_subparsers(dest="command", required=True)
+
+    sub_p = sub.add_parser("submit", help="положить патч в queue.d/ (без чтения queue.json)")
+    sub_p.add_argument("--slug", default=None)
+    sub_p.add_argument("--title", default=None)
+    sub_p.add_argument("--items-file", default=None, help="JSON {items:[{platform, entry}]}")
+    sub_p.set_defaults(func=cmd_submit)
+
+    sub_r = sub.add_parser("reconcile", help="свести патчи queue.d/ в queue.json")
+    sub_r.add_argument("--max-attempts", type=int, default=MAX_RECONCILE_ATTEMPTS)
+    sub_r.set_defaults(func=cmd_reconcile)
+
+    args = ap.parse_args()
+    return args.func(args)
 
 
 if __name__ == "__main__":

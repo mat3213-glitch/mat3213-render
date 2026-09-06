@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish_queue_write
+  cancel-in-progress: false
+
 jobs:
   variants:
     runs-on: ubuntu-latest
@@ -64,32 +68,30 @@ jobs:
             rclone copyto "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
           done
           rclone copyto "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
-          rclone copyto "ydrive:Content factory/cloud_io/publish_queue/queue.json" queue.json
+          # Общий writer очереди: НЕ правим queue.json сами. Собираем items →
+          # submit кладёт уникально-именованный патч в queue.d/ (нет lost update),
+          # reconcile — единственный writer queue.json (идемпотентный детерминированный fold).
           python3 - "$SLUG" "$TITLE" <<'PY'
           import json, sys
           slug, title = sys.argv[1:]
-          q = json.load(open("queue.json"))
           caption = "никто не придёт. это и есть взросление.\n\nyaromat — взрослый\nвключи звук"
+          items = []
           for platform, media, item_id in (
               ("tg", f"{slug}/{slug}_full_720.mp4", f"{slug}_tg"),
               ("vk", f"{slug}/{slug}_full_720.mp4", f"{slug}_vk"),
           ):
-              q.setdefault(platform, [])
-              if not any(x.get("id") == item_id for x in q[platform]):
-                  q[platform].append({"id": item_id, "media": media, "type": "video",
-                                      "caption": caption, "own_track": True})
-          q.setdefault("youtube", [])
+              items.append({"platform": platform, "entry": {"id": item_id, "media": media,
+                            "type": "video", "caption": caption, "own_track": True}})
           for n in range(1, 5):
-              item_id = f"{slug}_short_{n}"
-              if not any(x.get("id") == item_id for x in q["youtube"]):
-                  q["youtube"].append({
-                      "id": item_id,
-                      "media": f"{slug}/{slug}_section_{n}.mp4",
-                      "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
-                      "description": caption + f"\n\n#Shorts #futuregarage #downtempo #yaromat",
-                      "own_track": True})
-          json.dump(q, open("queue.json", "w"), ensure_ascii=False, indent=2)
+              items.append({"platform": "youtube", "entry": {
+                  "id": f"{slug}_short_{n}", "media": f"{slug}/{slug}_section_{n}.mp4",
+                  "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
+                  "description": caption + f"\n\n#Shorts #futuregarage #downtempo #yaromat",
+                  "own_track": True}})
+          json.dump({"items": items}, open("items.json", "w"), ensure_ascii=False, indent=2)
           PY
-          rclone copyto queue.json "ydrive:Content factory/cloud_io/publish_queue/queue.json"
+          QUEUE_DST="Content factory/cloud_io/publish_queue/queue.json"
+          python3 queue_enqueue.py submit --queue-dst "$QUEUE_DST" --slug "$SLUG" --items-file items.json
+          python3 queue_enqueue.py reconcile --queue-dst "$QUEUE_DST"
           ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_full_720.mp4
           ls -lh out/
