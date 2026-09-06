@@ -2,62 +2,61 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 5.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Грязный, не наш cold teal."
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Холодный тёмно-зелёный, приглушённый, соответствует deep teal, без тёплых оттенк"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 5.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёмный, не наш cold teal."
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Тёмная ночь, холодный teal, приглушённый, подходит бренду"
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": false,
-      "score": 6.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Близок к deep teal, но слишком светлый."
+      "keep": true,
+      "score": 7.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Ярко, но приглушённый teal, всё ещё deep teal, без тёплого"
     },
     {
-      "name": "scout_neutral_night_soft",
+      "name": "scout_warm_night_soft",
       "keep": false,
-      "score": 5.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёмный и грязный."
+      "score": 2.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Теплые тона, не deep teal, не подходит"
     },
     {
-      "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 4.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёмный и грязный."
+      "name": "scout_neutral_mid_soft",
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Средний свет, холодный teal, приглушённый, брендовый"
     },
     {
-      "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 6.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Близок к deep teal, но с мягким сдвигом."
+      "name": "scout_neutral_mid_muted_2",
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Приглушённый teal, deep teal, без тёплых, соответствует"
     }
   ],
-  "recommend_merge": [],
-  "disputed": [
+  "recommend_merge": [
     "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
     "scout_neutral_bright_muted",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
+    "scout_neutral_mid_soft",
+    "scout_neutral_mid_muted_2"
   ],
-  "_generated": "2026-09-05",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [],
+  "_generated": "2026-09-06",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
