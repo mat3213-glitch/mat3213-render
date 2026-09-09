@@ -65,7 +65,8 @@ def run_task(task: dict) -> dict:
         "thinking_mode": THINKING_MODE, "elapsed": round(time.time() - started, 1),
         "error": error, "diagnostics": {
             key: diag[key] for key in ("status", "actual_model", "actual_thinking_mode",
-                                       "first_text_s", "completion_s", "total_s") if key in diag
+                                       "submit_stage", "error_type", "first_text_s",
+                                       "completion_s", "total_s") if key in diag
         },
     }
 
