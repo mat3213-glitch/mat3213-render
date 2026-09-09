@@ -13,6 +13,7 @@ import asyncio
 import time
 from pathlib import Path
 from playwright.async_api import async_playwright
+from glm_state import split_state, restore_session_storage, capture_state, save_private, state_counts
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from runtime_safety import chromium_launch_kwargs  # noqa: E402
@@ -53,6 +54,8 @@ async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
         return ""
 
     state = json.loads(SESSION_FILE.read_text())
+    diagnostics["state_input"] = state_counts(state)
+    native_state, session_storage = split_state(state)
     print(f"  [glm-chat] model={model or 'current'} prompt_chars={len(prompt)}", file=sys.stderr)
 
     headless = os.environ.get("GLM_HEADLESS", "1").strip().lower() not in {"0", "false", "no"}
@@ -61,8 +64,9 @@ async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
             browser = await p.chromium.launch(**chromium_launch_kwargs(channel="chrome", headless=headless))
         except Exception:
             browser = await p.chromium.launch(**chromium_launch_kwargs(headless=headless))
-        ctx = await browser.new_context(storage_state=state,
+        ctx = await browser.new_context(storage_state=native_state,
                                         viewport={"width": 1280, "height": 900})
+        await restore_session_storage(ctx, session_storage)
         page = await ctx.new_page()
 
         # 180с, а не 60: на Atom под nice+cgroup-лимитом SPA z.ai не успевает за минуту
@@ -155,6 +159,13 @@ async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
 
         text = await _read_answer(page, timeout, diagnostics, submitted_at)
         await page.screenshot(path=str(OUTPUTS / "glm_chat_last.png"))
+        if text and diagnostics.get("status") == "completed" and os.environ.get("GLM_STATE_OUTPUT"):
+            try:
+                refreshed = await capture_state(ctx, page)
+                save_private(os.environ["GLM_STATE_OUTPUT"], refreshed)
+                diagnostics["state_output"] = state_counts(refreshed)
+            except Exception as exc:
+                diagnostics["state_save_error"] = type(exc).__name__
         await browser.close()
 
     return text

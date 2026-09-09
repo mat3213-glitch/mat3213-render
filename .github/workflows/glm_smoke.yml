@@ -105,6 +105,33 @@ jobs:
               assert actual == expected, "answer does not match expected text"
           PYCODE
         env:
+          GLM_STATE_OUTPUT: /tmp/glm-session-refreshed.json
+          INPUT_EXPECTED: ${{ inputs.expected }}
+          INPUT_PROMPT: ${{ inputs.prompt }}
+          INPUT_MODEL: ${{ inputs.model }}
+          INPUT_TIMEOUT: ${{ inputs.timeout }}
+
+      - name: Repeat with refreshed state
+        run: |
+          set -euo pipefail
+          test -s /tmp/glm-session-refreshed.json
+          cp /tmp/glm-session-refreshed.json Instrument/GLM/glm_session.json
+          printf '%s' "$INPUT_PROMPT" | GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
+            nice -n 15 python3 Instrument/GLM/glm_chat.py --stdin \
+            --model "$INPUT_MODEL" --timeout "$INPUT_TIMEOUT" \
+            --diagnostics /tmp/glmout/artifacts/repeat-diagnostics.json \
+            --output /tmp/glmout/artifacts/repeat-answer.txt \
+            > /tmp/glmout/artifacts/repeat-stdout.txt 2> /tmp/glmout/artifacts/repeat-stderr.txt
+          python3 - <<'PYCODE'
+          import json, os, pathlib
+          root = pathlib.Path('/tmp/glmout/artifacts')
+          d = json.loads((root / 'repeat-diagnostics.json').read_text())
+          assert d['status'] == 'completed'
+          expected = os.environ['INPUT_EXPECTED'].strip()
+          if expected:
+              assert (root / 'repeat-answer.txt').read_text().strip() == expected
+          PYCODE
+        env:
           INPUT_EXPECTED: ${{ inputs.expected }}
           INPUT_PROMPT: ${{ inputs.prompt }}
           INPUT_MODEL: ${{ inputs.model }}
@@ -140,4 +167,4 @@ jobs:
 
       - name: Remove credentials
         if: always()
-        run: rm -f Instrument/GLM/glm_session.json "$HOME/.config/rclone/rclone.conf"
+        run: rm -f /tmp/glm-session-refreshed.json Instrument/GLM/glm_session.json "$HOME/.config/rclone/rclone.conf"
