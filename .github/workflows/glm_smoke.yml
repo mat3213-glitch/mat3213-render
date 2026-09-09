@@ -28,7 +28,7 @@ on:
       thinking_mode:
         description: "Thinking mode exact label (__PROBE__ dumps menu)"
         required: false
-        default: ""
+        default: "High"
         type: string
 
 concurrency:

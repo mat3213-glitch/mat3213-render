@@ -30,6 +30,7 @@ BASE_URL = "https://chat.z.ai"
 # Пустой дефолт = НЕ трогать селектор модели: в аккаунте уже выбрана 5.2, а клик по
 # селектору хрупкий (Locator.click ловил таймаут 6с и оставлял открытым попап).
 DEFAULT_MODEL = ""
+DEFAULT_THINKING_MODE = os.environ.get("GLM_THINKING_MODE", "High")
 # текст ошибок ёмкости/пика — чтобы не принять за ответ
 CAPACITY_MARKERS = ("at capacity", "peak hours", "try again later", "switch to",
                     "currently at capacity", "MODEL_CONCURRENCY")
@@ -115,6 +116,10 @@ async def chat(prompt: str, model: str, timeout: int, thinking_mode: str = "", d
         diagnostics["ui_controls_before_prompt"] = await _visible_controls_snapshot(page)
         if thinking_mode:
             await _configure_thinking_mode(page, thinking_mode, diagnostics)
+            if diagnostics.get("thinking_mode_error") and thinking_mode != "__PROBE__":
+                diagnostics["status"] = "thinking_mode_unconfirmed"
+                await browser.close()
+                return ""
 
         diagnostics["status"] = "input"
         try:
@@ -261,6 +266,7 @@ async def _visible_controls_snapshot(page, limit: int = 40) -> list[dict]:
                     const relevant = nearComposer || aria === 'Select a model' ||
                         cls.includes('modelSelectorButton') || /Deep Think|Think|Search|Send|More|API|ZCode/.test(text);
                     return relevant && r.width > 0 && r.height > 0 &&
+                        r.right > 260 &&
                         r.bottom >= 0 && r.top <= window.innerHeight &&
                         area < 200000 && text.length <= 160 &&
                         s.visibility !== 'hidden' && s.display !== 'none';
@@ -441,8 +447,8 @@ def main():
     ap.add_argument("prompt", nargs="?", default="", help="Промпт (или --stdin)")
     ap.add_argument("--stdin", action="store_true", help="Читать промпт из stdin")
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Модель (default {DEFAULT_MODEL})")
-    ap.add_argument("--thinking-mode", default="",
-                    help="Exact thinking mode label, or __PROBE__ to dump the menu without changing it")
+    ap.add_argument("--thinking-mode", default=DEFAULT_THINKING_MODE,
+                    help="Exact thinking mode label, empty=current, __PROBE__ dumps the menu")
     ap.add_argument("--timeout", type=int, default=240)
     ap.add_argument("--diagnostics", type=Path, help="JSON timings/status, no credentials")
     ap.add_argument("--output", type=Path, help="Write only the completed answer to this file")
