@@ -30,6 +30,7 @@ jobs:
         run: |
           python3 -m pip install --disable-pip-version-check --no-cache-dir "playwright==1.54.0"
           google-chrome --version
+          sudo apt-get install -y rclone
           rclone version
           xvfb-run --help >/dev/null
 
