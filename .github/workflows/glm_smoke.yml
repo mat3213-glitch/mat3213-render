@@ -25,6 +25,11 @@ on:
         required: false
         default: "150"
         type: string
+      thinking_mode:
+        description: "Thinking mode exact label (__PROBE__ dumps menu)"
+        required: false
+        default: ""
+        type: string
 
 concurrency:
   group: glm-smoke
@@ -85,6 +90,7 @@ jobs:
           printf '%s' "$INPUT_PROMPT" | GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
             nice -n 15 python3 Instrument/GLM/glm_chat.py --stdin \
             --model "$INPUT_MODEL" --timeout "$INPUT_TIMEOUT" \
+            --thinking-mode "$INPUT_THINKING_MODE" \
             --diagnostics /tmp/glmout/artifacts/diagnostics.json \
             --output /tmp/glmout/artifacts/answer.txt \
             > /tmp/glmout/artifacts/stdout.txt 2> /tmp/glmout/artifacts/stderr.txt
@@ -110,6 +116,7 @@ jobs:
           INPUT_PROMPT: ${{ inputs.prompt }}
           INPUT_MODEL: ${{ inputs.model }}
           INPUT_TIMEOUT: ${{ inputs.timeout }}
+          INPUT_THINKING_MODE: ${{ inputs.thinking_mode }}
 
       - name: Repeat with refreshed state
         run: |
@@ -119,6 +126,7 @@ jobs:
           printf '%s' "$INPUT_PROMPT" | GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
             nice -n 15 python3 Instrument/GLM/glm_chat.py --stdin \
             --model "$INPUT_MODEL" --timeout "$INPUT_TIMEOUT" \
+            --thinking-mode "$INPUT_THINKING_MODE" \
             --diagnostics /tmp/glmout/artifacts/repeat-diagnostics.json \
             --output /tmp/glmout/artifacts/repeat-answer.txt \
             > /tmp/glmout/artifacts/repeat-stdout.txt 2> /tmp/glmout/artifacts/repeat-stderr.txt
@@ -136,6 +144,7 @@ jobs:
           INPUT_PROMPT: ${{ inputs.prompt }}
           INPUT_MODEL: ${{ inputs.model }}
           INPUT_TIMEOUT: ${{ inputs.timeout }}
+          INPUT_THINKING_MODE: ${{ inputs.thinking_mode }}
 
       - name: Collect diagnostics
         if: always()

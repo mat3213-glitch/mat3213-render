@@ -115,7 +115,7 @@ class AnswerTests(unittest.IsolatedAsyncioTestCase):
 
 class OutputTests(unittest.TestCase):
     def run_cli(self, answer):
-        async def fake_chat(prompt, model, timeout, diagnostics):
+        async def fake_chat(prompt, model, timeout, thinking_mode, diagnostics):
             diagnostics["status"] = "completed" if answer else "timeout"
             return answer
 

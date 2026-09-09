@@ -45,7 +45,7 @@ def _strip_cjk(t: str) -> str:
     return _CJK.sub("", t).strip()
 
 
-async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
+async def chat(prompt: str, model: str, timeout: int, thinking_mode: str = "", diagnostics=None) -> str:
     diagnostics = diagnostics if diagnostics is not None else {}
     diagnostics["status"] = "starting"
     if not SESSION_FILE.exists():
@@ -113,6 +113,8 @@ async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
             await browser.close()
             return ""
         diagnostics["ui_controls_before_prompt"] = await _visible_controls_snapshot(page)
+        if thinking_mode:
+            await _configure_thinking_mode(page, thinking_mode, diagnostics)
 
         diagnostics["status"] = "input"
         try:
@@ -240,8 +242,8 @@ async def _wait_model_value(page, trigger, model: str, timeout: int = 5000):
     raise RuntimeError(f"контрол модели не подтвердил {model!r}")
 
 
-async def _visible_controls_snapshot(page, limit: int = 80) -> list[dict]:
-    """Small sanitized snapshot of visible controls; no chat body/storage/session data."""
+async def _visible_controls_snapshot(page, limit: int = 40) -> list[dict]:
+    """Small sanitized snapshot of composer/model controls; no chat body/storage/session data."""
     try:
         return await page.evaluate(
             """(limit) => {
@@ -251,7 +253,14 @@ async def _visible_controls_snapshot(page, limit: int = 80) -> list[dict]:
                 const visible = controls.filter((el) => {
                     const r = el.getBoundingClientRect();
                     const s = window.getComputedStyle(el);
-                    return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
+                    const text = (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
+                    const aria = el.getAttribute('aria-label') || '';
+                    const cls = String(el.className || '');
+                    const nearComposer = r.top > window.innerHeight * 0.55;
+                    const relevant = nearComposer || aria === 'Select a model' ||
+                        cls.includes('modelSelectorButton') || /Deep Think|Think|Search|Send|More|API|ZCode/.test(text);
+                    return relevant && r.width > 0 && r.height > 0 &&
+                        s.visibility !== 'hidden' && s.display !== 'none';
                 });
                 return visible.slice(0, limit).map((el) => ({
                     tag: el.tagName.toLowerCase(),
@@ -266,6 +275,26 @@ async def _visible_controls_snapshot(page, limit: int = 80) -> list[dict]:
         )
     except Exception as exc:
         return [{"error": type(exc).__name__}]
+
+
+async def _configure_thinking_mode(page, mode: str, diagnostics) -> None:
+    """Open the thinking menu and optionally choose an exact visible item."""
+    diagnostics["requested_thinking_mode"] = mode
+    current = page.get_by_text(re.compile(r"^Deep Think|^Think"), exact=False).last
+    try:
+        await current.click(timeout=5000)
+        await page.wait_for_timeout(800)
+        diagnostics["ui_controls_thinking_menu"] = await _visible_controls_snapshot(page)
+        if mode == "__PROBE__":
+            await page.keyboard.press("Escape")
+            return
+        await page.get_by_text(mode, exact=True).last.click(timeout=7000)
+        await page.wait_for_timeout(800)
+        diagnostics["actual_thinking_mode"] = mode
+        diagnostics["ui_controls_after_thinking_mode"] = await _visible_controls_snapshot(page)
+    except Exception as exc:
+        diagnostics["thinking_mode_error"] = type(exc).__name__
+        await page.screenshot(path=str(OUTPUTS / "glm_thinking_mode_fail.png"))
 
 
 async def _read_answer(page, timeout: int, diagnostics=None, submitted_at=None) -> str:
@@ -363,6 +392,8 @@ def main():
     ap.add_argument("prompt", nargs="?", default="", help="Промпт (или --stdin)")
     ap.add_argument("--stdin", action="store_true", help="Читать промпт из stdin")
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Модель (default {DEFAULT_MODEL})")
+    ap.add_argument("--thinking-mode", default="",
+                    help="Exact thinking mode label, or __PROBE__ to dump the menu without changing it")
     ap.add_argument("--timeout", type=int, default=240)
     ap.add_argument("--diagnostics", type=Path, help="JSON timings/status, no credentials")
     ap.add_argument("--output", type=Path, help="Write only the completed answer to this file")
@@ -381,7 +412,7 @@ def main():
     started = time.monotonic()
     text = ""
     try:
-        text = asyncio.run(chat(prompt, args.model, args.timeout, diagnostics))
+        text = asyncio.run(chat(prompt, args.model, args.timeout, args.thinking_mode, diagnostics))
     except Exception as exc:
         diagnostics.update(status="error", error_type=type(exc).__name__)
         print(f"[glm-chat] {type(exc).__name__}", file=sys.stderr)
