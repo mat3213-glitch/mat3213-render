@@ -321,6 +321,7 @@ def main():
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Модель (default {DEFAULT_MODEL})")
     ap.add_argument("--timeout", type=int, default=240)
     ap.add_argument("--diagnostics", type=Path, help="JSON timings/status, no credentials")
+    ap.add_argument("--output", type=Path, help="Write only the completed answer to this file")
     args = ap.parse_args()
     if args.timeout <= 0:
         ap.error("--timeout must be positive")
@@ -328,6 +329,9 @@ def main():
     if not prompt.strip():
         ap.error("пустой промпт: передай аргументом или через --stdin")
 
+    if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text("")  # A failed retry must not leave a stale successful answer.
     OUTPUTS.mkdir(exist_ok=True)
     diagnostics = {"requested_model": args.model, "actual_model": None}
     started = time.monotonic()
@@ -345,6 +349,8 @@ def main():
         print("[diagnostics] " + json.dumps(diagnostics, ensure_ascii=False), file=sys.stderr)
     if not text:
         sys.exit(1)
+    if args.output:
+        args.output.write_text(text + "\n")
     print(text)   # чистый ответ в stdout — fanout захватит
 
 

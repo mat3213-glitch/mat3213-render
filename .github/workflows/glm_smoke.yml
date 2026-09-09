@@ -86,6 +86,7 @@ jobs:
             nice -n 15 python3 Instrument/GLM/glm_chat.py --stdin \
             --model "$INPUT_MODEL" --timeout "$INPUT_TIMEOUT" \
             --diagnostics /tmp/glmout/artifacts/diagnostics.json \
+            --output /tmp/glmout/artifacts/answer.txt \
             > /tmp/glmout/artifacts/stdout.txt 2> /tmp/glmout/artifacts/stderr.txt
           RC=${PIPESTATUS[1]}
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
@@ -100,7 +101,7 @@ jobs:
           assert d["actual_model"], "model not confirmed"
           expected = os.environ["INPUT_EXPECTED"].strip()
           if expected:
-              actual = (root / "stdout.txt").read_text().strip()
+              actual = (root / "answer.txt").read_text().strip()
               assert actual == expected, "answer does not match expected text"
           PYCODE
         env:

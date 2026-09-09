@@ -1,5 +1,10 @@
 """Regression tests for false timeout/success in browser GLM smoke (no browser)."""
 import unittest
+import io
+import json
+import tempfile
+from pathlib import Path
+from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 
 import glm_chat as glm
@@ -98,6 +103,40 @@ class AnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(glm._model_label("GLM-5.3-Flash"), "GLM-5.3-Flash")
         self.assertNotEqual(glm._model_label("GLM-5.3-Flash"), "GLM-5.3")
         self.assertEqual(glm._model_label("GLM-5.3 GLM-5.3-Flash"), "")
+
+
+class OutputTests(unittest.TestCase):
+    def run_cli(self, answer):
+        async def fake_chat(prompt, model, timeout, diagnostics):
+            diagnostics["status"] = "completed" if answer else "timeout"
+            return answer
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            result = root / "answer.txt"
+            result.write_text("stale successful answer")
+            diagnostics = root / "diagnostics.json"
+            argv = ["glm_chat.py", "probe", "--output", str(result),
+                    "--diagnostics", str(diagnostics)]
+            stdout, stderr = io.StringIO(), io.StringIO()
+            rc = 0
+            with patch.object(glm, "chat", fake_chat), patch.object(glm.sys, "argv", argv), \
+                    patch.object(glm, "OUTPUTS", root), redirect_stdout(stdout), redirect_stderr(stderr):
+                try:
+                    glm.main()
+                except SystemExit as exc:
+                    rc = exc.code
+            return rc, result.read_text(), stdout.getvalue(), json.loads(diagnostics.read_text())
+
+    def test_answer_file_and_stdout_contain_only_answer(self):
+        rc, result, stdout, d = self.run_cli("Готов")
+        self.assertEqual((rc, result, stdout), (0, "Готов\n", "Готов\n"))
+        self.assertEqual(d["status"], "completed")
+
+    def test_failed_retry_clears_stale_answer_and_exits_nonzero(self):
+        rc, result, stdout, d = self.run_cli("")
+        self.assertEqual((rc, result, stdout), (1, "", ""))
+        self.assertEqual(d["status"], "timeout")
 
 
 if __name__ == "__main__":
