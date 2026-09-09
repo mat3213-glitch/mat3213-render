@@ -90,6 +90,66 @@ def enrich_prompt(prompt: str) -> str:
         p = f"{p}, {FACE_ETHNICITY_BLOCK}"
     return p
 
+# ── банк сюжетов (директива yaromat 09.09: A — адаптация audio_dnb, B — тема) ──
+# Нарративные фото-сюжеты ДО обогащения: у каждого есть действие/состояние, а не
+# голый текстурный кадр (правило «stop polishing dead material»). БЕЗ лиц/человека —
+# канон, иначе разблокируется этнический блок. Выбор банка — env BANK.
+STORY_BANK = {
+    # A — адаптация сильных видео-сюжетов audio_dnb (ребёнок удалён, оставлена сцена
+    #     и свет как атмосфера, фигура спиной/силуэтом — в духе канона).
+    "audio_dnb": [
+        "Old residential elevator, worn brass doors just closing, a single cold ceiling light and its long shadow on the metal floor, the moment before the floor changes, quiet and alone",
+        "Long empty escalator climbing into a dark concrete hall, one distant bright exit as the only light, a lone figure as a small dark silhouette from behind near the base",
+        "Night bus interior, empty seats, rain streaks on the window with blurred cold streetlamp light passing by outside, the ghost of a motion just glimpsed",
+        "Small kitchen at 3 AM, single weak bare bulb on, dark doorframe reflected in the window, cold fridge light from a half-open door, absolute stillness",
+        "Concrete underpass at night, a single flickering blue-white fluorescent tube casting long moving shadows, wet floor reflecting a faraway warm light at the far end",
+        "Vintage subway car, dim, a single fluorescent tube flickering, empty seats and worn grab-handles, cold light pools on the floor, doors sliding shut",
+        "Worn office corridor at night, beige walls and closed doors receding into a cold tunnel of fluorescent light, one door slightly ajar spilling warm light",
+        "Elevator hall at night, deserted, institutional overhead panel light, caged elevator doors with a gap of darkness between, long hard shadows on terrazzo floor",
+        "Back seat of a parked car at night, rain dripping down the rear window, passing headlights crawling across the interior, half-open door spilling dome light",
+        "Stairwell in a brutalist concrete block, endless flights, a single bare bulb high above cutting long dramatic shadow lines across the walls and steps",
+    ],
+    # B1 — ноар / город, заброшка, холод
+    "noir": [
+        "Rain-soaked neon-free alley at night, one sodium streetlight pool, steam from a grate, a single black cat sitting at the far end watching",
+        "Abandoned cinema hall, rows of empty seats, a single projector beam of dust cutting through the dark, decaying red velvet, no screen visible",
+        "Decommissioned factory floor at night, tall windows with cracked glass, dust in a cold shaft of moonlight, silent machinery with one still-running gauge",
+        "Wet asphalt parking lot at night after rain, perfect mirror reflections of a single distant streetlight, a folded umbrella lying forgotten on the ground",
+        "Long underground corridor, hospital-green walls, a single hanging bulb swinging, arrows on the floor peeling, deep silence and a distant lit doorway",
+        "Motorcycle parked under a streetlamp in fog, warm halo of light, chain links wet with dew, mist swallowing the street behind it",
+    ],
+    # B2 — «театр тишины», одиночество пространства, интим предмета
+    "silence": [
+        "A single kitchen chair in a wide empty room at dusk, a shaft of pale evening light on the floorboards, dust slowly turning in the beam",
+        "An unmade bed by a rain-streaked window at blue hour, thin cold daylight, a single crumpled blanket catching a corner of warm lamp light",
+        "A rotary wall telephone on a dim hallway wall, the only warm light in the frame, a long shadow stretching across cracked wallpaper",
+        "A mug of untouched coffee going cold on a wooden table beside a window, morning haze, steam long since gone",
+        "An empty theater stage in darkness, a single follow-spot from above making a clean pool of light on worn floorboards, dust glinting",
+        "Old radio on a sill at dawn, one warm dial glow, thin curtain stirring, a moth resting beside the speaker grill, very quiet",
+    ],
+    # B3 — природа, свет, время (без людей)
+    "nature": [
+        "Melting alarm-clock on a wooden nightstand, warm amber window-light raking across its fluid dial, a thin dust mote hanging in the beam",
+        "A dark flooded basement puddle perfectly still, cold moonlight from a high grille, a drifting leaf barely touching the surface",
+        "Weathered concrete wall in raking cool light, a single thin crack widening with a faint warm glow inside, dust suspended",
+        "Rain dripping from a gutter onto mossy stones, each drop catching the flash, deep green shadow, no one around",
+        "A greenhouse at golden hour, pale light through cracked and fogged glass, wild untended plants, dust drifting, deep quiet",
+        "Snow-covered bench under a bare tree at dusk, one streetlamp warming the snow, footprints leading in and stopping",
+    ],
+}
+
+def resolve_prompts(sel: str) -> list[str]:
+    """Источник промптов: PROMPTS env → BANK <имя> · иначе пусто (конфиг)."""
+    raw = os.environ.get("PROMPTS", "").strip()
+    if raw:
+        return [p.strip() for p in raw.splitlines() if p.strip()]
+    bank = (os.environ.get("BANK") or sel or "").strip()
+    if bank in STORY_BANK:
+        return list(STORY_BANK[bank])
+    if bank:
+        print(f"неизвестный банк '{bank}': доступны {sorted(STORY_BANK)}", file=sys.stderr)
+    return []
+
 # ── склад ───────────────────────────────────────────────────────────────────
 YD = "ydrive:Content factory"
 WORK = Path(os.environ.get("IMAGE_FREE_WORK") or "/tmp/imagefree_pool")
@@ -245,10 +305,8 @@ def wait_for_task(tid) -> dict:
 
 
 def parse_prompts() -> list[str]:
-    """Промпты из PROMPTS env (построчно), как передаёт workflow input. Пустой → конфиг."""
-    raw = os.environ.get("PROMPTS", "").strip()
-    plist = [p.strip() for p in raw.splitlines() if p.strip()]
-    return plist
+    """Промпты: env BANK (встроенный банк сюжетов) ИЛИ PROMPTS (построчно). Пусто → конфиг."""
+    return resolve_prompts(os.environ.get("BANK", ""))
 
 
 def main():
