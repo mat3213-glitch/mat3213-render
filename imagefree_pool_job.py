@@ -63,7 +63,14 @@ ASPECTS = {"1:1", "3:4", "4:3", "9:16", "16:9"}
 DIGICAM_FOOTER = ("shot on an early-2000s point-and-shoot digital camera, harsh built-in flash, "
                   "slight noise and jpeg artifacts, low-fi amateur snapshot, photographic")
 FACE_KEYWORDS = ("face", "portrait", "woman", "girl", "man", "boy", "her ", "him ", "she ", "he ", "calm gaze")
-ETHNICITY_MARKERS = ("caucasian", "european", "asian", "african", "latin")
+ETHNICITY_MARKERS = ("caucasian", "european", "nordic", "scandinavian", "asian", "african", "latin", "slavic", "russian")
+# ЖЁСТКИЙ не-азиатский блок (директива yaromat 09.09, усилено после провала мягкой версии):
+# базовая модель Tongyi/Z-Image склонна к азиатским лицам, поэтому явный запрет в две стороны.
+FACE_ETHNICITY_BLOCK = (
+    "decidedly Nordic Scandinavian appearance, fair skin, light-colored hair and light eyes, "
+    "clearly Western European features, explicitly NOT East Asian and NOT Southeast Asian, "
+    "no Asian facial features"
+)
 
 def enrich_prompt(prompt: str) -> str:
     p = prompt.strip()
@@ -71,7 +78,7 @@ def enrich_prompt(prompt: str) -> str:
     if not any(k in lower for k in ("point-and-shoot", "digicam")):
         p = f"{p}, {DIGICAM_FOOTER}"
     if any(k in lower for k in FACE_KEYWORDS) and not any(m in lower for m in ETHNICITY_MARKERS):
-        p = f"{p}, Caucasian European features, non-Asian appearance"
+        p = f"{p}, {FACE_ETHNICITY_BLOCK}"
     return p
 
 # ── склад ───────────────────────────────────────────────────────────────────
