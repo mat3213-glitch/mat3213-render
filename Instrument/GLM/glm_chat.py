@@ -151,7 +151,8 @@ async def chat(prompt: str, model: str, timeout: int, thinking_mode: str = "", d
             # «No response, Please try again later». Ровно это три прогона подряд
             # выглядело как «GLM лежит» (29.07). Печатаем посимвольно — так ответ приходит.
             diagnostics["submit_stage"] = "typing"
-            await textarea.press_sequentially(prompt, delay=1)
+            await textarea.focus()
+            await page.keyboard.insert_text(prompt)
             await page.wait_for_timeout(300)
             diagnostics["submit_stage"] = "verify"
             typed = (await textarea.input_value() or "").strip()
