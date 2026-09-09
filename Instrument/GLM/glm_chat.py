@@ -112,6 +112,7 @@ async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
             await page.screenshot(path=str(OUTPUTS / "glm_model_fail.png"))
             await browser.close()
             return ""
+        diagnostics["ui_controls_before_prompt"] = await _visible_controls_snapshot(page)
 
         diagnostics["status"] = "input"
         try:
@@ -237,6 +238,34 @@ async def _wait_model_value(page, trigger, model: str, timeout: int = 5000):
             return
         await page.wait_for_timeout(100)
     raise RuntimeError(f"контрол модели не подтвердил {model!r}")
+
+
+async def _visible_controls_snapshot(page, limit: int = 80) -> list[dict]:
+    """Small sanitized snapshot of visible controls; no chat body/storage/session data."""
+    try:
+        return await page.evaluate(
+            """(limit) => {
+                const controls = Array.from(document.querySelectorAll(
+                    'button,[role="button"],[role="menuitem"],[aria-label],[aria-expanded]'
+                ));
+                const visible = controls.filter((el) => {
+                    const r = el.getBoundingClientRect();
+                    const s = window.getComputedStyle(el);
+                    return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
+                });
+                return visible.slice(0, limit).map((el) => ({
+                    tag: el.tagName.toLowerCase(),
+                    role: el.getAttribute('role') || '',
+                    aria: (el.getAttribute('aria-label') || '').slice(0, 120),
+                    expanded: el.getAttribute('aria-expanded') || '',
+                    text: (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 120),
+                    class_hint: String(el.className || '').slice(0, 120),
+                }));
+            }""",
+            limit,
+        )
+    except Exception as exc:
+        return [{"error": type(exc).__name__}]
 
 
 async def _read_answer(page, timeout: int, diagnostics=None, submitted_at=None) -> str:
