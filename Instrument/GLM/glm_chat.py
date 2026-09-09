@@ -256,13 +256,23 @@ async def _visible_controls_snapshot(page, limit: int = 40) -> list[dict]:
                     const text = (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
                     const aria = el.getAttribute('aria-label') || '';
                     const cls = String(el.className || '');
+                    const area = r.width * r.height;
                     const nearComposer = r.top > window.innerHeight * 0.55;
                     const relevant = nearComposer || aria === 'Select a model' ||
                         cls.includes('modelSelectorButton') || /Deep Think|Think|Search|Send|More|API|ZCode/.test(text);
                     return relevant && r.width > 0 && r.height > 0 &&
+                        area < 200000 && text.length <= 160 &&
                         s.visibility !== 'hidden' && s.display !== 'none';
                 });
+                visible.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
                 return visible.slice(0, limit).map((el) => ({
+                    rect: (() => {
+                        const r = el.getBoundingClientRect();
+                        return {
+                            x: Math.round(r.x), y: Math.round(r.y),
+                            w: Math.round(r.width), h: Math.round(r.height)
+                        };
+                    })(),
                     tag: el.tagName.toLowerCase(),
                     role: el.getAttribute('role') || '',
                     aria: (el.getAttribute('aria-label') || '').slice(0, 120),
@@ -280,21 +290,59 @@ async def _visible_controls_snapshot(page, limit: int = 40) -> list[dict]:
 async def _configure_thinking_mode(page, mode: str, diagnostics) -> None:
     """Open the thinking menu and optionally choose an exact visible item."""
     diagnostics["requested_thinking_mode"] = mode
-    current = page.get_by_text(re.compile(r"^Deep Think|^Think"), exact=False).last
     try:
-        await current.click(timeout=5000)
+        current = await _find_visible_exact_text_box(page, ("Deep Think Max", "Deep Think", "Think"))
+        diagnostics["thinking_control_rect"] = current
+        if not current:
+            raise RuntimeError("thinking mode control not found")
+        await page.mouse.click(current["cx"], current["cy"])
         await page.wait_for_timeout(800)
         diagnostics["ui_controls_thinking_menu"] = await _visible_controls_snapshot(page)
         if mode == "__PROBE__":
             await page.keyboard.press("Escape")
             return
-        await page.get_by_text(mode, exact=True).last.click(timeout=7000)
+        target = await _find_visible_exact_text_box(page, (mode,))
+        diagnostics["thinking_target_rect"] = target
+        if not target:
+            raise RuntimeError("requested thinking mode not found")
+        await page.mouse.click(target["cx"], target["cy"])
         await page.wait_for_timeout(800)
         diagnostics["actual_thinking_mode"] = mode
         diagnostics["ui_controls_after_thinking_mode"] = await _visible_controls_snapshot(page)
     except Exception as exc:
         diagnostics["thinking_mode_error"] = type(exc).__name__
         await page.screenshot(path=str(OUTPUTS / "glm_thinking_mode_fail.png"))
+
+
+async def _find_visible_exact_text_box(page, labels: tuple[str, ...]):
+    return await page.evaluate(
+        """(labels) => {
+            const wanted = new Set(labels);
+            const nodes = Array.from(document.querySelectorAll('button,[role="button"],[aria-expanded],div,span'));
+            const matches = [];
+            for (const el of nodes) {
+                const text = (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
+                if (!wanted.has(text)) continue;
+                const r = el.getBoundingClientRect();
+                const s = window.getComputedStyle(el);
+                if (r.width <= 0 || r.height <= 0 || s.visibility === 'hidden' || s.display === 'none') continue;
+                matches.push({
+                    x: Math.round(r.x), y: Math.round(r.y),
+                    w: Math.round(r.width), h: Math.round(r.height),
+                    cx: Math.round(r.x + r.width / 2),
+                    cy: Math.round(r.y + r.height / 2),
+                    text,
+                    tag: el.tagName.toLowerCase(),
+                    aria: el.getAttribute('aria-label') || '',
+                    cls: String(el.className || '').slice(0, 120),
+                    area: r.width * r.height,
+                });
+            }
+            matches.sort((a, b) => a.area - b.area);
+            return matches[0] || null;
+        }""",
+        list(labels),
+    )
 
 
 async def _read_answer(page, timeout: int, diagnostics=None, submitted_at=None) -> str:
