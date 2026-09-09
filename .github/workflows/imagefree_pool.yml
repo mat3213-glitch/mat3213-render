@@ -1,0 +1,81 @@
+name: ImageFree Pool (Z-Image-Turbo)
+
+# Пул AI-стиллов с бесплатного imagefree.net (без регистрации/лимитов по их заявлению).
+# Вторичный источник (постеры/концепты/Style Scout), НЕ основной клип-сток.
+# Все прогоны ТОЛЬКО с GH (US-IP): у сайта IP-лимиты, и эфемерный IP раннера их
+# не жжёт. Анти-блок поведение зашито в скрипт: строго последовательно, джиттер,
+# потолок задач, стоп на IP-лимите/CF-челлендже без ретраев.
+#
+# Склад: cloud_io/<YYYY-MM-DD>/imagefree_pool/ (+ manifest.json + прерывания в status.txt).
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompts:
+        description: 'Промпты, по одному на строку (канон yaromat)'
+        required: true
+        type: string
+      aspect:
+        description: 'Соотношение сторон: 1:1 | 3:4 | 4:3 | 9:16 | 16:9'
+        required: false
+        default: '9:16'
+        type: string
+      max_tasks:
+        description: 'Потолок генераций за прогон (анти-блок: не больше 8-12)'
+        required: false
+        default: '8'
+        type: string
+      judge:
+        description: 'Судья на входе в пул (on/off)'
+        required: false
+        default: 'on'
+        type: string
+
+jobs:
+  pool:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --fix-missing rclone
+          pip install -q requests pillow rapidocr-onnxruntime
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Generate pool
+        env:
+          PROMPTS:   ${{ inputs.prompts }}
+          ASPECT:    ${{ inputs.aspect }}
+          MAX_TASKS: ${{ inputs.max_tasks }}
+          JUDGE:     ${{ inputs.judge }}
+          # опц. TG-пинг в тред фактори (5) на стоп/успех — без ключей беззвучен
+          TG_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_SECRET: ${{ secrets.TG_WORKER_SECRET }}
+          # судья на входе (fail-open): без ключей он выбывает, пул не теряется
+          GITHUB_TOKEN:       ${{ secrets.GH_MODELS_TOKEN || secrets.GITHUB_TOKEN }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          IMG_WORKER_SECRET:  ${{ secrets.IMG_WORKER_SECRET }}
+          IMG_WORKER_URL:     https://yaromat-img.mat3213.workers.dev
+        run: python -u imagefree_pool_job.py
+
+      - name: Write error status (site-stop / ci-fail)
+        if: failure()
+        run: |
+          rclone rcat "ydrive:Content factory/cloud_io/$(date +%F)/imagefree_pool/status.txt" \
+            <<< "error: workflow failed" || true
