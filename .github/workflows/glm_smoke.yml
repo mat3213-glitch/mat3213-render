@@ -32,7 +32,7 @@ on:
         type: string
 
 concurrency:
-  group: glm-smoke
+  group: glm-shared-session
   cancel-in-progress: false
 
 jobs:
