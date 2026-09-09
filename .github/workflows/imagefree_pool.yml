@@ -12,8 +12,14 @@ on:
   workflow_dispatch:
     inputs:
       prompts:
-        description: 'Промпты, по одному на строку (канон yaromat)'
-        required: true
+        description: 'Промпты, по одному на строку (канон yaromat). Пусто если задан bank.'
+        required: false
+        default: ''
+        type: string
+      bank:
+        description: 'Встроенный банк сюжетов: audio_dnb | noir | silence | nature (если prompts пуст)'
+        required: false
+        default: ''
         type: string
       aspect:
         description: 'Соотношение сторон: 1:1 | 3:4 | 4:3 | 9:16 | 16:9'
@@ -61,6 +67,7 @@ jobs:
       - name: Generate pool
         env:
           PROMPTS:   ${{ inputs.prompts }}
+          BANK:      ${{ inputs.bank }}
           ASPECT:    ${{ inputs.aspect }}
           MAX_TASKS: ${{ inputs.max_tasks }}
           JUDGE:     ${{ inputs.judge }}
