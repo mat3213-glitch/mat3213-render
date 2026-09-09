@@ -62,7 +62,7 @@ ASPECTS = {"1:1", "3:4", "4:3", "9:16", "16:9"}
 #    Tongyi/Z-Image тяготеет к азиатским лицам). Не цепляемся за «no people».
 DIGICAM_FOOTER = ("shot on an early-2000s point-and-shoot digital camera, harsh built-in flash, "
                   "slight noise and jpeg artifacts, low-fi amateur snapshot, photographic")
-FACE_KEYWORDS = ("face", "portrait", "woman", "girl", "man", "boy", "her ", "him ", "she ", "he ", "calm gaze")
+FACE_KEYWORDS = ("face", "portrait", "woman", "girl", "man", "boy", "her", "him", "she", "he", "calm", "gaze")
 ETHNICITY_MARKERS = ("caucasian", "european", "nordic", "scandinavian", "asian", "african", "latin", "slavic", "russian")
 # ЖЁСТКИЙ не-азиатский блок (директива yaromat 09.09, усилено после провала мягкой версии):
 # базовая модель Tongyi/Z-Image склонна к азиатским лицам, поэтому явный запрет в две стороны.
@@ -71,13 +71,22 @@ FACE_ETHNICITY_BLOCK = (
     "clearly Western European features, explicitly NOT East Asian and NOT Southeast Asian, "
     "no Asian facial features"
 )
+# Границы слов обязательны: «he »-подстрока ловит «the », «man» — «human». Только слова.
+_FACE_RE = None
+
+def _face_keyword_in(lower: str) -> bool:
+    global _FACE_RE
+    if _FACE_RE is None:
+        import re
+        _FACE_RE = re.compile(r"\b(?:face|portrait|woman|girl|man|boy|her|him|she|he|calm|gaze)\b")
+    return bool(_FACE_RE.search(lower))
 
 def enrich_prompt(prompt: str) -> str:
     p = prompt.strip()
     lower = p.lower()
     if not any(k in lower for k in ("point-and-shoot", "digicam")):
         p = f"{p}, {DIGICAM_FOOTER}"
-    if any(k in lower for k in FACE_KEYWORDS) and not any(m in lower for m in ETHNICITY_MARKERS):
+    if _face_keyword_in(lower) and not any(m in lower for m in ETHNICITY_MARKERS):
         p = f"{p}, {FACE_ETHNICITY_BLOCK}"
     return p
 
