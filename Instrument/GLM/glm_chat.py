@@ -149,13 +149,13 @@ async def chat(prompt: str, model: str, timeout: int, thinking_mode: str = "", d
             # события ввода → уходит ПУСТОЕ сообщение, а сервис отвечает
             # «No response, Please try again later». Ровно это три прогона подряд
             # выглядело как «GLM лежит» (29.07). Печатаем посимвольно — так ответ приходит.
-            await page.keyboard.type(prompt)
+            await textarea.press_sequentially(prompt, delay=1)
             await page.wait_for_timeout(300)
             typed = (await textarea.input_value() or "").strip()
             if prompt[:12] not in typed:
                 raise RuntimeError(f"текст не попал в поле (в поле: «{typed[:40]}»)")
             submitted_at = time.monotonic()
-            await page.keyboard.press("Enter")
+            await textarea.press("Enter")
             print("  [submit] Enter", file=sys.stderr)
         except Exception as e:
             diagnostics["status"] = "submit_failed"
