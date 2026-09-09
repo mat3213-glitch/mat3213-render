@@ -45,8 +45,11 @@ REMOTE = "ydrive:"
 CAPTION = "тишина — это не пустота. внутри всегда есть точка покоя.\n\nyaromat — Frozen Space\nвключи звук"
 
 PATCH_DIRNAME = "queue.d"
+PROCESSED_DIRNAME = "queue.processed"
 QUEUE_DST = "Content factory/cloud_io/publish_queue/queue.json"
 WRITER_WORKFLOW = "reconcile_publish_queue.yml"
+PLATFORMS = ("tg", "vk", "ok", "pinterest", "youtube")
+RCLONE_TIMEOUT = 300
 
 
 def validate_slug(slug: str) -> str:
@@ -93,6 +96,28 @@ def load_queue(text: str) -> dict:
     return queue
 
 
+def validate_entry(platform: str, entry: dict) -> None:
+    if platform not in PLATFORMS:
+        raise ValueError(f"неизвестная platform: {platform!r}")
+    if not isinstance(entry.get("id"), str) or not entry["id"]:
+        raise ValueError("entry.id обязателен")
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", entry["id"]):
+        raise ValueError(f"небезопасный entry.id: {entry['id']!r}")
+    media = entry.get("media")
+    if not isinstance(media, str) or not media or media.startswith("/") or ".." in Path(media).parts:
+        raise ValueError("entry.media обязателен и должен быть относительным безопасным путём")
+    if platform in {"tg", "vk", "ok", "pinterest"}:
+        caption = entry.get("caption")
+        if not isinstance(caption, str) or not caption.strip():
+            raise ValueError(f"{platform}: entry.caption обязателен")
+    if platform == "youtube":
+        title = entry.get("title")
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("youtube: entry.title обязателен")
+        if entry.get("own_track") is not True:
+            raise ValueError("youtube: own_track должен быть true")
+
+
 def parse_patch(text: str) -> list[dict]:
     """Валидирует патч и возвращает список items [{"platform", "entry"}, ...]."""
     try:
@@ -109,10 +134,7 @@ def parse_patch(text: str) -> list[dict]:
         entry = item.get("entry")
         if not isinstance(platform, str) or not platform or not isinstance(entry, dict):
             raise ValueError("элемент патча требует platform (str) и entry (dict)")
-        if not isinstance(entry.get("id"), str) or not entry["id"]:
-            raise ValueError("entry.id обязателен")
-        if not re.fullmatch(r"[A-Za-z0-9_.-]+", entry["id"]):
-            raise ValueError(f"небезопасный entry.id: {entry['id']!r}")
+        validate_entry(platform, entry)
         items.append({"platform": platform, "entry": entry})
     return items
 
@@ -139,7 +161,7 @@ def sha256_file(path: Path) -> str:
 
 
 def rclone(argv: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(["rclone", *argv], capture_output=True, text=True)
+    result = subprocess.run(["rclone", *argv], capture_output=True, text=True, timeout=RCLONE_TIMEOUT)
     if check and result.returncode != 0:
         raise RuntimeError(f"rclone {' '.join(argv[:3])} failed ({result.returncode}): "
                            f"{result.stderr.strip()[:300]}")
@@ -172,6 +194,21 @@ def list_patch_names(queue_dst: str) -> list[str]:
 def patch_remote_path(queue_dst: str, name: str) -> str:
     folder = "/".join(queue_dst.split("/")[:-1])
     return f"{folder}/{PATCH_DIRNAME}/{name}"
+
+
+def processed_remote_path(queue_dst: str, name: str) -> str:
+    folder = "/".join(queue_dst.split("/")[:-1])
+    return f"{folder}/{PROCESSED_DIRNAME}/{name}"
+
+
+def archive_patch(queue_dst: str, name: str) -> None:
+    rclone(["moveto", f"{REMOTE}{patch_remote_path(queue_dst, name)}",
+            f"{REMOTE}{processed_remote_path(queue_dst, name)}"])
+
+
+def archive_patches(queue_dst: str, names: list[str]) -> None:
+    for name in names:
+        archive_patch(queue_dst, name)
 
 
 def submit_patch(queue_dst: str, items: list[dict], slug: str, *, work: Path) -> tuple[str, str]:
@@ -224,18 +261,20 @@ def _reconcile_locked(queue_dst: str, *, work: Path) -> tuple[int, int]:
         return 0, 2
 
     requested = list_patch_names(queue_dst)
-    items: list[dict] = []
+    patch_items: list[tuple[str, list[dict]]] = []
     broken: list[str] = []
     for name in requested:
         try:
-            items.extend(parse_patch(pull_text(patch_remote_path(queue_dst, name))))
+            patch_items.append((name, parse_patch(pull_text(patch_remote_path(queue_dst, name)))))
         except ValueError as exc:
             broken.append(f"{name}: {exc}")
     if broken:
         raise ValueError("invalid patches; queue unchanged: " + "; ".join(broken))
 
+    items = [item for _, parsed in patch_items for item in parsed]
     added = fold(queue, items)
     if added == 0:
+        archive_patches(queue_dst, [name for name, _ in patch_items])
         return 0, 0
     staged = work / "queue_staged.json"
     staged.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -247,6 +286,7 @@ def _reconcile_locked(queue_dst: str, *, work: Path) -> tuple[int, int]:
     pull_file(queue_dst, verified)
     if sha256_file(verified) != sha256_file(staged):
         raise RuntimeError("queue verification failed; inspect external writer before retry")
+    archive_patches(queue_dst, [name for name, _ in patch_items])
     print(f"reconciled {added} items; existing queue order preserved")
     return added, 0
 

@@ -44,4 +44,5 @@ jobs:
       - name: Reconcile durable patches without changing existing positions
         run: |
           rclone mkdir 'ydrive:Content factory/cloud_io/publish_queue/queue.d'
+          rclone mkdir 'ydrive:Content factory/cloud_io/publish_queue/queue.processed'
           python3 queue_enqueue.py reconcile --queue-dst 'Content factory/cloud_io/publish_queue/queue.json'

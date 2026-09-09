@@ -63,18 +63,20 @@ jobs:
         env:
           INPUT_QUERIES: ${{ inputs.queries }}
           JOB_ID: ${{ inputs.job_id }}
+          INPUT_MAX: ${{ inputs.max || '3' }}
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
         run: |
           python3 screenplay_pipeline/reference_search.py --queries "$INPUT_QUERIES" \
-            --cc-only --job-id "$JOB_ID" --top "${{ inputs.max || '3' }}"
+            --cc-only --job-id "$JOB_ID" --top "$INPUT_MAX"
 
       - name: Stage 2 — download CC clips
         env:
           JOB_ID: ${{ inputs.job_id }}
+          INPUT_MAX: ${{ inputs.max || '3' }}
         run: |
           rclone copyto "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/references.json" references.json
           python3 screenplay_pipeline/fetch_cc_clip.py --references references.json \
-            --job-id "$JOB_ID" --max "${{ inputs.max || '3' }}" --cookies "$PWD/youtube_cookies.txt"
+            --job-id "$JOB_ID" --max "$INPUT_MAX" --cookies "$PWD/youtube_cookies.txt"
 
       - name: Report status on failure
         if: failure()

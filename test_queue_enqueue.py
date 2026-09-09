@@ -44,6 +44,7 @@ class RemoteStore:
     def __init__(self) -> None:
         self.store: dict[str, str] = {QUEUE_DST: sample()}
         self.uploads: list[str] = []
+        self.cats: list[str] = []
 
 
 class RemoteSubprocess(object):
@@ -70,12 +71,19 @@ class RemoteSubprocess(object):
             path = argv[1].removeprefix("ydrive:")
             if path not in self.remote.store:
                 raise AssertionError(f"cat несуществующего файла: {path}")
+            self.remote.cats.append(path)
             return self._result(self.remote.store[path])
         elif op == "lsf":
             folder = argv[-1].removeprefix("ydrive:") + "/"
             names = [name for name in self.remote.store if name.startswith(folder)
                      and "/" not in name[len(folder):]]
             return self._result("\n".join(name.rsplit("/", 1)[-1] + "\n" for name in names))
+        elif op == "moveto":
+            src = argv[1].removeprefix("ydrive:")
+            dst = argv[2].removeprefix("ydrive:")
+            if src not in self.remote.store:
+                raise AssertionError(f"moveto несуществующего файла: {src}")
+            self.remote.store[dst] = self.remote.store.pop(src)
         else:
             raise AssertionError(f"неожиданная команда: {argv}")
         return self._result("")
@@ -138,10 +146,25 @@ class QueueEnqueueTests(unittest.TestCase):
 
     def test_parse_patch_rejects_bad_ids(self) -> None:
         self.assertEqual(len(parse_patch(json.dumps({"items": [
-            {"platform": "vk", "entry": {"id": "ok_1", "media": "m"}}]}))), 1)
+            {"platform": "vk", "entry": {"id": "ok_1", "media": "m", "caption": "c"}}]}))), 1)
         with self.assertRaisesRegex(ValueError, "безопасный"):
             parse_patch(json.dumps({"items": [
-                {"platform": "vk", "entry": {"id": "../up", "media": "m"}}]}))
+                {"platform": "vk", "entry": {"id": "../up", "media": "m", "caption": "c"}}]}))
+
+    def test_parse_patch_rejects_malformed_publish_entries(self) -> None:
+        with self.assertRaisesRegex(ValueError, "media"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "tg", "entry": {"id": "poison", "caption": "c"}}]}))
+        with self.assertRaisesRegex(ValueError, "caption"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "vk", "entry": {"id": "poison", "media": "m.mp4"}}]}))
+        with self.assertRaisesRegex(ValueError, "own_track"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "youtube", "entry": {
+                    "id": "poison", "media": "m.mp4", "title": "x", "own_track": "false"}}]}))
+        with self.assertRaisesRegex(ValueError, "platform"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "unknown", "entry": {"id": "x", "media": "m.mp4", "caption": "c"}}]}))
 
     def test_submit_then_reconcile(self) -> None:
         remote = RemoteStore()
@@ -153,6 +176,8 @@ class QueueEnqueueTests(unittest.TestCase):
             added, code = reconcile(QUEUE_DST, work=self.work)
         self.assertEqual(added, 5)
         self.assertEqual(code, 0)
+        self.assertNotIn(f"{QUEUE_DST.rsplit('/', 1)[0]}/queue.d/{name}", remote.store)
+        self.assertIn(f"{QUEUE_DST.rsplit('/', 1)[0]}/queue.processed/{name}", remote.store)
         q = load_queue(remote.store[QUEUE_DST])
         self.assertEqual([x["id"] for x in q["youtube"]],
                          [f"frozen_v3_short_{n}" for n in range(1, 5)])
@@ -166,8 +191,10 @@ class QueueEnqueueTests(unittest.TestCase):
             submit_patch(QUEUE_DST, frozen_items("frozen_v3", "T"), "frozen_v3",
                          work=self.work)
             reconcile(QUEUE_DST, work=self.work)
+            first_cats = len(remote.cats)
             added, code = reconcile(QUEUE_DST, work=self.work)
         self.assertEqual((added, code), (0, 0))
+        self.assertEqual(len(remote.cats), first_cats)
         self.assertEqual(len(json.loads(remote.store[QUEUE_DST])["youtube"]), 4)
 
     def test_second_writer_blocked_before_read_and_existing_prefix_preserved(self) -> None:
@@ -261,6 +288,7 @@ class QueueEnqueueTests(unittest.TestCase):
         with patch("queue_enqueue.rclone", side_effect=runner):
             self.assertEqual(reconcile(QUEUE_DST, work=self.work), (0, 0))
         self.assertEqual(remote.store[QUEUE_DST], before)
+        self.assertFalse(any("/queue.d/" in key for key in remote.store))
 
     def test_listing_failure_and_broken_patch_do_not_write_queue(self):
         remote = RemoteStore()

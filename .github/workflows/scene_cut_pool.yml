@@ -54,12 +54,18 @@ jobs:
       - name: Run scene cut pool
         run: |
           python -u scene_cut_pool.py \
-            --source-folder "${{ inputs.source_folder }}" \
-            --out-base "${{ inputs.out_base }}" \
-            --target "${{ inputs.target }}"
+            --source-folder "$INPUT_SOURCE_FOLDER" \
+            --out-base "$INPUT_OUT_BASE" \
+            --target "$INPUT_TARGET"
+        env:
+          INPUT_SOURCE_FOLDER: ${{ inputs.source_folder }}
+          INPUT_OUT_BASE: ${{ inputs.out_base }}
+          INPUT_TARGET: ${{ inputs.target }}
 
       - name: Summarize
         if: success()
         run: |
-          echo "Pool stored under ${{ inputs.out_base }}/pool/ on YaD."
+          echo "Pool stored under ${INPUT_OUT_BASE}/pool/ on YaD."
           echo "Next: point vzrosly_clip_job video_source_dir at that pool/ and set duration."
+        env:
+          INPUT_OUT_BASE: ${{ inputs.out_base }}

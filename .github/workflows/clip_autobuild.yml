@@ -40,10 +40,12 @@ jobs:
     steps:
       - id: mk
         run: |
-          N=${{ inputs.parts }}
+          N="$INPUT_PARTS"
           M=$(python3 -c "print('[' + ','.join(str(i) for i in range(1, $N+1)) + ']')")
           echo "matrix=$M" >> "$GITHUB_OUTPUT"
           echo "части: $M"
+        env:
+          INPUT_PARTS: ${{ inputs.parts }}
 
   part:
     needs: plan

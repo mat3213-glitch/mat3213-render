@@ -84,13 +84,14 @@ jobs:
           JOB_ID: ${{ inputs.job_id }}
           YT_API_KEY: ${{ secrets.YT_API_KEY }}
           TV: ${{ inputs.top_views == 'true' && '--top-views' || '' }}
+          INPUT_TOP: ${{ inputs.top || '5' }}
         run: |
           if [ -n "$INPUT_QUERIES" ]; then
             python3 screenplay_pipeline/reference_search.py --queries "$INPUT_QUERIES" \
-              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}" $TV
+              --job-id "$JOB_ID" --top "$INPUT_TOP" $TV
           else
             python3 screenplay_pipeline/reference_search.py --brief brief_full.yaml \
-              --job-id "$JOB_ID" --top "${{ inputs.top || '5' }}" $TV
+              --job-id "$JOB_ID" --top "$INPUT_TOP" $TV
           fi
 
       - name: Stage 2 — reference_deconstruct

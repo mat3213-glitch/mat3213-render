@@ -76,14 +76,18 @@ jobs:
           set +e
           mkdir -p /tmp/glmout
           GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
-            python3 Instrument/GLM/glm_chat.py "${{ inputs.prompt }}" \
-            --model "${{ inputs.model }}" --timeout ${{ inputs.timeout }} \
+            python3 Instrument/GLM/glm_chat.py "$INPUT_PROMPT" \
+            --model "$INPUT_MODEL" --timeout "$INPUT_TIMEOUT" \
             > /tmp/glmout/stdout.txt 2> /tmp/glmout/stderr.txt
           RC=$?
           echo "RC=$RC"
           echo "--- stdout ---"; cat /tmp/glmout/stdout.txt
           echo "--- stderr ---"; cat /tmp/glmout/stderr.txt
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
+        env:
+          INPUT_PROMPT: ${{ inputs.prompt }}
+          INPUT_MODEL: ${{ inputs.model }}
+          INPUT_TIMEOUT: ${{ inputs.timeout }}
 
       - name: Collect screenshots + DOM
         run: |

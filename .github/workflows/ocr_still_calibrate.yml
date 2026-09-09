@@ -121,9 +121,11 @@ jobs:
 
       - name: Upload sheet to Yandex Disk (разметка глазами)
         run: |
-          DATE="${{ inputs.out_date }}"
+          DATE="$INPUT_OUT_DATE"
           [ -z "$DATE" ] && DATE=$(date +%Y-%m-%d)
           # Правило именования cloud_io: в корне — только дата, тема подпапкой внутри
           DEST="ydrive:Content factory/cloud_io/preview/${DATE}/ocr_still_sheet"
           rclone copy sheet "$DEST" -v
           echo "✓ лист → $DEST"
+        env:
+          INPUT_OUT_DATE: ${{ inputs.out_date }}

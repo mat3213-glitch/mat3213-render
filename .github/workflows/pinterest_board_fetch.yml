@@ -63,10 +63,11 @@ jobs:
       - name: Fetch board videos
         env:
           BOARD_REF: ${{ inputs.board_ref }}
+          RUN_NAME: ${{ inputs.run_name }}
         run: |
           python -u pinterest_board_fetch.py \
             --board "$BOARD_REF" \
-            --dest-folder "Content factory/cloud_io/$(TZ=Asia/Novosibirsk date +%F)/${{ inputs.run_name }}/${GITHUB_RUN_ID}"
+            --dest-folder "Content factory/cloud_io/$(TZ=Asia/Novosibirsk date +%F)/${RUN_NAME}/${GITHUB_RUN_ID}"
 
       - name: Summarize fetch
         if: success()
