@@ -55,6 +55,25 @@ POLL_MS = [6000, 4000, 10000, 15000, 20000, 30000, 30000, 30000, 30000, 30000,
 
 ASPECTS = {"1:1", "3:4", "4:3", "9:16", "16:9"}
 
+# ── канон-обогащение промптов (директива yaromat 09.09) ────────────────────
+# 1. ВСЁ снято «на мыльницу 2000-х»: жёсткая встроенная вспышка, шум, jpeg-артефакты,
+#    любительская композиция — фотографично и НЕ синтетика (в противовес AI-глянцу).
+# 2. Если в промпте есть лицо/человек — явная не-азиатская внешность (базовая модель
+#    Tongyi/Z-Image тяготеет к азиатским лицам). Не цепляемся за «no people».
+DIGICAM_FOOTER = ("shot on an early-2000s point-and-shoot digital camera, harsh built-in flash, "
+                  "slight noise and jpeg artifacts, low-fi amateur snapshot, photographic")
+FACE_KEYWORDS = ("face", "portrait", "woman", "girl", "man", "boy", "her ", "him ", "she ", "he ", "calm gaze")
+ETHNICITY_MARKERS = ("caucasian", "european", "asian", "african", "latin")
+
+def enrich_prompt(prompt: str) -> str:
+    p = prompt.strip()
+    lower = p.lower()
+    if not any(k in lower for k in ("point-and-shoot", "digicam")):
+        p = f"{p}, {DIGICAM_FOOTER}"
+    if any(k in lower for k in FACE_KEYWORDS) and not any(m in lower for m in ETHNICITY_MARKERS):
+        p = f"{p}, Caucasian European features, non-Asian appearance"
+    return p
+
 # ── склад ───────────────────────────────────────────────────────────────────
 YD = "ydrive:Content factory"
 WORK = Path(os.environ.get("IMAGE_FREE_WORK") or "/tmp/imagefree_pool")
@@ -237,13 +256,15 @@ def main():
     manifest, exit_code, stop_reason = [], 0, ""
     consec_errors, task_num = 0, 0
 
-    for prompt in prompts:
+    for prompt_raw in prompts:
         if stop_reason:
             break
         task_num += 1
+        prompt = enrich_prompt(prompt_raw)
         sha = hashlib.sha1(prompt.encode("utf-8")).hexdigest()[:8]
         print(f"\n[{task_num}/{len(prompts)}] {prompt[:90]}")
-        rec = {"n": task_num, "prompt": prompt, "prompt_sha": sha, "aspect": aspect}
+        rec = {"n": task_num, "prompt_raw": prompt_raw, "prompt": prompt,
+               "prompt_sha": sha, "aspect": aspect}
 
         tid, err = submit(prompt, aspect)
         if err:
