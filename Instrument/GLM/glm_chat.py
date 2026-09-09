@@ -314,6 +314,10 @@ async def _configure_thinking_mode(page, mode: str, diagnostics) -> None:
             raise RuntimeError("requested thinking mode not found")
         await page.mouse.click(target["cx"], target["cy"])
         await page.wait_for_timeout(800)
+        # Some z.ai builds apply the choice but leave the popover expanded. It
+        # then intercepts the composer click and makes submit fail.
+        await page.keyboard.press("Escape")
+        await page.wait_for_timeout(300)
         diagnostics["actual_thinking_mode"] = mode
         diagnostics["ui_controls_after_thinking_mode"] = await _visible_controls_snapshot(page)
     except Exception as exc:

@@ -47,6 +47,8 @@ def run_task(task: dict) -> dict:
         text = result.stdout.strip()
         ok = result.returncode == 0 and bool(text)
         error = "" if ok else (result.stderr or f"empty output (rc={result.returncode})")[-300:]
+        if not ok:
+            text = ""
         if ok and REFRESHED.is_file() and REFRESHED.stat().st_size > 1000:
             os.replace(REFRESHED, SESSION)
     except subprocess.TimeoutExpired:
