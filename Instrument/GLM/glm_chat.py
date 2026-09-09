@@ -1,18 +1,8 @@
 #!/usr/bin/env python3
-"""
-[ВОРКЕР] glm — текст-чат GLM-5.2 через chat.z.ai (как qwen-coder).
+"""GLM browser worker: authenticated chat.z.ai, DOM answer -> stdout.
 
-chat.z.ai = OpenWebUI-форк. Прямой requests к /api/v2/chat/completions упирается в
-captcha-сигнатуру (frontend сам её считает) → гоним через БРАУЗЕР с тёплой сессией:
-Playwright вводит промпт (фронт подписывает запрос), CDPSession ловит chat_id из
-ответа /api/v1/chats/new, затем requests поллит /api/v1/chats/{chat_id} и возвращает
-ТЕКСТ ответа ассистента. Ответ → stdout (для fanout-захвата).
-
-Сессия: glm_session.json (из glm_auth.py). Тёплую держать daily-пингом.
-
-Запуск:
-  python3 Instrument/GLM/glm_chat.py "напиши python-функцию факториала"
-  python3 Instrument/GLM/glm_chat.py "..." --model GLM-5.2 --timeout 240
+Use GLM_HEADLESS=0 with xvfb-run on GH. Session stays outside git.
+--diagnostics writes timings/status only, never session or request headers.
 """
 import re
 import os
@@ -20,6 +10,7 @@ import sys
 import json
 import argparse
 import asyncio
+import time
 from pathlib import Path
 from playwright.async_api import async_playwright
 
@@ -53,13 +44,16 @@ def _strip_cjk(t: str) -> str:
     return _CJK.sub("", t).strip()
 
 
-async def chat(prompt: str, model: str, timeout: int) -> str:
+async def chat(prompt: str, model: str, timeout: int, diagnostics=None) -> str:
+    diagnostics = diagnostics if diagnostics is not None else {}
+    diagnostics["status"] = "starting"
     if not SESSION_FILE.exists():
         print("Нет сессии. Сначала: python3 Instrument/GLM/glm_auth.py", file=sys.stderr)
-        sys.exit(2)
+        diagnostics["status"] = "session_missing"
+        return ""
 
     state = json.loads(SESSION_FILE.read_text())
-    print(f"  [glm-chat] model={model} prompt=«{prompt[:60]}»", file=sys.stderr)
+    print(f"  [glm-chat] model={model or 'current'} prompt_chars={len(prompt)}", file=sys.stderr)
 
     headless = os.environ.get("GLM_HEADLESS", "1").strip().lower() not in {"0", "false", "no"}
     async with async_playwright() as p:
@@ -73,6 +67,7 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
 
         # 180с, а не 60: на Atom под nice+cgroup-лимитом SPA z.ai не успевает за минуту
         # (сеть при этом здорова — curl отдаёт 200 за 2.5с, проверено 2026-07-29).
+        diagnostics["status"] = "navigation"
         await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=180000)
         await page.wait_for_timeout(3500)
         await _dismiss_modal(page)
@@ -83,52 +78,38 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
             print("  [captcha] обнаружена security verification; нужна headed-проверка",
                   file=sys.stderr)
             await page.screenshot(path=str(OUTPUTS / "glm_captcha.png"))
+            diagnostics["status"] = "captcha"
             await browser.close()
             return ""
 
-        # Переключить модель. Используем стабильный публичный контракт DOM, а не
-        # `[class*='model']`: тот матчится на посторонние элементы и первый locator
-        # мог быть невидимым/не кликабельным. После выбора ждём, пока UI подтвердит
-        # новое значение, иначе сообщение уйдёт в старую модель.
-        if model:
-            try:
-                trigger = page.locator(
-                    "button.modelSelectorButton[aria-label='Select a model']"
-                ).first
-                await trigger.wait_for(state="visible", timeout=15000)
+        # An explicit model is a contract: never silently use another model.
+        diagnostics["status"] = "model_selection"
+        try:
+            trigger = page.locator(
+                "button.modelSelectorButton[aria-label='Select a model']"
+            ).first
+            await trigger.wait_for(state="visible", timeout=15000)
+            current = _model_label(await trigger.inner_text())
+            if model and current != model:
                 await trigger.click(timeout=8000)
                 await _wait_model_menu(page, trigger, expanded=True)
-
-                option = None
                 menu = page.locator("[role='menu']:visible").last
-                deadline = asyncio.get_event_loop().time() + 15000 / 1000
-                while asyncio.get_event_loop().time() < deadline:
-                    # Ограничиваем поиск открытым menu: глобальный get_by_text также
-                    # видит сам trigger с текущей моделью и может кликнуть его вместо
-                    # пункта списка.
-                    candidates = (await menu.get_by_text(model, exact=True).all()
-                                  if await menu.count() else [])
-                    for candidate in candidates:
-                        if await candidate.is_visible():
-                            option = candidate
-                            break
-                    if option is not None:
-                        break
-                    await page.wait_for_timeout(250)
-                if option is None:
-                    raise RuntimeError(f"пункт модели {model!r} не появился в меню")
-                await option.click(timeout=6000)
+                await menu.get_by_text(model, exact=True).click(timeout=15000)
                 await _wait_model_menu(page, trigger, expanded=False)
                 await _wait_model_value(page, trigger, model)
-                print(f"  [model] выбрал {model}", file=sys.stderr)
-            except Exception as e:
-                print(f"  [model] НЕ подтверждён ({str(e)[:100]})", file=sys.stderr)
-                await browser.close()
-                return ""
-            finally:
-                await page.keyboard.press("Escape")
-                await page.wait_for_timeout(400)
+            actual = _model_label(await trigger.inner_text())
+            if not actual or (model and actual != model):
+                raise RuntimeError("model label not confirmed")
+            diagnostics["actual_model"] = actual
+            print(f"  [model] confirmed {actual}", file=sys.stderr)
+        except Exception as exc:
+            diagnostics["status"] = "model_unconfirmed"
+            diagnostics["error_type"] = type(exc).__name__
+            await page.screenshot(path=str(OUTPUTS / "glm_model_fail.png"))
+            await browser.close()
+            return ""
 
+        diagnostics["status"] = "input"
         try:
             # Поле ждём до 45с: на Atom SPA z.ai рисуется дольше фиксированной паузы
             # (у MiniMax через 9с DOM был вообще пуст — тот же класс проблемы, 29.07).
@@ -161,15 +142,18 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
             typed = (await textarea.input_value() or "").strip()
             if prompt[:12] not in typed:
                 raise RuntimeError(f"текст не попал в поле (в поле: «{typed[:40]}»)")
+            submitted_at = time.monotonic()
             await page.keyboard.press("Enter")
             print("  [submit] Enter", file=sys.stderr)
         except Exception as e:
-            print(f"  [submit] ошибка: {e}", file=sys.stderr)
+            diagnostics["status"] = "submit_failed"
+            diagnostics["error_type"] = type(e).__name__
+            print(f"  [submit] ошибка: {type(e).__name__}", file=sys.stderr)
             await page.screenshot(path=str(OUTPUTS / "glm_chat_fail.png"))
             await browser.close()
-            sys.exit(1)
+            return ""
 
-        text = await _read_answer(page, timeout)
+        text = await _read_answer(page, timeout, diagnostics, submitted_at)
         await page.screenshot(path=str(OUTPUTS / "glm_chat_last.png"))
         await browser.close()
 
@@ -229,35 +213,50 @@ async def _wait_model_menu(page, trigger, expanded: bool, timeout: int = 5000):
     raise RuntimeError(f"меню модели не перешло в aria-expanded={wanted}")
 
 
+def _model_label(text: str) -> str:
+    # Do not match GLM-5.3 as a substring of GLM-5.3-Flash.
+    labels = re.findall(r"\bGLM-\d+(?:\.\d+)*(?:-[A-Za-z0-9]+)*", text)
+    return labels[0] if len(labels) == 1 else ""
+
+
 async def _wait_model_value(page, trigger, model: str, timeout: int = 5000):
     deadline = asyncio.get_event_loop().time() + timeout / 1000
     while asyncio.get_event_loop().time() < deadline:
-        if model in (await trigger.inner_text()):
+        if model == _model_label(await trigger.inner_text()):
             return
         await page.wait_for_timeout(100)
     raise RuntimeError(f"контрол модели не подтвердил {model!r}")
 
 
-async def _read_answer(page, timeout: int) -> str:
+async def _read_answer(page, timeout: int, diagnostics=None, submitted_at=None) -> str:
     """Читает ответ ассистента из DOM: ждёт, пока текст появится и СТАБИЛИЗИРУЕТСЯ.
     Возвращает финальный текст (или "" при ёмкости/таймауте)."""
     sel = "[class*='chat-assistant']"   # контейнер ответа (откалибровано на chat.z.ai)
     print("  [read] ожидание ответа", end="", file=sys.stderr, flush=True)
-    deadline = asyncio.get_event_loop().time() + timeout
+    diagnostics = diagnostics if diagnostics is not None else {}
+    started = time.monotonic() if submitted_at is None else submitted_at
+    diagnostics.update(status="reading", first_text_s=None, completion_s=None)
+    deadline = started + timeout
     last, stable, refusal = "", 0, 0
-    while asyncio.get_event_loop().time() < deadline:
-        await page.wait_for_timeout(3000)
-        await _dismiss_modal(page, allow_escape=False)
+    while time.monotonic() < deadline:
+        await page.wait_for_timeout(1000)
+        # Never click Cancel/Skip or press Escape while generation is running.
+        if time.monotonic() >= deadline:
+            break
         if await _captcha_visible(page):
             print(" CAPTCHA/security verification — ответ недоступен headless",
                   file=sys.stderr)
             await page.screenshot(path=str(OUTPUTS / "glm_captcha_detected.png"))
+            diagnostics["status"] = "captcha"
             return ""
         try:
             els = page.locator(sel)
             txt = (await els.last.inner_text()).strip() if await els.count() else ""
         except Exception:
             txt = ""
+        if txt and diagnostics["first_text_s"] is None:
+            diagnostics["first_text_s"] = round(time.monotonic() - started, 3)
+            print(f" first_text={diagnostics['first_text_s']}s", file=sys.stderr)
         low = txt.lower()
         # ВЕРДИКТ «ОТКАЗ» — ТОЛЬКО ЕСЛИ ОН УСТОЯЛСЯ. Раньше первый же цикл с маркером
         # возвращал «ёмкость/пик», и в это окно попадал баннер peak-hours, живущий в том
@@ -270,6 +269,7 @@ async def _read_answer(page, timeout: int) -> str:
                 # контейнер», и мы уже дважды приняли второе за первое.
                 print(f" ёмкость/пик — модель отказала (устойчиво). Текст: «{txt[:150]}»",
                       file=sys.stderr)
+                diagnostics["status"] = "refused"
                 return ""
         else:
             refusal = 0
@@ -289,17 +289,21 @@ async def _read_answer(page, timeout: int) -> str:
                 pass
 
         body = _drop_thoughts(txt)
-        if body and txt == last and not generating and len(body) > 10:
+        if body and txt == last and not generating and not refusal:
             stable += 1
             if stable >= 2:        # не менялся и генерация не идёт → готово
-                print(" готово", file=sys.stderr, flush=True)
+                diagnostics.update(status="completed",
+                                   completion_s=round(time.monotonic() - started, 3),
+                                   answer_chars=len(_strip_cjk(body)))
+                print(f" готово ({diagnostics['completion_s']}s)", file=sys.stderr, flush=True)
                 return _strip_cjk(body)
         else:
             stable = 0
         last = txt
         print(".", end="", file=sys.stderr, flush=True)
     print(" timeout", file=sys.stderr, flush=True)
-    return _strip_cjk(_drop_thoughts(last))
+    diagnostics.update(status="timeout", partial_chars=len(last))
+    return ""
 
 
 def _drop_thoughts(txt: str) -> str:
@@ -311,18 +315,34 @@ def _drop_thoughts(txt: str) -> str:
 
 
 def main():
-    ap = argparse.ArgumentParser(description="GLM-5.2 текст-чат через chat.z.ai")
+    ap = argparse.ArgumentParser(description="GLM текст-чат через chat.z.ai")
     ap.add_argument("prompt", nargs="?", default="", help="Промпт (или --stdin)")
     ap.add_argument("--stdin", action="store_true", help="Читать промпт из stdin")
     ap.add_argument("--model", default=DEFAULT_MODEL, help=f"Модель (default {DEFAULT_MODEL})")
     ap.add_argument("--timeout", type=int, default=240)
+    ap.add_argument("--diagnostics", type=Path, help="JSON timings/status, no credentials")
     args = ap.parse_args()
+    if args.timeout <= 0:
+        ap.error("--timeout must be positive")
     prompt = sys.stdin.read() if args.stdin else args.prompt
     if not prompt.strip():
         ap.error("пустой промпт: передай аргументом или через --stdin")
 
     OUTPUTS.mkdir(exist_ok=True)
-    text = asyncio.run(chat(prompt, args.model, args.timeout))
+    diagnostics = {"requested_model": args.model, "actual_model": None}
+    started = time.monotonic()
+    text = ""
+    try:
+        text = asyncio.run(chat(prompt, args.model, args.timeout, diagnostics))
+    except Exception as exc:
+        diagnostics.update(status="error", error_type=type(exc).__name__)
+        print(f"[glm-chat] {type(exc).__name__}", file=sys.stderr)
+    finally:
+        diagnostics["total_s"] = round(time.monotonic() - started, 3)
+        if args.diagnostics:
+            args.diagnostics.parent.mkdir(parents=True, exist_ok=True)
+            args.diagnostics.write_text(json.dumps(diagnostics, ensure_ascii=False, indent=2) + "\n")
+        print("[diagnostics] " + json.dumps(diagnostics, ensure_ascii=False), file=sys.stderr)
     if not text:
         sys.exit(1)
     print(text)   # чистый ответ в stdout — fanout захватит

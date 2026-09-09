@@ -1,17 +1,19 @@
-name: glm smoke (xvfb headed US-check)
+name: glm smoke (verified model and completion)
 
-# Разовый диагностический smoke-тест GLM-воркера (chat.z.ai) с US-IP GH-раннера.
-# Цель: понять, CAPTCHA это фингерпринт/headless-специфика бука или IP-зависимость,
-# и работает ли свежая сессия (залита с бука в ydrive) headless за границей.
-# Сессия тянется с ЯД, в git НЕ хранится.
-# Результат: DOM+скрин последнего состояния (артефакт) + короткий вердикт в job-log.
+# Sequential headed browser smoke; session never enters logs/artifacts.
+# Timings distinguish first DOM text, completion, and total browser runtime.
 on:
   workflow_dispatch:
     inputs:
       prompt:
         description: "Промпт для smoke-ответа"
         required: false
-        default: "ответь одним словом: готов"
+        default: "Ответь ровно одним словом без пояснений: Готов"
+        type: string
+      expected:
+        description: "Expected exact answer (empty disables content assertion)"
+        required: false
+        default: "Готов"
         type: string
       model:
         description: "Модель (GLM-5.3 | GLM-5.3-Flash | пусто=текущая)"
@@ -41,12 +43,16 @@ jobs:
           google-chrome --version || python3 -m playwright install --with-deps chromium
           sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone xvfb
 
+      - name: Regression tests
+        run: python3 -m unittest discover -s Instrument/GLM -p "test_*.py" -v
+
       - name: Configure rclone ydrive
         env:
           YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
           YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
           YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
         run: |
+          umask 077
           mkdir -p "$HOME/.config/rclone"
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
@@ -55,6 +61,7 @@ jobs:
       - name: Pull fresh GLM session from ydrive
         run: |
           set -e
+          umask 077
           rclone copyto "ydrive:Content factory/cloud_io/cnchat_ci/glm_session.json" \
             Instrument/GLM/glm_session.json
           SIZE=$(stat -c%s Instrument/GLM/glm_session.json)
@@ -74,41 +81,62 @@ jobs:
         id: run
         run: |
           set +e
-          mkdir -p /tmp/glmout
-          GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
-            python3 Instrument/GLM/glm_chat.py "$INPUT_PROMPT" \
+          mkdir -p /tmp/glmout/artifacts
+          printf '%s' "$INPUT_PROMPT" | GLM_HEADLESS=0 timeout 540 xvfb-run -a -s "-screen 0 1280x900x24" \
+            nice -n 15 python3 Instrument/GLM/glm_chat.py --stdin \
             --model "$INPUT_MODEL" --timeout "$INPUT_TIMEOUT" \
-            > /tmp/glmout/stdout.txt 2> /tmp/glmout/stderr.txt
-          RC=$?
-          echo "RC=$RC"
-          echo "--- stdout ---"; cat /tmp/glmout/stdout.txt
-          echo "--- stderr ---"; cat /tmp/glmout/stderr.txt
+            --diagnostics /tmp/glmout/artifacts/diagnostics.json \
+            > /tmp/glmout/artifacts/stdout.txt 2> /tmp/glmout/artifacts/stderr.txt
+          RC=${PIPESTATUS[1]}
           echo "rc=$RC" >> "$GITHUB_OUTPUT"
+          cat /tmp/glmout/artifacts/stderr.txt
+          cat /tmp/glmout/artifacts/stdout.txt
+          if [ "$RC" -ne 0 ]; then exit "$RC"; fi
+          python3 - <<'PYCODE'
+          import json, os, pathlib
+          root = pathlib.Path("/tmp/glmout/artifacts")
+          d = json.loads((root / "diagnostics.json").read_text())
+          assert d["status"] == "completed", d["status"]
+          assert d["actual_model"], "model not confirmed"
+          expected = os.environ["INPUT_EXPECTED"].strip()
+          if expected:
+              actual = (root / "stdout.txt").read_text().strip()
+              assert actual == expected, "answer does not match expected text"
+          PYCODE
         env:
+          INPUT_EXPECTED: ${{ inputs.expected }}
           INPUT_PROMPT: ${{ inputs.prompt }}
           INPUT_MODEL: ${{ inputs.model }}
           INPUT_TIMEOUT: ${{ inputs.timeout }}
 
-      - name: Collect screenshots + DOM
+      - name: Collect diagnostics
+        if: always()
         run: |
           mkdir -p /tmp/glmout/artifacts
-          cp "$GITHUB_WORKSPACE"/Instrument/GLM/outputs/*.png /tmp/glmout/artifacts/ 2>/dev/null || true
-          python3 - <<'PY'
-          import json, pathlib
-          p = pathlib.Path("Instrument/GLM/glm_session.json")
-          if p.exists():
-              # не выкладываем куки/токены в артефакт — только имена+длины, для диагностики
-              st = json.loads(p.read_text())
-              names = sorted({f"{c['name']}({len(c['value'])})"
-                              for c in st.get("cookies", []) if "z.ai" in c.get("domain", "")})
-              pathlib.Path("/tmp/glmout/artifacts/cookie_names.txt").write_text(
-                  "z.ai cookies: " + ", ".join(names) + "\n", encoding="utf-8")
-          PY
-          echo "--- стдout бойца ---"; cat /tmp/glmout/stdout.txt; echo
+          cp Instrument/GLM/outputs/*.png /tmp/glmout/artifacts/ 2>/dev/null || true
+          python3 - <<'PYCODE'
+          import json, os, pathlib
+          p = pathlib.Path("/tmp/glmout/artifacts/diagnostics.json")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as out:
+              if p.exists():
+                  d = json.loads(p.read_text())
+                  out.write("### GLM browser smoke\n\n")
+                  for key in ("status", "requested_model", "actual_model", "first_text_s",
+                              "completion_s", "total_s", "answer_chars", "partial_chars", "error_type"):
+                      if key in d:
+                          out.write(f"- {key}: `{d[key]}`\n")
+              else:
+                  out.write("GLM diagnostics missing: check setup or process timeout.\n")
+          PYCODE
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # was v4
+        if: always()
         with:
-          name: glm-smoke-screens
+          name: glm-smoke-diagnostics
           path: /tmp/glmout/artifacts/
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Remove credentials
+        if: always()
+        run: rm -f Instrument/GLM/glm_session.json "$HOME/.config/rclone/rclone.conf"
