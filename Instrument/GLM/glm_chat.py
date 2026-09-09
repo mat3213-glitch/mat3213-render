@@ -167,6 +167,19 @@ async def chat(prompt: str, model: str, timeout: int, thinking_mode: str = "", d
             submitted_at = time.monotonic()
             diagnostics["submit_stage"] = "enter"
             await textarea.press("Enter")
+            await page.wait_for_timeout(800)
+            if (await textarea.input_value() or "").strip():
+                diagnostics["submit_fallback"] = "button"
+                send = page.locator(
+                    "button[type='submit'], button[aria-label*='send' i], "
+                    "button[title*='send' i]"
+                ).last
+                if not await send.count() or not await send.is_visible():
+                    raise RuntimeError("Enter не отправил текст, кнопка Send не найдена")
+                await send.click(force=True)
+                await page.wait_for_timeout(800)
+            if (await textarea.input_value() or "").strip():
+                raise RuntimeError("текст остался в поле после submit")
             diagnostics["submit_stage"] = "submitted"
             print("  [submit] Enter", file=sys.stderr)
         except Exception as e:

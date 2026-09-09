@@ -66,7 +66,8 @@ def run_task(task: dict) -> dict:
         "error": error, "diagnostics": {
             key: diag[key] for key in ("status", "actual_model", "actual_thinking_mode",
                                        "submit_stage", "error_type", "first_text_s",
-                                       "input_fallback", "completion_s", "total_s") if key in diag
+                                       "input_fallback", "submit_fallback", "completion_s",
+                                       "total_s") if key in diag
         },
     }
 
