@@ -98,6 +98,14 @@ class AnswerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(text, "")
         self.assertEqual(d["status"], "refused")
 
+    async def test_thinking_placeholder_is_not_an_answer(self):
+        text, d = await self.read([("Thinking...", False)] * 5 + [("Готов", False)] * 3)
+        self.assertEqual(text, "Готов")
+        self.assertGreaterEqual(d["completion_s"], 8)
+        text, d = await self.read([("Thinking...", False)], timeout=5)
+        self.assertEqual(text, "")
+        self.assertEqual(d["status"], "timeout")
+
     def test_model_names_are_exact(self):
         self.assertEqual(glm._model_label("GLM-5.3\nSelect a model"), "GLM-5.3")
         self.assertEqual(glm._model_label("GLM-5.3-Flash"), "GLM-5.3-Flash")

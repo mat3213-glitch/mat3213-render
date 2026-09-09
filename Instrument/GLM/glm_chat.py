@@ -321,7 +321,11 @@ def _drop_thoughts(txt: str) -> str:
     """Убрать блок рассуждений: GLM кладёт его в тот же контейнер шапкой 'Thought Process'."""
     for marker in ("Thought Process", "Процесс размышлений", "Thinking"):
         if txt.startswith(marker):
-            return txt[len(marker):].strip()
+            txt = txt[len(marker):].strip()
+            break
+    # Thinking... is an animated placeholder, not a completed short answer.
+    if not txt.strip(". …\t\r\n"):
+        return ""
     return txt
 
 

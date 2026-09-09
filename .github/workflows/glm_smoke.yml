@@ -11,7 +11,7 @@ on:
         default: "Ответь ровно одним словом без пояснений: Готов"
         type: string
       expected:
-        description: "Expected exact answer (empty disables content assertion)"
+        description: "Expected exact answer (__ANY__ disables exact assertion)"
         required: false
         default: "Готов"
         type: string
@@ -100,7 +100,7 @@ jobs:
           assert d["status"] == "completed", d["status"]
           assert d["actual_model"], "model not confirmed"
           expected = os.environ["INPUT_EXPECTED"].strip()
-          if expected:
+          if expected and expected != "__ANY__":
               actual = (root / "answer.txt").read_text().strip()
               assert actual == expected, "answer does not match expected text"
           PYCODE
@@ -128,7 +128,7 @@ jobs:
           d = json.loads((root / 'repeat-diagnostics.json').read_text())
           assert d['status'] == 'completed'
           expected = os.environ['INPUT_EXPECTED'].strip()
-          if expected:
+          if expected and expected != "__ANY__":
               assert (root / 'repeat-answer.txt').read_text().strip() == expected
           PYCODE
         env:
