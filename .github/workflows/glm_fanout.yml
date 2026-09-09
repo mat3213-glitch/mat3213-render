@@ -29,9 +29,9 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --disable-pip-version-check --no-cache-dir "playwright==1.54.0"
-          google-chrome --version || python3 -m playwright install --with-deps chromium
-          sudo apt-get update -qq
-          sudo apt-get install -y --fix-missing rclone xvfb
+          google-chrome --version
+          rclone version
+          xvfb-run --help >/dev/null
 
       - name: Configure rclone
         env:
