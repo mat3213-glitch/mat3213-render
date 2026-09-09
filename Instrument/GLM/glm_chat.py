@@ -156,6 +156,13 @@ async def chat(prompt: str, model: str, timeout: int, thinking_mode: str = "", d
             diagnostics["submit_stage"] = "verify"
             typed = (await textarea.input_value() or "").strip()
             if prompt[:12] not in typed:
+                diagnostics["input_fallback"] = "fill_and_events"
+                await textarea.fill(prompt)
+                await textarea.dispatch_event("input")
+                await textarea.dispatch_event("change")
+                await page.wait_for_timeout(300)
+                typed = (await textarea.input_value() or "").strip()
+            if prompt[:12] not in typed:
                 raise RuntimeError(f"текст не попал в поле (в поле: «{typed[:40]}»)")
             submitted_at = time.monotonic()
             diagnostics["submit_stage"] = "enter"
