@@ -18,7 +18,7 @@ on:
       model:
         description: "Модель (GLM-5.3 | GLM-5.3-Flash | пусто=текущая)"
         required: false
-        default: "GLM-5.3"
+        default: "GLM-5.3-Flash"
         type: string
       timeout:
         description: "Таймаут ожидания ответа, сек"
