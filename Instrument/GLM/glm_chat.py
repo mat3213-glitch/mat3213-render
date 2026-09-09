@@ -261,6 +261,7 @@ async def _visible_controls_snapshot(page, limit: int = 40) -> list[dict]:
                     const relevant = nearComposer || aria === 'Select a model' ||
                         cls.includes('modelSelectorButton') || /Deep Think|Think|Search|Send|More|API|ZCode/.test(text);
                     return relevant && r.width > 0 && r.height > 0 &&
+                        r.bottom >= 0 && r.top <= window.innerHeight &&
                         area < 200000 && text.length <= 160 &&
                         s.visibility !== 'hidden' && s.display !== 'none';
                 });
