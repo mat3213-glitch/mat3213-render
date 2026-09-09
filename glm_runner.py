@@ -32,11 +32,12 @@ def run_task(task: dict) -> dict:
     started = time.time()
     timeout = _task_timeout(task.get("timeout"))
     diagnostics = ROOT / f"glm-diagnostics-{task.get('id', 'task')}.json"
+    answer = ROOT / f"glm-answer-{task.get('id', 'task')}.txt"
     args = [
         "xvfb-run", "-a", "-s", "-screen 0 1280x900x24", "nice", "-n", "15",
         sys.executable, str(GLM_CHAT), "--stdin", "--model", MODEL,
         "--thinking-mode", THINKING_MODE, "--timeout", str(timeout),
-        "--diagnostics", str(diagnostics),
+        "--diagnostics", str(diagnostics), "--output", str(answer),
     ]
     env = dict(os.environ)
     env["GLM_HEADLESS"] = "0"
@@ -44,7 +45,10 @@ def run_task(task: dict) -> dict:
     try:
         result = subprocess.run(args, input=str(task["prompt"]), capture_output=True,
                                 text=True, timeout=timeout + 120, env=env)
-        text = result.stdout.strip()
+        try:
+            text = answer.read_text(encoding="utf-8").strip()
+        except OSError:
+            text = ""
         ok = result.returncode == 0 and bool(text)
         error = "" if ok else (result.stderr or f"empty output (rc={result.returncode})")[-300:]
         if not ok:
