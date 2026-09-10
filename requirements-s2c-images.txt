@@ -1,0 +1,6 @@
+# Signals only. Do not add to Content Factory's shared requirements.
+numpy==1.26.4
+opencv-python==4.11.0.86
+onnxruntime==1.20.1
+rapidocr-onnxruntime==1.4.4
+Pillow==11.3.0

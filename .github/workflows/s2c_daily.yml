@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: false
+      image_test:
+        description: "Test one live news illustration, without sending a Telegram draft"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "0 6 * * *"
     - cron: "0 14 * * *"
@@ -57,15 +62,46 @@ jobs:
           pip install -q requests playwright yt-dlp
           python -m playwright install --with-deps chromium
 
+      - name: Install isolated Signals image checks
+        run: |
+          python -m venv .s2c-image-venv
+          .s2c-image-venv/bin/pip install -q -r requirements-s2c-images.txt
+          .s2c-image-venv/bin/python -m unittest test_s2c_daily test_s2c_images
+          .s2c-image-venv/bin/python s2c_images.py
+
+      - name: Pull Signals image cache
+        run: |
+          mkdir -p s2c_image_cache
+          rclone copy "ydrive:Content factory/cloud_io/s2c/image_cache" s2c_image_cache || echo "::warning::Signals image cache unavailable; will generate if needed"
+
       - name: Run s2c daily cycle
         env:
           S2C_WORKER_SECRET: ${{ secrets.S2C_WORKER_SECRET }}
           GH_PAT: ${{ secrets.GH_PAT }}
           S2C_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          S2C_IMAGE_TEST: ${{ inputs.image_test || 'false' }}
         run: |
           if [ "$S2C_DRY_RUN" = "true" ]; then
-            python3 s2c_daily.py --dry-run
+            .s2c-image-venv/bin/python s2c_daily.py --dry-run
+          elif [ "$S2C_IMAGE_TEST" = "true" ]; then
+            .s2c-image-venv/bin/python s2c_image_smoke.py
           else
-            python3 s2c_daily.py
+            .s2c-image-venv/bin/python s2c_daily.py
           fi
+
+      - name: Persist Signals image cache
+        if: always()
+        run: |
+          if [ -d s2c_image_cache ]; then
+            rclone copy s2c_image_cache "ydrive:Content factory/cloud_io/s2c/image_cache"
+          fi
+
+      - name: Keep image smoke evidence
+        if: always() && inputs.image_test
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: s2c-image-smoke
+          path: s2c_image_smoke_output/
+          if-no-files-found: warn
+          retention-days: 7
 

@@ -3,10 +3,21 @@ from unittest.mock import patch
 import base64
 import json
 import os
+import tempfile
+from pathlib import Path
 from urllib.error import HTTPError
 import s2c_daily as m
 
 class DailyTests(unittest.TestCase):
+    def setUp(self):
+        m._IMAGEFREE_STOPPED = False
+        m._IMAGEFREE_TASKS = 0
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.cache = patch.object(m.s2c_images, 'CACHE_DIR', Path(self.tmp.name))
+        self.cache.start()
+        self.addCleanup(self.cache.stop)
+
     def test_title(self):
         self.assertEqual(m.split_post('**НОВЫЙ ЗАГОЛОВОК**\n\nТело **текста**.'), ('НОВЫЙ ЗАГОЛОВОК', 'Тело текста.'))
 
@@ -19,7 +30,8 @@ class DailyTests(unittest.TestCase):
     def test_imagefree_png_bytes(self):
         candidate = {'id':'arxiv:1','title':'AI paper','text':'facts','url':'https://example.org/paper'}
         png = b'\x89PNG\r\n\x1a\n' + b'0' * 6000
-        with patch.object(m, '_imagefree_submit', return_value=('task-1', None)), patch.object(m, '_imagefree_wait', return_value=('https://cdn.example/a.png', None)), patch.object(m, '_download_png', return_value=png), patch.object(m.time, 'sleep'):
+        brief={'subject':'a mechanical gripper','action':'lifting a glass sphere','setting':'on a plain workbench','simplified_scene':'a mechanical gripper holding glass','reason':'Shows fragile object manipulation'}
+        with patch.object(m, '_imagefree_brief', return_value=brief), patch.object(m.s2c_images, 'check_image', return_value={'ok':True,'reason':'clean'}), patch.object(m, '_imagefree_submit', return_value=('task-1', None)), patch.object(m, '_imagefree_wait', return_value=('https://cdn.example/a.png', None)), patch.object(m, '_download_png', return_value=png), patch.object(m.time, 'sleep'):
             self.assertEqual(m.imagefree_image_bytes(candidate), png)
 
     def test_worker_add_multipart_with_image(self):
@@ -92,7 +104,7 @@ class DailyTests(unittest.TestCase):
         def add(url,secret,draft,image=None):
             delivered.append(draft)
             return True,{'ok':True}
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',side_effect=['SKIP','**TITLE**\n\nBody']), patch.object(m,'og_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=None), patch.object(m,'worker_add',side_effect=add), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',side_effect=['SKIP','**TITLE**\n\nBody']), patch.object(m,'og_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',side_effect=add), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
         self.assertEqual(len(delivered),1)
         self.assertEqual(delivered[0]['id'],'1')
@@ -103,7 +115,7 @@ class DailyTests(unittest.TestCase):
 
     def test_one_generation_error_does_not_fail_full_delivery(self):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(2)]
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=None), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
 
 if __name__=='__main__': unittest.main()

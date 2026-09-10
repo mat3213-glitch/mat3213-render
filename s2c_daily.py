@@ -34,6 +34,8 @@ from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
+import s2c_images
+
 HERE = Path(__file__).resolve().parent
 PROFILE_FILE = HERE / "s2c_channel_profile.json"
 QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"
@@ -658,16 +660,14 @@ def og_image(url: str, timeout: int = 15) -> str | None:
     return img
 
 
-def _imagefree_prompt(candidate: dict) -> str:
-    title = str(candidate.get("title") or "").strip()
-    summary = re.sub(r"\s+", " ", str(candidate.get("text") or "")).strip()
-    topic = f"{title}. {summary[:500]}".strip()
-    return (
-        "Editorial technology news cover image, no text, no words, no letters, no typography, "
-        "no captions, no logos, no watermark, no faces, no people, no portraits. "
-        "Modern clean composition, realistic objects or abstract technical visual, "
-        f"topic: {topic}"
-    )
+def _imagefree_brief(candidate: dict) -> dict:
+    brief = s2c_images.load_brief(candidate)
+    if brief is None:
+        raw = qwen_generate(s2c_images.brief_prompt(candidate),
+                            os.getenv('QWEN_MODEL', 'Qwen3-Coder').strip())
+        brief = s2c_images.parse_brief(raw, candidate)
+        s2c_images.save_brief(candidate, brief)
+    return brief
 
 
 def _imagefree_post(path: str, body: dict, timeout: int = 45) -> dict:
@@ -746,22 +746,61 @@ def _download_png(url: str, timeout: int = 90) -> bytes | None:
     return data
 
 
+_IMAGEFREE_STOPPED = False
+_IMAGEFREE_TASKS = 0
+
+
 def imagefree_image_bytes(candidate: dict, aspect: str = "4:3") -> bytes | None:
-    prompt = _imagefree_prompt(candidate)
-    task_id, err = _imagefree_submit(prompt, aspect)
-    if err:
-        print(f"::warning::imagefree submit {candidate.get('id')}: {err}")
+    global _IMAGEFREE_STOPPED, _IMAGEFREE_TASKS
+    cached = s2c_images.load_image(candidate, aspect)
+    if cached:
+        verdict = s2c_images.check_image(cached)
+        if verdict.get('ok') is True:
+            return cached
+        if verdict['reason'].startswith('qa_'):
+            _IMAGEFREE_STOPPED = True
+    if _IMAGEFREE_STOPPED or _IMAGEFREE_TASKS >= 8:
         return None
-    print(f"[s2c] imagefree task {task_id[:8]}… для {candidate.get('id')}")
-    image_url, err = _imagefree_wait(task_id)
-    if err:
-        print(f"::warning::imagefree status {candidate.get('id')}: {err}")
+    try:
+        brief = _imagefree_brief(candidate)
+    except Exception as exc:
+        print(f"::warning::s2c image brief unavailable: {type(exc).__name__}")
         return None
-    image = _download_png(image_url)
-    if not image:
-        print(f"::warning::imagefree download {candidate.get('id')}: bad_png")
-    time.sleep(random.uniform(6, 15))
-    return image
+    for attempt in range(2):
+        if _IMAGEFREE_TASKS >= 8:
+            break
+        prompt = s2c_images.render_prompt(brief, attempt)
+        _IMAGEFREE_TASKS += 1
+        task_id, err = _imagefree_submit(prompt, aspect)
+        if err or not task_id:
+            # Never compete with an active pool task or retry a site/IP challenge.
+            _IMAGEFREE_STOPPED = True
+            print(f"::warning::s2c imagefree stopped on submit: {err or 'missing_task'}")
+            return None
+        image_url, err = _imagefree_wait(task_id)
+        if err or not image_url:
+            # A timed-out task may still be running. Do not start another.
+            _IMAGEFREE_STOPPED = True
+            print(f"::warning::s2c imagefree stopped on status: {err or 'missing_url'}")
+            return None
+        image = _download_png(image_url)
+        time.sleep(random.uniform(6, 15))
+        if not image:
+            _IMAGEFREE_STOPPED = True
+            return None
+        verdict = s2c_images.check_image(image)
+        print(f"[s2c] image QA attempt={attempt + 1}: {verdict['reason']}")
+        if verdict.get('ok') is True:
+            try:
+                s2c_images.save_image(candidate, image, prompt, aspect, verdict)
+            except OSError:
+                print('::warning::s2c image cache write failed; draft deferred')
+                return None
+            return image
+        if verdict['reason'].startswith('qa_'):
+            _IMAGEFREE_STOPPED = True
+            return None
+    return None
 
 
 def candidate_image(candidate: dict) -> str | None:
@@ -937,6 +976,11 @@ def main() -> int:
         image_bytes = None
         if not img:
             image_bytes = imagefree_image_bytes(c)
+            if not image_bytes:
+                # Not sent and not marked as sent: next scheduled run can retry.
+                print(f"::warning::s2c image pending for {c['id']}; draft deferred")
+                failures += 1
+                continue
         title, body = split_post(text)
         draft = {"id": c["id"], "source": c.get("source") or name, "source_url": c.get("url") or "", "title": title, "text": body, "image_url": img,
                  "source_text": f"{c['title']}\n{c.get('text') or ''}"}
