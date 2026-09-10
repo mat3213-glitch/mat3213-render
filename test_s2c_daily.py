@@ -30,7 +30,8 @@ class DailyTests(unittest.TestCase):
     def test_imagefree_png_bytes(self):
         candidate = {'id':'arxiv:1','title':'AI paper','text':'facts','url':'https://example.org/paper'}
         png = b'\x89PNG\r\n\x1a\n' + b'0' * 6000
-        brief={'subject':'a mechanical gripper','action':'lifting a glass sphere','setting':'on a plain workbench','simplified_scene':'a mechanical gripper holding glass','reason':'Shows fragile object manipulation'}
+        brief={'who':'Механический манипулятор','does_what':'поднимает стеклянную сферу',
+               'subject':'a mechanical gripper','action':'lifting a glass sphere','setting':'a plain empty background','simplified_scene':'a mechanical gripper holding glass','reason':'Shows fragile object manipulation'}
         with patch.object(m, '_imagefree_brief', return_value=brief), patch.object(m.s2c_images, 'check_image', return_value={'ok':True,'reason':'clean'}), patch.object(m, '_imagefree_submit', return_value=('task-1', None)), patch.object(m, '_imagefree_wait', return_value=('https://cdn.example/a.png', None)), patch.object(m, '_download_png', return_value=png), patch.object(m.time, 'sleep'):
             self.assertEqual(m.imagefree_image_bytes(candidate), png)
 

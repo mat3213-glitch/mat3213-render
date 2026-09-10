@@ -34,3 +34,4 @@ kimi_session.json
 qwen/qwen_session.json
 .agents/
 remotion/.agents/
+.s2c-image-models/

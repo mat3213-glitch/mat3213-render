@@ -11,9 +11,11 @@ import s2c_images as images
 NEWS = {'id':'arxiv:example', 'title':'New research finds missing specification details',
         'text':'Ambiguous specifications leave implementation choices undefined.',
         'url':'https://example.org/paper', 'score':10}
-BRIEF = {'subject':'a structure of translucent blocks',
+BRIEF = {'who': 'Бенчмарк, проверяющий пробелы в спецификациях',
+         'does_what': 'выявляет критические пробелы в описаниях методов',
+         'subject':'a structure of translucent blocks',
          'action':'several missing joints leave gaps between interlocking pieces',
-         'setting':'a plain matte tabletop with soft side lighting',
+         'setting':'a plain empty background',
          'simplified_scene':'two translucent blocks separated by a missing connector',
          'reason':'Missing joints represent unspecified implementation choices.'}
 
@@ -30,12 +32,23 @@ class ImageTests(unittest.TestCase):
 
     def test_brief_retains_metaphor_not_headline(self):
         brief = images.parse_brief(json.dumps(BRIEF), NEWS)
+        self.assertEqual(brief['who'], BRIEF['who'])
+        self.assertEqual(brief['does_what'], BRIEF['does_what'])
         prompt = images.render_prompt(brief)
         self.assertIn('missing joints', prompt)
         self.assertNotIn(NEWS['title'], prompt)
         self.assertNotIn(NEWS['url'], prompt)
+        self.assertIn('Flat vector-style editorial illustration', prompt)
+        self.assertIn('Strictly three solid ink colors', prompt)
+        self.assertNotIn(BRIEF['who'], prompt)
         self.assertIn('No faces', prompt)
         self.assertIn('No text', prompt)
+
+    def test_missing_actor_analysis_is_rejected(self):
+        for field in ('who', 'does_what'):
+            broken = {k: v for k, v in BRIEF.items() if k != field}
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                images.parse_brief(json.dumps(broken), NEWS)
 
     def test_unsafe_or_invalid_brief_is_rejected(self):
         for val in ('a laptop screen showing a report', 'a portrait of a scientist',
