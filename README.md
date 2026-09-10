@@ -55,6 +55,7 @@
 | Скрипт | Workflow | Назначение |
 |---|---|---|
 | `img_gen_job.py` / `gen_cf_image.py` | `img_gen.yml` | пакетная генерация картинок через CF Workers AI (flux/SDXL) |
+| **`s2c_daily.py` / `s2c_images.py`** ⭐ | **`s2c_daily.yml`** | **SignalToChannel daily: HN/Lobsters/arXiv/Grok/ChatGPT/TG RSS/YouTube/official blogs → Qwen rewrite → Worker `/add`; для новостей без картинки использует изолированный ImageFree fallback `s2c-poster-v1`, не трогая Content Factory imagefree pool.** |
 | `veofree_gen.py` | `veofree_gen.yml` | VeoFree (Seedance) t2v — 1 генерация/прогон (свежий IP раннера) |
 | `veofree_i2v_gen.py` | `veofree_i2v_gen.yml` | VeoFree i2v — видео из фото, 1/прогон |
 
@@ -84,6 +85,52 @@
 | — | `mimo_probe.yml` | mimo probe (узкая генерация/дебаг по спеке) |
 
 ---
+
+## 8. SignalToChannel daily
+
+`s2c_daily.py` — отдельный production-пайплайн для канала «ИИшница». Он не
+публикует напрямую: все черновики отправляются в Cloudflare Worker
+`s2c-moderation-1` через `/add`, дальше идут в личку бота на модерацию.
+
+Источники:
+
+- Hacker News
+- Lobsters
+- arXiv
+- Grok/ChatGPT JSON из `mat3213-signals/signals/incoming/`
+- Telegram RSS через `t.me/s`
+- YouTube
+- официальные блоги OpenAI, Google DeepMind, Hugging Face, Microsoft Research,
+  NVIDIA
+
+Картинки:
+
+- если у источника есть нормальная картинка, используется она;
+- если картинки нет, `s2c_images.py` делает Signals-only fallback через
+  `https://imagefree.net`;
+- политика `s2c-poster-v1`: Qwen JSON-бриф WHO/DOES WHAT, плоский
+  векторный постер, без текста, логотипов, лиц, людей, тел, конечностей,
+  person pictograms, экранов и документов;
+- хорошие PNG кешируются в `ydrive:Content factory/cloud_io/s2c/image_cache`;
+- общий Content Factory `imagefree_pool_job.py`, банки промптов, `art_judge.py`,
+  `ocr_gate.py` и workflows не меняются ради SignalToChannel.
+
+Надёжность после правки `e6391d7`:
+
+- bad JSON/Unicode от ImageFree — ошибка одного кандидата, не падение всего job;
+- после успешного Worker `/add` dedup state сразу сохраняется;
+- слишком длинные тексты не отправляются, если не помещаются в один photo
+  caption с источником;
+- есть общий time budget с резервом на сохранение state/cache;
+- `S2C_IMAGEFREE_MAX_TASKS` ограничивает число ImageFree tasks.
+
+Проверка:
+
+```bash
+python -X utf8 -m unittest test_s2c_daily test_s2c_images
+```
+
+Последний локальный результат: 31/31 OK.
 
 ## Данные и ассеты (в репо)
 
