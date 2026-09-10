@@ -657,7 +657,8 @@ def _imagefree_prompt(candidate: dict) -> str:
     summary = re.sub(r"\s+", " ", str(candidate.get("text") or "")).strip()
     topic = f"{title}. {summary[:500]}".strip()
     return (
-        "Editorial technology news cover image, no text, no logos, no watermark. "
+        "Editorial technology news cover image, no text, no words, no letters, no typography, "
+        "no captions, no logos, no watermark, no faces, no people, no portraits. "
         "Modern clean composition, realistic objects or abstract technical visual, "
         f"topic: {topic}"
     )
