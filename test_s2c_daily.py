@@ -38,6 +38,11 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(out[0]['id'],'youtube:abc123')
         self.assertEqual(out[0]['image_url'],'https://i.ytimg.com/vi/abc123/hqdefault.jpg')
 
+    def test_youtube_page_fallback(self):
+        with patch.object(m, '_youtube_feed_bytes', side_effect=HTTPError('feed',404,'missing',{},None)), patch.object(m, '_youtube_page_videos', return_value=[('abcdefghijk','New robot')]):
+            out=m.youtube_fetch(4,{})
+        self.assertEqual(out[0]['id'],'youtube:abcdefghijk')
+
     def test_skip_replaced_and_not_counted_as_sent(self):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(3)]
         state={'sent_ids':[], 'collected':{}}

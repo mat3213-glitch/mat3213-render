@@ -413,25 +413,53 @@ def _youtube_feed_bytes(url: str) -> bytes:
         return resp.read()
 
 
+def _youtube_page_videos(handle: str) -> list[tuple[str, str]]:
+    html = _http_bytes(f"https://www.youtube.com/@{handle}/videos", timeout=30).decode("utf-8", "replace")
+    out, seen = [], set()
+    for match in re.finditer(r'"videoId":"([A-Za-z0-9_-]{11})"', html):
+        video_id = match.group(1)
+        if video_id in seen:
+            continue
+        nearby = html[match.end():match.end() + 1200]
+        title_match = re.search(r'"title":\{"runs":\[\{"text":("(?:[^"\\]|\\.)*")', nearby)
+        if not title_match:
+            continue
+        try:
+            title = json.loads(title_match.group(1)).strip()
+        except json.JSONDecodeError:
+            continue
+        if title:
+            out.append((video_id, title))
+            seen.add(video_id)
+    return out
+
+
 def youtube_fetch(limit: int, profile: dict) -> list[dict]:
     raw = os.getenv("S2C_YOUTUBE_CHANNELS", "").strip()
     configured = [x.strip() for x in raw.split(",") if x.strip()]
     channels = {x:x for x in configured} if configured else _DEFAULT_YOUTUBE_CHANNELS
     out = []
     for label, channel_id in channels.items():
+        videos = []
         try:
             feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
             feed = ET.fromstring(_youtube_feed_bytes(feed_url))
         except (HTTPError, URLError, OSError, ET.ParseError) as exc:
             print(f"::warning::youtube {label}: {type(exc).__name__}: {exc}")
-            continue
-        ns = {"atom":"http://www.w3.org/2005/Atom", "yt":"http://www.youtube.com/xml/schemas/2015"}
-        entries = feed.findall("atom:entry", ns) or feed.findall(".//{*}entry")
-        if not entries:
-            print(f"::warning::youtube {label}: empty feed root={feed.tag}")
-        for entry in entries[:5]:
-            video_id = entry.findtext("yt:videoId", default="", namespaces=ns) or entry.findtext("{*}videoId", default="")
-            title = (entry.findtext("atom:title", default="", namespaces=ns) or entry.findtext("{*}title", default="")).strip()
+            try:
+                videos = _youtube_page_videos(label)
+            except (HTTPError, URLError, OSError) as page_exc:
+                print(f"::warning::youtube page {label}: {type(page_exc).__name__}: {page_exc}")
+        else:
+            ns = {"atom":"http://www.w3.org/2005/Atom", "yt":"http://www.youtube.com/xml/schemas/2015"}
+            entries = feed.findall("atom:entry", ns) or feed.findall(".//{*}entry")
+            videos = [(
+                entry.findtext("yt:videoId", default="", namespaces=ns) or entry.findtext("{*}videoId", default=""),
+                (entry.findtext("atom:title", default="", namespaces=ns) or entry.findtext("{*}title", default="")).strip(),
+            ) for entry in entries[:5]]
+        if not videos:
+            print(f"::warning::youtube {label}: no videos parsed")
+        for video_id, title in videos[:5]:
             if video_id and title:
                 out.append({"id":f"youtube:{video_id}", "title":title,
                             "url":f"https://www.youtube.com/watch?v={video_id}",
