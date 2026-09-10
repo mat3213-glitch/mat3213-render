@@ -16,11 +16,29 @@ class DailyTests(unittest.TestCase):
     def test_generated_markdown_source_line_removed(self):
         self.assertEqual(m.split_post('ЗАГОЛОВОК\n\nТело.\n\nИсточник: [https://example.org/a](https://example.org/a)'), ('ЗАГОЛОВОК', 'Тело.'))
 
-    def test_imagefree_url_response(self):
+    def test_imagefree_png_bytes(self):
         candidate = {'id':'arxiv:1','title':'AI paper','text':'facts','url':'https://example.org/paper'}
-        with patch.dict(os.environ, {'S2C_IMAGEFREE_URL':'https://img.example/generate'}), patch.object(m.urllib.request, 'urlopen') as urlopen:
-            urlopen.return_value.__enter__.return_value.read.return_value = b'{"image_url":"https://cdn.example/a.png"}'
-            self.assertEqual(m.imagefree_image(candidate), 'https://cdn.example/a.png')
+        png = b'\x89PNG\r\n\x1a\n' + b'0' * 6000
+        with patch.object(m, '_imagefree_submit', return_value=('task-1', None)), patch.object(m, '_imagefree_wait', return_value=('https://cdn.example/a.png', None)), patch.object(m, '_download_png', return_value=png), patch.object(m.time, 'sleep'):
+            self.assertEqual(m.imagefree_image_bytes(candidate), png)
+
+    def test_worker_add_multipart_with_image(self):
+        captured = {}
+        class FakeResponse:
+            def __enter__(self): return self
+            def __exit__(self, *args): return None
+            def read(self): return b'{"ok": true}'
+        def fake_urlopen(req, timeout):
+            captured['content_type'] = req.headers.get('Content-type') or req.headers.get('Content-Type')
+            captured['body'] = req.data
+            return FakeResponse()
+        png = b'\x89PNG\r\n\x1a\n' + b'0' * 6000
+        draft = {'id':'1','title':'T','text':'B','image_url':None}
+        with patch.object(m.urllib.request, 'urlopen', side_effect=fake_urlopen):
+            ok, _ = m.worker_add('https://worker.example', 'secret', draft, png)
+        self.assertTrue(ok)
+        self.assertIn('multipart/form-data', captured['content_type'])
+        self.assertIn(b'name="image"; filename="imagefree.png"', captured['body'])
 
     def test_official_blog_rss(self):
         feed=b'<rss><channel><item><title>New model</title><link>https://example.org/model</link><description><![CDATA[<b>Details</b>]]></description></item></channel></rss>'
@@ -71,10 +89,10 @@ class DailyTests(unittest.TestCase):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(3)]
         state={'sent_ids':[], 'collected':{}}
         delivered=[]
-        def add(url,secret,draft):
+        def add(url,secret,draft,image=None):
             delivered.append(draft)
             return True,{'ok':True}
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',side_effect=['SKIP','**TITLE**\n\nBody']), patch.object(m,'og_image',return_value=None), patch.object(m,'worker_add',side_effect=add), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',side_effect=['SKIP','**TITLE**\n\nBody']), patch.object(m,'og_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=None), patch.object(m,'worker_add',side_effect=add), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
         self.assertEqual(len(delivered),1)
         self.assertEqual(delivered[0]['id'],'1')
@@ -85,7 +103,7 @@ class DailyTests(unittest.TestCase):
 
     def test_one_generation_error_does_not_fail_full_delivery(self):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(2)]
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=None), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
 
 if __name__=='__main__': unittest.main()
