@@ -694,7 +694,7 @@ def main() -> int:
     print(f"[s2c] доставлено: {delivered}; обработано: {len(new_sent - sent_set)}; в состоянии всего: {len(state['sent_ids'])}")
     save_state_and_push(state, yandex_state)
 
-    return 1 if failures else 0
+    return 1 if failures and delivered < max_drafts else 0
 
 
 if __name__ == "__main__":

@@ -54,5 +54,10 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(state['sent_ids'],['1'])
         self.assertIn('0',state['deferred_until'])
 
+    def test_one_generation_error_does_not_fail_full_delivery(self):
+        items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(2)]
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+            self.assertEqual(m.main(),0)
+
 if __name__=='__main__': unittest.main()
 
