@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 from urllib.request import urlopen
 
-POLICY_VERSION = 's2c-scene-v1'
+POLICY_VERSION = 's2c-scene-v2'
 CACHE_DIR = Path('s2c_image_cache')
 MODEL_DIR = Path(__file__).resolve().parent / '.s2c-image-models'
 YUNET_SHA = '8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4'
@@ -184,13 +184,26 @@ class ImageGuard:
                 _, faces = self.face.detect(sized)
                 if faces is not None and len(faces):
                     return {'ok': False, 'reason': 'face', 'faces': len(faces)}
-            # Detection without recognition also catches unreadable generated lettering.
-            # Reject every detected text region; unlike the music pool, no label is allowed.
+            # Independent passes: recognition catches real letters (including large ones),
+            # detection catches unreadable pseudo-text. Geometry excludes entire frame edges
+            # and isolated screw holes, observed false positives on real ImageFree outputs.
             for turns in (0, 1):
                 rotated = np.ascontiguousarray(np.rot90(arr, turns))
+                words, _ = self.ocr(rotated, use_det=True, use_cls=False, use_rec=True)
+                if words is not None:
+                    for _, text, score in words:
+                        if float(score) >= 0.85 and any(c.isalnum() for c in str(text)):
+                            return {'ok': False, 'reason': 'text_region', 'kind':'recognized'}
                 boxes, _ = self.ocr(rotated, use_det=True, use_cls=False, use_rec=False)
-                if boxes is not None and len(boxes):
-                    return {'ok': False, 'reason': 'text_region', 'regions': len(boxes)}
+                if boxes is not None:
+                    h, w = rotated.shape[:2]
+                    for box in boxes:
+                        points = np.asarray(box, dtype=float)
+                        width = float(np.linalg.norm(points[1] - points[0]))
+                        height = float(np.linalg.norm(points[3] - points[0]))
+                        if (0.008 <= height / h <= 0.12 and width / w >= 0.04
+                                and width / max(height, 1) >= 2.2):
+                            return {'ok': False, 'reason': 'text_region', 'kind':'pseudo_text_line'}
             return {'ok': True, 'reason': 'clean', 'policy': POLICY_VERSION}
         except Exception as exc:
             return {'ok': False, 'reason': 'qa_error:' + type(exc).__name__}
