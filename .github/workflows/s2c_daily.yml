@@ -19,7 +19,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
 
@@ -56,3 +56,5 @@ jobs:
           S2C_WORKER_SECRET: ${{ secrets.S2C_WORKER_SECRET }}
           GH_PAT: ${{ secrets.GH_PAT }}
         run: python3 s2c_daily.py
+
+

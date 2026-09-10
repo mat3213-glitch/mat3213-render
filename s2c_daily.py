@@ -40,7 +40,7 @@ DEFAULT_YD_STATE = "Content factory/cloud_io/s2c/state.json"
 
 HN_BASE = "https://hacker-news.firebaseio.com/v0"
 LOB_BASE = "https://lobste.rs"
-ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_API = "https://export.arxiv.org/api/query"
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) signal-to-channel/1.0"
 
 # Отправной редакторский промпт (голос «ИИшницы») — тот же, что в SignalToChannel writer.py.
@@ -49,13 +49,15 @@ _EDITOR_PROMPT = """Ты редактор русскоязычного Telegram-
 
 Стиль и формат:
 * Заголовок — КАПС-кликбейт на русском (1 строка, без #), цепляет. Примеры: «ЭТО БЕСПЛАТНО?!», «РОБОТЫ УКРАЛИ РАБОТУ МОДЕРАТОРАМ», «GPT-5.6 РАЗДАЁТ БЕСПЛАТНЫЙ ДОСТУП»
-* 3–5 коротких абзацев с пустой строкой между ними. Живой язык, хуки, лёгкий юмор или ирония.
+* 3–5 коротких абзацев с пустой строкой между ними. Живой язык, хуки, лёгкий юмор или ирония. Весь готовый пост вместе с заголовком и ссылкой — не более 900 символов.
 * Хватай за внимание: конкретные цифры, неожиданные сравнения, бытовые аналогии.
 * Не используй штампы «революционный», «заслуживает внимания», «в эпоху», «это не просто».
 * Не добавляй фактов, которых нет в исходнике. Не обещай доходность и не давай инвестиционных советов.
 * Последний абзац — вывод/мораль: 1–2 предложения, зачем это важно обычному читателю.
 * Последняя строка: «Источник: <ссылка>».
 * Если данных мало или тема не относится к ИИ/роботам/технологиям, ответь ровно: SKIP.
+* Рекламные интеграции, продвижение авторских каналов, курсов, вебинаров и реферальных предложений — SKIP. Новости о продуктах допустимы.
+* Пиши обычный текст без Markdown и звёздочек. Заголовок только в первой строке, в теле не повторяй.
 * Перед ответом молча проверь: заголовок цепляет, есть хук, есть юмор/irony, есть мораль, есть ссылка.
 * Весь текст ТОЛЬКО на русском языке. Никакого английского в теле поста.
 
@@ -211,11 +213,11 @@ def _sig_id(source_url: str, title: str) -> str:
 def _finding_to_candidate(f: dict, source: str = "") -> dict | None:
     if not isinstance(f, dict):
         return None
-    title = str(f.get("title") or "").strip()
+    title = str(f.get("title") or f.get("signal") or f.get("name") or "").strip()
     url = str(f.get("source_url") or f.get("url") or f.get("source_link") or f.get("link") or "").strip()
     if not title:
         return None
-    text = str(f.get("what_found") or f.get("what") or f.get("practical_value") or "").strip()
+    text = "\n".join(str(f[k]).strip() for k in ("what_found", "what", "summary", "description", "practical_value", "why_it_matters", "caveat", "free", "limit") if f.get(k))
     return {
         "id": _sig_id(url, title),
         "title": title,
@@ -230,10 +232,10 @@ def _finding_to_candidate(f: dict, source: str = "") -> dict | None:
 def grok_fetch(limit: int, profile: dict) -> list[dict]:
     token = os.getenv("GH_PAT", "").strip()
     if not token:
-        print("[s2c] grok: нет GITHUB_TOKEN — пропуск")
+        raise RuntimeError("grok: missing GH_PAT")
         return []
     today = datetime.now(timezone.utc)
-    dates = [(today - timedelta(days=d)).strftime("%Y-%m-%d") for d in range(2)]
+    dates = [(today - timedelta(days=d)).strftime("%Y-%m-%d") for d in range(7)]
     out = []
     for date_str in dates:
         path = f"signals/incoming/grok_{date_str}.json"
@@ -243,7 +245,11 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
             data = json.loads(
                 __import__("base64").b64decode(raw["content"]).decode("utf-8", "replace")
             )
-        except (HTTPError, URLError, OSError, KeyError, json.JSONDecodeError):
+        except HTTPError as exc:
+            if exc.code != 404:
+                raise
+            continue
+        if str(data.get("source") or "grok").lower() == "chatgpt":
             continue
         # основной пул — candidates (Grok) или findings (legacy)
         for f in data.get("candidates", data.get("findings", [])):
@@ -278,13 +284,14 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
                     "score": 40,
                 })
         # build_today — extra Grok field
-        for f in data.get("build_today", []):
+        builds = data.get("build_today", [])
+        for f in ([builds] if isinstance(builds, dict) else builds):
             if isinstance(f, dict):
                 c = _finding_to_candidate(f, source="grok")
                 if c:
                     c["score"] = 60
                     out.append(c)
-    return out[:limit]
+    return out
 
 
 # ----------------------------------------------------------------------------
@@ -295,26 +302,31 @@ def grok_fetch(limit: int, profile: dict) -> list[dict]:
 def chatgpt_fetch(limit: int, profile: dict) -> list[dict]:
     token = os.getenv("GH_PAT", "").strip()
     if not token:
-        return []
+        raise RuntimeError("chatgpt: missing GH_PAT")
     today = datetime.now(timezone.utc)
-    dates = [(today - timedelta(days=d)).strftime("%Y-%m-%d") for d in range(2)]
+    dates = [(today - timedelta(days=d)).strftime("%Y-%m-%d") for d in range(7)]
     out = []
     for date_str in dates:
-        path = f"signals/incoming/chatgpt_{date_str}.json"
-        url = f"https://api.github.com/repos/{_SIGNALS_REPO}/contents/{path}"
-        try:
-            raw = _gh_json(url, token)
-            data = json.loads(
-                __import__("base64").b64decode(raw["content"]).decode("utf-8", "replace")
-            )
-        except (HTTPError, URLError, OSError, KeyError, json.JSONDecodeError):
-            continue
-        for f in data.get("findings", []):
-            c = _finding_to_candidate(f, source="chatgpt")
-            if c:
-                c["score"] = 80
-                out.append(c)
-    return out[:limit]
+        for prefix in ("chatgpt", "grok"):
+            path = f"signals/incoming/{prefix}_{date_str}.json"
+            url = f"https://api.github.com/repos/{_SIGNALS_REPO}/contents/{path}"
+            try:
+                raw = _gh_json(url, token)
+                data = json.loads(__import__("base64").b64decode(raw["content"]).decode("utf-8", "replace"))
+            except HTTPError as exc:
+                if exc.code != 404:
+                    raise
+                continue
+            if str(data.get("source") or prefix).lower() != "chatgpt":
+                continue
+            for f in data.get("findings", []):
+                c = _finding_to_candidate(f, source="chatgpt")
+                if c:
+                    c["score"] = 80
+                    out.append(c)
+    if not out:
+        print("::warning::chatgpt: no reports with candidates in the last 7 days; check report delivery")
+    return out
 
 
 # ----------------------------------------------------------------------------
@@ -384,6 +396,34 @@ def rss_fetch(limit: int, profile: dict) -> list[dict]:
     return out[:limit]
 
 
+_DEFAULT_YOUTUBE_HANDLES = ["OpenAI", "GoogleDeepMind", "AnthropicAI", "NVIDIADeveloper"]
+
+
+def youtube_fetch(limit: int, profile: dict) -> list[dict]:
+    raw = os.getenv("S2C_YOUTUBE_CHANNELS", "").strip()
+    handles = [x.strip().lstrip("@") for x in raw.split(",") if x.strip()] if raw else _DEFAULT_YOUTUBE_HANDLES
+    out = []
+    for handle in handles:
+        try:
+            page = _http_bytes(f"https://www.youtube.com/@{handle}").decode("utf-8", "replace")
+            match = re.search(r'"channelId":"(UC[^"]+)"', page)
+            if not match:
+                continue
+            feed = ET.fromstring(_http_bytes(f"https://www.youtube.com/feeds/videos.xml?channel_id={match.group(1)}"))
+        except (HTTPError, URLError, OSError, ET.ParseError):
+            continue
+        ns = {"atom":"http://www.w3.org/2005/Atom", "yt":"http://www.youtube.com/xml/schemas/2015"}
+        for entry in feed.findall("atom:entry", ns)[:5]:
+            video_id = entry.findtext("yt:videoId", default="", namespaces=ns)
+            title = entry.findtext("atom:title", default="", namespaces=ns).strip()
+            if video_id and title:
+                out.append({"id":f"youtube:{video_id}", "title":title,
+                            "url":f"https://www.youtube.com/watch?v={video_id}",
+                            "domain":"youtube.com", "text":f"Видео канала @{handle}",
+                            "score":30, "image_url":f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"})
+    return out[:limit]
+
+
 # Реестр источников: name -> (fetch_func, auto_relevant)
 # auto_relevant=True  — источник уже «по построению» про тему (arXiv AI, Grok, ChatGPT), фильтруем только exclude.
 # auto_relevant=False — обычный новостной, применяем include_any фильтр (HN, Lobsters, RSS).
@@ -393,6 +433,7 @@ SOURCES = {
     "arxiv": (arxiv_fetch, True),
     "grok": (grok_fetch, True),
     "chatgpt": (chatgpt_fetch, True),
+    "youtube": (youtube_fetch, True),
     "rss": (rss_fetch, False),
 }
 
@@ -432,10 +473,11 @@ def save_state_and_push(state: dict, yandex_state: str):
         with open("s2c_state.json", "w", encoding="utf-8") as fh:
             json.dump(state, fh, ensure_ascii=False)
         subprocess.run(["rclone", "copyto", "s2c_state.json", f"ydrive:{yandex_state}"],
-                       check=False, timeout=120)
+                       check=True, timeout=120)
         print(f"[s2c] состояние обновлено: {len(state['sent_ids'])} sent; collected={state['collected']}")
     except Exception as e:
         print(f"[s2c] не записал состояние: {type(e).__name__}")
+        raise
 
 
 def relevant(item: dict, profile: dict) -> bool:
@@ -458,6 +500,8 @@ def qwen_generate(prompt: str, model: str, timeout: int = 300) -> str:
         ["python3", str(QWEN_CHAT), "--stdin", "--model", model, "--timeout", str(timeout)],
         input=prompt, capture_output=True, text=True, timeout=timeout + 90,
     )
+    if proc.returncode:
+        raise RuntimeError(f"Qwen exited with code {proc.returncode}")
     text = (proc.stdout or "").strip()
     text = _CITATION_RE.sub("", text).replace("[[", "").replace("]]", "").strip()
     return text
@@ -484,7 +528,24 @@ def og_image(url: str, timeout: int = 15) -> str | None:
     return img
 
 
-def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, str]:
+def candidate_image(candidate: dict) -> str | None:
+    if candidate.get("image_url"):
+        return candidate["image_url"]
+    if candidate["id"].startswith("arxiv:"):
+        paper_id = candidate["id"].split(":", 1)[1]
+        try:
+            html_url = f"https://arxiv.org/html/{paper_id}"
+            html = _http_bytes(html_url, timeout=30).decode("utf-8", "replace")
+            for src in re.findall(r'<img[^>]+src=["\']([^"\']+)["\']', html, re.I):
+                if not re.search(r'logo|icon|badge', src, re.I):
+                    return urljoin(html_url + "/", src)
+        except (HTTPError, URLError, OSError):
+            pass
+        return None
+    return og_image(candidate["url"])
+
+
+def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, dict | str]:
     body = json.dumps(draft, ensure_ascii=False).encode("utf-8")
     req = urllib.request.Request(
         f"{base_url}/add", data=body, method="POST",
@@ -494,11 +555,38 @@ def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, str]:
     try:
         with urllib.request.urlopen(req, timeout=40) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            return bool(data.get("ok")), json.dumps(data, ensure_ascii=False)
+            return bool(data.get("ok")), data
     except HTTPError as e:
         return False, f"HTTP {e.code}"
     except (URLError, OSError) as e:
         return False, str(e)
+
+
+def split_post(text: str) -> tuple[str, str]:
+    clean = text.replace("**", "").strip()
+    lines = clean.splitlines()
+    if len(lines) > 1 and len(lines[0]) <= 200 and lines[0].strip():
+        body = "\n".join(lines[1:]).strip()
+        if body:
+            return lines[0].strip(), body
+    return "", clean
+
+
+def fair_candidates(buckets: dict, cursor: int):
+    names = list(buckets)
+    if not names:
+        return []
+    offset = cursor % len(names)
+    order = names[offset:] + names[:offset]
+    result, seen = [], set()
+    for i in range(max((len(b) for b in buckets.values()), default=0)):
+        for name in order:
+            if i < len(buckets[name]):
+                item = buckets[name][i]
+                if item["id"] not in seen:
+                    result.append((name, item))
+                    seen.add(item["id"])
+    return result
 
 
 def main() -> int:
@@ -514,6 +602,8 @@ def main() -> int:
     profile = _load_json(PROFILE_FILE) if PROFILE_FILE.exists() else {"include_any": [], "exclude_any": []}
     state = load_state()
     sent_set = _normalize_sent(state.get("sent_ids", []))
+    deferred = state.setdefault("deferred_until", {})
+    failures = 0
     print(f"[s2c] профиль: {os.path.basename(str(PROFILE_FILE))}; уже отправлено: {len(sent_set)}")
 
     # 1–2. собрать + отфильтровать по каждому источнику
@@ -524,11 +614,13 @@ def main() -> int:
             items = fetch_fn(per_source, profile) or []
         except Exception as e:  # noqa: BLE001
             print(f"[s2c] {name}: ОШИБКА сбора — {type(e).__name__}: {e}")
-            state["collected"][name] = now.isoformat()
+            failures += 1
             continue
         fresh = []
         for it in items:
             if it["id"] in sent_set:
+                continue
+            if deferred.get(it["id"], "") > now.isoformat():
                 continue
             if auto_relevant:
                 hay = f"{it['title']} {it.get('domain') or ''}".lower()
@@ -544,27 +636,13 @@ def main() -> int:
         state["collected"][name] = now.isoformat()
 
     # глобальный лимит max_drafts — round-robin по источникам, чтобы никто не голодал
-    candidates = []
-    order = list(buckets.keys())
-    pos = {k: 0 for k in order}
-    while len(candidates) < max_drafts:
-        added = False
-        for name in order:
-            b = buckets[name]
-            if pos[name] < len(b):
-                candidates.append(b[pos[name]])
-                pos[name] += 1
-                added = True
-                if len(candidates) >= max_drafts:
-                    break
-        if not added:
-            break
+    candidates = fair_candidates(buckets, int(state.get("source_cursor", 0)))
     print(f"[s2c] ИТОГО кандидатов к генерации: {len(candidates)}")
-    for c in candidates:
+    for _, c in candidates[:max_drafts]:
         print(f"  [sel] {c['id']} score={c.get('score')} {c['title']}")
 
     if dry:
-        for c in candidates:
+        for _, c in candidates[:max_drafts]:
             print(f"  [dry] {c['id']} score={c['score']} {c['title']}")
         return 0
 
@@ -573,27 +651,48 @@ def main() -> int:
         return 1
 
     new_sent = set(sent_set)
-    for c in candidates:
+    delivered = 0
+    max_attempts = int(os.getenv("S2C_MAX_ATTEMPTS", "9"))
+    for name, c in candidates[:max_attempts]:
+        if delivered >= max_drafts:
+            break
+        state["source_cursor"] = (list(buckets).index(name) + 1) % len(buckets)
         prompt = _EDITOR_PROMPT.format(title=c["title"], summary=(c["text"] or "нет"), source_url=(c["url"] or "не указан"))
-        text = qwen_generate(prompt, qwen_model)
+        try:
+            text = qwen_generate(prompt, qwen_model)
+        except Exception as exc:
+            print(f"::error::generation {c['id']}: {type(exc).__name__}")
+            failures += 1
+            continue
         if not text or text.strip().upper() == "SKIP":
             print(f"  [skip] {c['id']}: Qwen вернул SKIP/пусто")
+            if text.strip().upper() == "SKIP":
+                deferred[c["id"]] = (now + timedelta(days=1)).isoformat()
+            else:
+                failures += 1
             continue
-        img = og_image(c["url"])
-        draft = {"id": c["id"], "title": c["title"], "text": text, "image_url": img}
+        img = candidate_image(c)
+        title, body = split_post(text)
+        draft = {"id": c["id"], "source": name, "title": title, "text": body, "image_url": img,
+                 "source_text": f"{c['title']}\n{c.get('text') or ''}"}
         ok, resp = worker_add(worker_url, worker_secret, draft)
-        print(f"  [add] {draft['id']} ok={ok} resp={resp[:120]}")
+        filtered = isinstance(resp, dict) and resp.get("skipped")
+        print(f"  [add] {draft['id']} ok={ok} filtered={bool(filtered)}")
         if ok:
             new_sent.add(c["id"])
+            if not filtered:
+                delivered += 1
+        else:
+            failures += 1
 
     # 3. сохранить дедуп + таймстампы на ЯД (rclone сделает workflow / сам)
     # персистим нормализованный namespaced набор, чтобы состояние было чистым
     persisted = _normalize_sent(state.get("sent_ids", []))
     state["sent_ids"] = sorted(persisted | new_sent)
-    print(f"[s2c] отправлено за прогон: {len(new_sent - sent_set)}; в состоянии всего: {len(state['sent_ids'])}")
+    print(f"[s2c] доставлено: {delivered}; обработано: {len(new_sent - sent_set)}; в состоянии всего: {len(state['sent_ids'])}")
     save_state_and_push(state, yandex_state)
 
-    return 0
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":
@@ -602,3 +701,4 @@ if __name__ == "__main__":
     except Exception as exc:  # noqa: BLE001
         print(f"[s2c] FATAL: {type(exc).__name__}: {exc}", file=sys.stderr)
         raise SystemExit(1)
+
