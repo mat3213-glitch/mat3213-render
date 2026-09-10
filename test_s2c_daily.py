@@ -10,6 +10,16 @@ class DailyTests(unittest.TestCase):
     def test_title(self):
         self.assertEqual(m.split_post('**НОВЫЙ ЗАГОЛОВОК**\n\nТело **текста**.'), ('НОВЫЙ ЗАГОЛОВОК', 'Тело текста.'))
 
+    def test_generated_source_line_removed(self):
+        self.assertEqual(m.split_post('ЗАГОЛОВОК\n\nТело.\n\nИсточник: https://example.org/a'), ('ЗАГОЛОВОК', 'Тело.'))
+
+    def test_official_blog_rss(self):
+        feed=b'<rss><channel><item><title>New model</title><link>https://example.org/model</link><description><![CDATA[<b>Details</b>]]></description></item></channel></rss>'
+        with patch.object(m, '_OFFICIAL_FEEDS', {'openai':'https://example.org/feed'}), patch.object(m, '_http_bytes', return_value=feed):
+            out=m.official_blogs_fetch(5,{})
+        self.assertEqual(out[0]['source'],'openai')
+        self.assertEqual(out[0]['text'],'Details')
+
     def test_rotation(self):
         buckets = {k:[{'id': k}] for k in ['hn','lob','arxiv','grok','chatgpt']}
         first = m.fair_candidates(buckets, 0)[:3]
