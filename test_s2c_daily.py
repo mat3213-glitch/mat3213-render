@@ -13,6 +13,15 @@ class DailyTests(unittest.TestCase):
     def test_generated_source_line_removed(self):
         self.assertEqual(m.split_post('ЗАГОЛОВОК\n\nТело.\n\nИсточник: https://example.org/a'), ('ЗАГОЛОВОК', 'Тело.'))
 
+    def test_generated_markdown_source_line_removed(self):
+        self.assertEqual(m.split_post('ЗАГОЛОВОК\n\nТело.\n\nИсточник: [https://example.org/a](https://example.org/a)'), ('ЗАГОЛОВОК', 'Тело.'))
+
+    def test_imagefree_url_response(self):
+        candidate = {'id':'arxiv:1','title':'AI paper','text':'facts','url':'https://example.org/paper'}
+        with patch.dict(os.environ, {'S2C_IMAGEFREE_URL':'https://img.example/generate'}), patch.object(m.urllib.request, 'urlopen') as urlopen:
+            urlopen.return_value.__enter__.return_value.read.return_value = b'{"image_url":"https://cdn.example/a.png"}'
+            self.assertEqual(m.imagefree_image(candidate), 'https://cdn.example/a.png')
+
     def test_official_blog_rss(self):
         feed=b'<rss><channel><item><title>New model</title><link>https://example.org/model</link><description><![CDATA[<b>Details</b>]]></description></item></channel></rss>'
         with patch.object(m, '_OFFICIAL_FEEDS', {'openai':'https://example.org/feed'}), patch.object(m, '_http_bytes', return_value=feed):
@@ -80,4 +89,3 @@ class DailyTests(unittest.TestCase):
             self.assertEqual(m.main(),0)
 
 if __name__=='__main__': unittest.main()
-
