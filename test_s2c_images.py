@@ -42,6 +42,8 @@ class ImageTests(unittest.TestCase):
         self.assertIn('Strictly three solid ink colors', prompt)
         self.assertNotIn(BRIEF['who'], prompt)
         self.assertIn('No faces', prompt)
+        self.assertIn('no bodies', prompt)
+        self.assertNotIn('silhouette', prompt)
         self.assertIn('No text', prompt)
 
     def test_missing_actor_analysis_is_rejected(self):
@@ -53,7 +55,8 @@ class ImageTests(unittest.TestCase):
     def test_unsafe_or_invalid_brief_is_rejected(self):
         for val in ('a laptop screen showing a report', 'a portrait of a scientist',
                     'a sculpture with human eyes', 'blocks branded with a logo',
-                    'a robot carrying a poster', 'GPT 99 release', 'картинка'):
+                    'a robot carrying a poster', 'a person pictogram moving blocks',
+                    'GPT 99 release', 'картинка'):
             with self.subTest(val=val), self.assertRaises(ValueError):
                 images.parse_brief(json.dumps(dict(BRIEF, subject=val)), NEWS)
         with self.assertRaises(ValueError):

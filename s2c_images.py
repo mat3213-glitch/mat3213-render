@@ -31,7 +31,8 @@ reports difficulty or failure. Stay specific to the discovery, do not invent
 facts or product appearance. One main actor plus at most one target; one
 visible action, legible instantly. Avoid elaborate mechanisms, exploded
 assemblies, floating machine parts and generic glowing chips.
-Never include humans, faces, heads, humanoids, portraits, dolls or statues.
+Never include humans, faces, heads, bodies, hands, legs, humanoids, portraits,
+person pictograms, dolls or statues.
 Never include writing, characters, numbers, formulas, brands, logos, screens,
 interfaces, signs, posters, documents, books, paper, maps, charts or labels.
 Do not quote or copy the headline. Do not spell out company/product/person names.
@@ -54,13 +55,15 @@ News:
 EXCLUSIONS = (
     'No text, no letters, no words, no numbers, no typography, no captions, '
     'no symbols, no formulas, no logos, no watermark, no signatures. '
-    'No faces, no people, no heads, no portraits, no humanoids, no dolls, no statues. '
+    'No faces, no people, no heads, no bodies, no hands, no legs, no arms, '
+    'no portraits, no humanoids, no person pictograms, no dolls, no statues. '
     'No screens, no interfaces, no paper, no books, no posters, no signs, no labels.'
 )
 _FORBIDDEN = re.compile(
     r'\b(?:text|letters?|words?|numbers?|typograph\w*|caption\w*|symbols?|formulas?|'
     r'logos?|watermarks?|signatures?|faces?|people|persons?|humans?|heads?|portraits?|'
-    r'humanoids?|dolls?|statues?|men|women|children|boys?|girls?|'
+    r'humanoids?|dolls?|statues?|bodies|hands?|arms?|legs?|men|women|'
+    r'children|boys?|girls?|pictograms?|'
     r'screens?|interfaces?|paper|books?|posters?|signs?|labels?|'
     r'documents?|charts?|maps?|infographic\w*|diagrams?|billboards?|'
     r'newspaper\w*|magazines?|writing|written|lettering|branded|brands?|'
@@ -109,7 +112,7 @@ def render_prompt(brief: dict, attempt: int = 0) -> str:
     scene = (f"{brief['subject']}; {brief['action']}"
              if attempt == 0 else brief['simplified_scene'])
     return ('Flat vector-style editorial illustration. ' + scene + '. '
-            'One large clear silhouette actively interacting with one simple target. '
+            'One large clear non-human object shape actively interacting with one simple target. '
             'Bold flat shapes, strong negative space, instantly readable action. '
             'Strictly three solid ink colors total including the background: '
             'warm ivory background, dark navy shapes, vivid orange accent. '

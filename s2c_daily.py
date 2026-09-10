@@ -53,6 +53,10 @@ IMAGEFREE_UA = "curl/8.5.0"
 # жить на стороне ImageFree дольше (тест 34480244238: стандартное ожидание
 # заканчивалось таймаутом на живой генерации; в эксперименте помогли 540 c).
 IMAGEFREE_POLL_MS = [6000, 4000, 10000, 15000, 20000] + [30000] * 16
+IMAGEFREE_MAX_TASKS = int(os.getenv("S2C_IMAGEFREE_MAX_TASKS", "8"))
+JOB_TIME_BUDGET_SEC = int(os.getenv("S2C_JOB_TIME_BUDGET_SEC", str(70 * 60)))
+JOB_SAVE_RESERVE_SEC = int(os.getenv("S2C_JOB_SAVE_RESERVE_SEC", "240"))
+TELEGRAM_CAPTION_LIMIT = 1024
 
 # Отправной редакторский промпт (голос «ИИшницы») — тот же, что в SignalToChannel writer.py.
 _EDITOR_PROMPT = """Ты редактор русскоязычного Telegram-канала «ИИшница» про нейросети, AI-инструменты, роботов и технологии.
@@ -697,7 +701,7 @@ def _imagefree_submit(prompt: str, aspect: str) -> tuple[str | None, str | None]
         if exc.code == 429:
             return None, "rate_limited"
         return None, f"http_{exc.code}"
-    except (URLError, OSError, TimeoutError) as exc:
+    except (URLError, OSError, TimeoutError, json.JSONDecodeError, UnicodeDecodeError) as exc:
         return None, f"net:{type(exc).__name__}"
     if not isinstance(data, dict):
         return None, "bad_body"
@@ -762,7 +766,7 @@ def imagefree_image_bytes(candidate: dict, aspect: str = "4:3", *, diagnostics: 
             return cached
         if verdict['reason'].startswith('qa_'):
             _IMAGEFREE_STOPPED = True
-    if _IMAGEFREE_STOPPED or _IMAGEFREE_TASKS >= 8:
+    if _IMAGEFREE_STOPPED or _IMAGEFREE_TASKS >= IMAGEFREE_MAX_TASKS:
         return None
     try:
         brief = _imagefree_brief(candidate)
@@ -770,7 +774,7 @@ def imagefree_image_bytes(candidate: dict, aspect: str = "4:3", *, diagnostics: 
         print(f"::warning::s2c image brief unavailable: {type(exc).__name__}")
         return None
     for attempt in range(2):
-        if _IMAGEFREE_TASKS >= 8:
+        if _IMAGEFREE_TASKS >= IMAGEFREE_MAX_TASKS:
             break
         prompt = s2c_images.render_prompt(brief, attempt)
         _IMAGEFREE_TASKS += 1
@@ -881,6 +885,17 @@ def split_post(text: str) -> tuple[str, str]:
     return "", clean
 
 
+def _caption_len(title: str, body: str, source_url: str, source: str = "") -> int:
+    label = source or "source"
+    footer = f"\n\nИсточник ({label}) — {source_url}" if source_url else ""
+    main = f"{title}\n\n{body}" if title else body
+    return len((main + footer).strip())
+
+
+def _fits_single_photo_post(title: str, body: str, source_url: str, source: str = "") -> bool:
+    return _caption_len(title, body, source_url, source) <= TELEGRAM_CAPTION_LIMIT
+
+
 def fair_candidates(buckets: dict, cursor: int):
     names = list(buckets)
     if not names:
@@ -899,6 +914,7 @@ def fair_candidates(buckets: dict, cursor: int):
 
 
 def main() -> int:
+    started_at = time.monotonic()
     dry = "--dry-run" in sys.argv
     worker_url = os.getenv("S2C_WORKER_URL", DEFAULT_WORKER_URL).rstrip("/")
     worker_secret = os.getenv("S2C_WORKER_SECRET", "").strip()
@@ -963,6 +979,9 @@ def main() -> int:
     delivered = 0
     max_attempts = int(os.getenv("S2C_MAX_ATTEMPTS", "9"))
     for name, c in candidates[:max_attempts]:
+        if time.monotonic() - started_at > JOB_TIME_BUDGET_SEC - JOB_SAVE_RESERVE_SEC:
+            print("::warning::s2c stopping early to preserve time for state/cache persistence")
+            break
         if delivered >= max_drafts:
             break
         state["source_cursor"] = (list(buckets).index(name) + 1) % len(buckets)
@@ -980,16 +999,26 @@ def main() -> int:
             else:
                 failures += 1
             continue
+        title, body = split_post(text)
+        if not _fits_single_photo_post(title, body, c.get("url") or "", c.get("source") or name):
+            print(f"::warning::s2c post too long for one photo caption: {c['id']}")
+            deferred[c["id"]] = (now + timedelta(hours=6)).isoformat()
+            failures += 1
+            continue
         img = candidate_image(c)
         image_bytes = None
         if not img:
-            image_bytes = imagefree_image_bytes(c)
+            try:
+                image_bytes = imagefree_image_bytes(c)
+            except Exception as exc:  # noqa: BLE001
+                print(f"::warning::s2c imagefree failed for {c['id']}: {type(exc).__name__}")
+                failures += 1
+                continue
             if not image_bytes:
                 # Not sent and not marked as sent: next scheduled run can retry.
                 print(f"::warning::s2c image pending for {c['id']}; draft deferred")
                 failures += 1
                 continue
-        title, body = split_post(text)
         draft = {"id": c["id"], "source": c.get("source") or name, "source_url": c.get("url") or "", "title": title, "text": body, "image_url": img,
                  "source_text": f"{c['title']}\n{c.get('text') or ''}"}
         ok, resp = worker_add(worker_url, worker_secret, draft, image_bytes)
@@ -997,6 +1026,12 @@ def main() -> int:
         print(f"  [add] {draft['id']} ok={ok} filtered={bool(filtered)}")
         if ok:
             new_sent.add(c["id"])
+            state["sent_ids"] = sorted(_normalize_sent(state.get("sent_ids", [])) | new_sent)
+            try:
+                save_state_and_push(state, yandex_state)
+            except Exception as exc:  # noqa: BLE001
+                print(f"::warning::s2c immediate state save failed: {type(exc).__name__}: {exc}")
+                failures += 1
             if not filtered:
                 delivered += 1
         else:

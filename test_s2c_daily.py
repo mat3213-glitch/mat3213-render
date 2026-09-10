@@ -6,6 +6,7 @@ import os
 import tempfile
 from pathlib import Path
 from urllib.error import HTTPError
+from json import JSONDecodeError
 import s2c_daily as m
 
 class DailyTests(unittest.TestCase):
@@ -34,6 +35,13 @@ class DailyTests(unittest.TestCase):
                'subject':'a mechanical gripper','action':'lifting a glass sphere','setting':'a plain empty background','simplified_scene':'a mechanical gripper holding glass','reason':'Shows fragile object manipulation'}
         with patch.object(m, '_imagefree_brief', return_value=brief), patch.object(m.s2c_images, 'check_image', return_value={'ok':True,'reason':'clean'}), patch.object(m, '_imagefree_submit', return_value=('task-1', None)), patch.object(m, '_imagefree_wait', return_value=('https://cdn.example/a.png', None)), patch.object(m, '_download_png', return_value=png), patch.object(m.time, 'sleep'):
             self.assertEqual(m.imagefree_image_bytes(candidate), png)
+
+    def test_bad_imagefree_json_is_candidate_local_failure(self):
+        candidate = {'id':'arxiv:1','title':'AI paper','text':'facts','url':'https://example.org/paper'}
+        brief={'who':'Механический манипулятор','does_what':'поднимает стеклянную сферу',
+               'subject':'a mechanical gripper','action':'lifting a glass sphere','setting':'a plain empty background','simplified_scene':'a mechanical gripper holding glass','reason':'Shows fragile object manipulation'}
+        with patch.object(m, '_imagefree_brief', return_value=brief), patch.object(m, '_imagefree_post', side_effect=JSONDecodeError('bad', '{', 0)):
+            self.assertIsNone(m.imagefree_image_bytes(candidate))
 
     def test_worker_add_multipart_with_image(self):
         captured = {}
@@ -118,5 +126,21 @@ class DailyTests(unittest.TestCase):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(2)]
         with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
+
+    def test_successful_add_is_checkpointed_immediately(self):
+        items=[{'id':'1','title':'AI','text':'facts','url':'https://example.org','score':5}]
+        state={'sent_ids':[], 'collected':{}}
+        saves=[]
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',return_value='TITLE\n\nBody'), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push',side_effect=lambda s, y: saves.append(list(s['sent_ids']))), patch.object(m.sys,'argv',['test']):
+            self.assertEqual(m.main(),0)
+        self.assertIn(['1'], saves)
+
+    def test_long_post_is_not_sent_as_split_caption(self):
+        items=[{'id':'1','title':'AI','text':'facts','url':'https://example.org','score':5}]
+        state={'sent_ids':[], 'collected':{}}
+        long_body='A' * 1200
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',return_value=f'TITLE\n\n{long_body}'), patch.object(m,'candidate_image',return_value='https://example.org/photo.png'), patch.object(m,'worker_add') as add, patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+            self.assertEqual(m.main(),1)
+        add.assert_not_called()
 
 if __name__=='__main__': unittest.main()
