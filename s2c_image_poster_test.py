@@ -69,6 +69,21 @@ def poster_prompt(brief, attempt):
     )
 
 
+def wait_for_test_image(task, timeout=540):
+    """Keep polling this task only; ImageFree pool jobs also allow longer waits."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        status = daily._imagefree_poll(task)
+        if isinstance(status, dict):
+            if status.get('status') == 'completed':
+                url = next((status[k] for k in ('image','image_url','imageUrl','url') if status.get(k)), None)
+                return (str(url), None) if url else (None, 'missing_image')
+            if status.get('status') == 'failed' or status.get('errorCode'):
+                return None, str(status.get('errorCode') or status.get('error') or 'failed')
+        time.sleep(min(15, max(0, deadline - time.monotonic())))
+    return None, 'timeout'
+
+
 def main():
     output = Path('s2c_image_smoke_output')
     output.mkdir(exist_ok=True)
@@ -89,7 +104,10 @@ def main():
         task, error = daily._imagefree_submit(prompt, '4:3')
         if error or not task:
             raise RuntimeError('ImageFree stopped: ' + str(error))
-        url, error = daily._imagefree_wait(task)
+        (output / 'task.json').write_text(json.dumps({'task_id':task,'attempt':attempt+1,
+            'prompt':prompt,'provider':'imagefree.net'},indent=2),encoding='utf-8')
+        print('[s2c] ImageFree submitted task:', task, flush=True)
+        url, error = wait_for_test_image(task)
         if error or not url:
             raise RuntimeError('ImageFree stopped: ' + str(error))
         image = daily._download_png(url)
