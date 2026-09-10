@@ -404,6 +404,15 @@ _DEFAULT_YOUTUBE_CHANNELS = {
 }
 
 
+def _youtube_feed_bytes(url: str) -> bytes:
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/128 Safari/537.36",
+        "Accept": "application/atom+xml,application/xml,text/xml,*/*",
+    })
+    with urllib.request.urlopen(req, timeout=25) as resp:
+        return resp.read()
+
+
 def youtube_fetch(limit: int, profile: dict) -> list[dict]:
     raw = os.getenv("S2C_YOUTUBE_CHANNELS", "").strip()
     configured = [x.strip() for x in raw.split(",") if x.strip()]
@@ -411,8 +420,10 @@ def youtube_fetch(limit: int, profile: dict) -> list[dict]:
     out = []
     for label, channel_id in channels.items():
         try:
-            feed = ET.fromstring(_http_bytes(f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"))
-        except (HTTPError, URLError, OSError, ET.ParseError):
+            feed_url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+            feed = ET.fromstring(_youtube_feed_bytes(feed_url))
+        except (HTTPError, URLError, OSError, ET.ParseError) as exc:
+            print(f"::warning::youtube {label}: {type(exc).__name__}: {exc}")
             continue
         ns = {"atom":"http://www.w3.org/2005/Atom", "yt":"http://www.youtube.com/xml/schemas/2015"}
         for entry in feed.findall("atom:entry", ns)[:5]:

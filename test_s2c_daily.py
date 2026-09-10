@@ -33,7 +33,7 @@ class DailyTests(unittest.TestCase):
 
     def test_youtube_feed(self):
         feed = b'''<feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015"><entry><yt:videoId>abc123</yt:videoId><title>New AI model</title></entry></feed>'''
-        with patch.object(m, '_http_bytes', return_value=feed):
+        with patch.object(m, '_youtube_feed_bytes', return_value=feed):
             out=m.youtube_fetch(4,{})
         self.assertEqual(out[0]['id'],'youtube:abc123')
         self.assertEqual(out[0]['image_url'],'https://i.ytimg.com/vi/abc123/hqdefault.jpg')
