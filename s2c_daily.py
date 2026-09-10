@@ -21,9 +21,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import random
 import re
 import subprocess
 import sys
+import time
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
@@ -42,6 +45,9 @@ HN_BASE = "https://hacker-news.firebaseio.com/v0"
 LOB_BASE = "https://lobste.rs"
 ARXIV_API = "https://export.arxiv.org/api/query"
 _UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) signal-to-channel/1.0"
+IMAGEFREE_API = "https://imagefree.net"
+IMAGEFREE_UA = "curl/8.5.0"
+IMAGEFREE_POLL_MS = [6000, 4000, 10000, 15000, 20000, 30000, 30000, 30000]
 
 # Отправной редакторский промпт (голос «ИИшницы») — тот же, что в SignalToChannel writer.py.
 _EDITOR_PROMPT = """Ты редактор русскоязычного Telegram-канала «ИИшница» про нейросети, AI-инструменты, роботов и технологии.
@@ -664,46 +670,98 @@ def _imagefree_prompt(candidate: dict) -> str:
     )
 
 
-def imagefree_image(candidate: dict, timeout: int = 60) -> str | None:
-    endpoint = os.getenv("S2C_IMAGEFREE_URL", "").strip()
-    if not endpoint:
-        return None
-    payload = json.dumps({
-        "prompt": _imagefree_prompt(candidate),
-        "aspect_ratio": "4:3",
-        "source_url": candidate.get("url") or "",
-        "source": candidate.get("source") or candidate.get("id", "").split(":", 1)[0],
-    }, ensure_ascii=False).encode("utf-8")
+def _imagefree_post(path: str, body: dict, timeout: int = 45) -> dict:
     req = urllib.request.Request(
-        endpoint,
-        data=payload,
+        f"{IMAGEFREE_API}{path}",
+        data=json.dumps(body).encode("utf-8"),
+        headers={"Content-Type": "application/json", "User-Agent": IMAGEFREE_UA},
         method="POST",
-        headers={"Content-Type": "application/json; charset=utf-8", "User-Agent": _UA},
     )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", "replace"))
+
+
+def _imagefree_submit(prompt: str, aspect: str) -> tuple[str | None, str | None]:
+    try:
+        data = _imagefree_post("/api/generate", {
+            "prompt": prompt,
+            "aspect_ratio": aspect,
+            "turnstile_token": "",
+        })
+    except HTTPError as exc:
+        if exc.code in (403, 412):
+            return None, "cf_challenge"
+        if exc.code == 429:
+            return None, "rate_limited"
+        return None, f"http_{exc.code}"
+    except (URLError, OSError, TimeoutError) as exc:
+        return None, f"net:{type(exc).__name__}"
+    if not isinstance(data, dict):
+        return None, "bad_body"
+    task_id = data.get("taskId")
+    if task_id:
+        return str(task_id), None
+    if data.get("errorCode"):
+        return None, f"site:{data['errorCode']}"
+    return None, f"site:{data.get('error', 'no_task_id')}"
+
+
+def _imagefree_poll(task_id: str) -> dict | None:
+    url = f"{IMAGEFREE_API}/api/generate/status?taskId={urllib.parse.quote(task_id)}"
+    req = urllib.request.Request(url, headers={"User-Agent": IMAGEFREE_UA})
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return json.loads(resp.read().decode("utf-8", "replace"))
+    except (HTTPError, URLError, OSError, TimeoutError, json.JSONDecodeError):
+        return None
+
+
+def _imagefree_wait(task_id: str) -> tuple[str | None, str | None]:
+    for delay_ms in IMAGEFREE_POLL_MS:
+        status = _imagefree_poll(task_id)
+        if isinstance(status, dict):
+            state = status.get("status")
+            if state == "completed":
+                image = status.get("image") or status.get("image_url") or status.get("imageUrl") or status.get("url")
+                return (str(image), None) if image else (None, "no_image_url")
+            if state == "failed":
+                return None, str(status.get("error") or status.get("errorCode") or "failed")
+            if status.get("errorCode"):
+                return None, f"site:{status['errorCode']}"
+        time.sleep(delay_ms / 1000.0)
+    return None, "timeout"
+
+
+def _download_png(url: str, timeout: int = 90) -> bytes | None:
+    if not url.startswith(("http://", "https://")):
+        return None
+    req = urllib.request.Request(url, headers={"User-Agent": IMAGEFREE_UA})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            raw = resp.read(200_000).decode("utf-8", "replace").strip()
+            data = resp.read(9_500_001)
     except (HTTPError, URLError, OSError, TimeoutError):
         return None
-    if raw.startswith("http://") or raw.startswith("https://"):
-        return raw
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
+    if data[:8] != b"\x89PNG\r\n\x1a\n" or len(data) < 5000 or len(data) > 9_500_000:
         return None
-    candidates = [
-        data.get("image_url"), data.get("imageUrl"), data.get("url"), data.get("output"),
-        data.get("result"), data.get("data"),
-    ]
-    while candidates:
-        value = candidates.pop(0)
-        if isinstance(value, str) and value.startswith(("http://", "https://")):
-            return value
-        if isinstance(value, list):
-            candidates.extend(value)
-        elif isinstance(value, dict):
-            candidates.extend(value.values())
-    return None
+    return data
+
+
+def imagefree_image_bytes(candidate: dict, aspect: str = "4:3") -> bytes | None:
+    prompt = _imagefree_prompt(candidate)
+    task_id, err = _imagefree_submit(prompt, aspect)
+    if err:
+        print(f"::warning::imagefree submit {candidate.get('id')}: {err}")
+        return None
+    print(f"[s2c] imagefree task {task_id[:8]}… для {candidate.get('id')}")
+    image_url, err = _imagefree_wait(task_id)
+    if err:
+        print(f"::warning::imagefree status {candidate.get('id')}: {err}")
+        return None
+    image = _download_png(image_url)
+    if not image:
+        print(f"::warning::imagefree download {candidate.get('id')}: bad_png")
+    time.sleep(random.uniform(6, 15))
+    return image
 
 
 def candidate_image(candidate: dict) -> str | None:
@@ -719,17 +777,42 @@ def candidate_image(candidate: dict) -> str | None:
                     return urljoin(html_url + "/", src)
         except (HTTPError, URLError, OSError):
             pass
-        return imagefree_image(candidate)
-    return og_image(candidate["url"]) or imagefree_image(candidate)
+        return None
+    return og_image(candidate["url"])
 
 
-def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, dict | str]:
-    body = json.dumps(draft, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(
-        f"{base_url}/add", data=body, method="POST",
-        headers={"Content-Type": "application/json; charset=utf-8",
-                 "X-Worker-Secret": secret, "User-Agent": _UA},
-    )
+def _multipart_body(fields: dict, image: bytes) -> tuple[bytes, str]:
+    boundary = f"s2c-{hashlib.sha1(image[:1024]).hexdigest()[:24]}"
+    chunks: list[bytes] = []
+    for key, value in fields.items():
+        if value is None:
+            continue
+        chunks.extend([
+            f"--{boundary}\r\n".encode("ascii"),
+            f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode("ascii"),
+            str(value).encode("utf-8"),
+            b"\r\n",
+        ])
+    chunks.extend([
+        f"--{boundary}\r\n".encode("ascii"),
+        b'Content-Disposition: form-data; name="image"; filename="imagefree.png"\r\n',
+        b"Content-Type: image/png\r\n\r\n",
+        image,
+        b"\r\n",
+        f"--{boundary}--\r\n".encode("ascii"),
+    ])
+    return b"".join(chunks), boundary
+
+
+def worker_add(base_url: str, secret: str, draft: dict, image: bytes | None = None) -> tuple[bool, dict | str]:
+    headers = {"X-Worker-Secret": secret, "User-Agent": _UA}
+    if image:
+        body, boundary = _multipart_body(draft, image)
+        headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
+    else:
+        body = json.dumps(draft, ensure_ascii=False).encode("utf-8")
+        headers["Content-Type"] = "application/json; charset=utf-8"
+    req = urllib.request.Request(f"{base_url}/add", data=body, method="POST", headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=40) as resp:
             data = json.loads(resp.read().decode("utf-8"))
@@ -851,10 +934,13 @@ def main() -> int:
                 failures += 1
             continue
         img = candidate_image(c)
+        image_bytes = None
+        if not img:
+            image_bytes = imagefree_image_bytes(c)
         title, body = split_post(text)
         draft = {"id": c["id"], "source": c.get("source") or name, "source_url": c.get("url") or "", "title": title, "text": body, "image_url": img,
                  "source_text": f"{c['title']}\n{c.get('text') or ''}"}
-        ok, resp = worker_add(worker_url, worker_secret, draft)
+        ok, resp = worker_add(worker_url, worker_secret, draft, image_bytes)
         filtered = isinstance(resp, dict) and resp.get("skipped")
         print(f"  [add] {draft['id']} ok={ok} filtered={bool(filtered)}")
         if ok:
