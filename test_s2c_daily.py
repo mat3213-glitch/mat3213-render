@@ -39,7 +39,7 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(out[0]['image_url'],'https://i.ytimg.com/vi/abc123/hqdefault.jpg')
 
     def test_youtube_page_fallback(self):
-        with patch.object(m, '_youtube_feed_bytes', side_effect=HTTPError('feed',404,'missing',{},None)), patch.object(m, '_youtube_page_videos', return_value=[('abcdefghijk','New robot')]):
+        with patch.object(m, '_youtube_feed_bytes', side_effect=HTTPError('feed',404,'missing',{},None)), patch.object(m, '_youtube_page_videos', return_value=[('abcdefghijk','New robot')]), patch.object(m, '_invidious_latest', return_value=[]):
             out=m.youtube_fetch(4,{})
         self.assertEqual(out[0]['id'],'youtube:abcdefghijk')
 
