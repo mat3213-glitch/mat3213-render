@@ -405,7 +405,7 @@ _OFFICIAL_FEEDS = {
 
 
 def official_blogs_fetch(limit: int, profile: dict) -> list[dict]:
-    out = []
+    buckets = []
     for source, feed_url in _OFFICIAL_FEEDS.items():
         try:
             root = ET.fromstring(_http_bytes(feed_url, timeout=25))
@@ -413,6 +413,7 @@ def official_blogs_fetch(limit: int, profile: dict) -> list[dict]:
             print(f"::warning::official blog {source}: {type(exc).__name__}: {exc}")
             continue
         entries = root.findall(".//item") or root.findall(".//{*}entry")
+        source_items = []
         for entry in entries[:8]:
             title = (entry.findtext("title") or entry.findtext("{*}title") or "").strip()
             link_node = entry.find("link")
@@ -426,10 +427,19 @@ def official_blogs_fetch(limit: int, profile: dict) -> list[dict]:
             summary = re.sub(r"<[^>]+>", " ", summary)
             summary = re.sub(r"\s+", " ", summary).strip()
             if title and link:
-                out.append({"id": f"official:{source}:{hashlib.sha1(link.encode()).hexdigest()[:16]}",
-                            "title": title, "url": link, "domain": _domain(link),
-                            "text": summary[:3000] or None, "score": 35, "source": source})
-    return out[:limit]
+                source_items.append({"id": f"official:{source}:{hashlib.sha1(link.encode()).hexdigest()[:16]}",
+                                     "title": title, "url": link, "domain": _domain(link),
+                                     "text": summary[:3000] or None, "score": 35, "source": source})
+        if source_items:
+            buckets.append(source_items)
+    out = []
+    for index in range(max((len(items) for items in buckets), default=0)):
+        for items in buckets:
+            if index < len(items):
+                out.append(items[index])
+                if len(out) >= limit:
+                    return out
+    return out
 
 
 _DEFAULT_YOUTUBE_CHANNELS = {
