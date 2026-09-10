@@ -426,9 +426,12 @@ def youtube_fetch(limit: int, profile: dict) -> list[dict]:
             print(f"::warning::youtube {label}: {type(exc).__name__}: {exc}")
             continue
         ns = {"atom":"http://www.w3.org/2005/Atom", "yt":"http://www.youtube.com/xml/schemas/2015"}
-        for entry in feed.findall("atom:entry", ns)[:5]:
-            video_id = entry.findtext("yt:videoId", default="", namespaces=ns)
-            title = entry.findtext("atom:title", default="", namespaces=ns).strip()
+        entries = feed.findall("atom:entry", ns) or feed.findall(".//{*}entry")
+        if not entries:
+            print(f"::warning::youtube {label}: empty feed root={feed.tag}")
+        for entry in entries[:5]:
+            video_id = entry.findtext("yt:videoId", default="", namespaces=ns) or entry.findtext("{*}videoId", default="")
+            title = (entry.findtext("atom:title", default="", namespaces=ns) or entry.findtext("{*}title", default="")).strip()
             if video_id and title:
                 out.append({"id":f"youtube:{video_id}", "title":title,
                             "url":f"https://www.youtube.com/watch?v={video_id}",
