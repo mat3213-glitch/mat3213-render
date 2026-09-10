@@ -434,6 +434,20 @@ def _youtube_page_videos(handle: str) -> list[tuple[str, str]]:
     return out
 
 
+def _invidious_latest(channel_id: str) -> list[tuple[str, str]]:
+    # Officially listed public instances; used only when YouTube blocks both its
+    # Atom feed and public videos page on the GitHub runner.
+    for host in ("inv.nadeko.net", "invidious.nerdvpn.de", "yt.chocolatemoo53.com"):
+        try:
+            data = _http_json(f"https://{host}/api/v1/channels/{channel_id}/latest", timeout=25)
+        except (HTTPError, URLError, OSError, json.JSONDecodeError):
+            continue
+        videos = [(str(x.get("videoId") or ""), str(x.get("title") or "").strip()) for x in data if isinstance(x, dict)]
+        if videos:
+            return videos
+    return []
+
+
 def youtube_fetch(limit: int, profile: dict) -> list[dict]:
     raw = os.getenv("S2C_YOUTUBE_CHANNELS", "").strip()
     configured = [x.strip() for x in raw.split(",") if x.strip()]
@@ -458,7 +472,9 @@ def youtube_fetch(limit: int, profile: dict) -> list[dict]:
                 (entry.findtext("atom:title", default="", namespaces=ns) or entry.findtext("{*}title", default="")).strip(),
             ) for entry in entries[:5]]
         if not videos:
-            print(f"::warning::youtube {label}: no videos parsed")
+            videos = _invidious_latest(channel_id)
+        if not videos:
+            print(f"::warning::youtube {label}: no videos parsed from YouTube or fallbacks")
         for video_id, title in videos[:5]:
             if video_id and title:
                 out.append({"id":f"youtube:{video_id}", "title":title,
