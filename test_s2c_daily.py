@@ -31,6 +31,13 @@ class DailyTests(unittest.TestCase):
         with patch.dict(os.environ, {'GH_PAT':'test'}), patch.object(m, '_gh_json', side_effect=HTTPError('test',403,'forbidden',{},None)):
             with self.assertRaises(HTTPError): m.grok_fetch(12,{})
 
+    def test_youtube_feed(self):
+        feed = b'''<feed xmlns="http://www.w3.org/2005/Atom" xmlns:yt="http://www.youtube.com/xml/schemas/2015"><entry><yt:videoId>abc123</yt:videoId><title>New AI model</title></entry></feed>'''
+        with patch.object(m, '_http_bytes', return_value=feed):
+            out=m.youtube_fetch(4,{})
+        self.assertEqual(out[0]['id'],'youtube:abc123')
+        self.assertEqual(out[0]['image_url'],'https://i.ytimg.com/vi/abc123/hqdefault.jpg')
+
     def test_skip_replaced_and_not_counted_as_sent(self):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(3)]
         state={'sent_ids':[], 'collected':{}}

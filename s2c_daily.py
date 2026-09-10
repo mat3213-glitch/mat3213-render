@@ -396,20 +396,22 @@ def rss_fetch(limit: int, profile: dict) -> list[dict]:
     return out[:limit]
 
 
-_DEFAULT_YOUTUBE_HANDLES = ["OpenAI", "GoogleDeepMind", "AnthropicAI", "NVIDIADeveloper"]
+_DEFAULT_YOUTUBE_CHANNELS = {
+    "OpenAI": "UCXZCJLdBC09xxGZ6gcdrc6A",
+    "GoogleDeepMind": "UCP7jMXSY2xbc3KCAE0MHQ-A",
+    "Anthropic": "UCrDwWp7EBBv4NwvScIpBDOA",
+    "NVIDIA": "UCHuiy8bXnmK5nisYHUd1J5g",
+}
 
 
 def youtube_fetch(limit: int, profile: dict) -> list[dict]:
     raw = os.getenv("S2C_YOUTUBE_CHANNELS", "").strip()
-    handles = [x.strip().lstrip("@") for x in raw.split(",") if x.strip()] if raw else _DEFAULT_YOUTUBE_HANDLES
+    configured = [x.strip() for x in raw.split(",") if x.strip()]
+    channels = {x:x for x in configured} if configured else _DEFAULT_YOUTUBE_CHANNELS
     out = []
-    for handle in handles:
+    for label, channel_id in channels.items():
         try:
-            page = _http_bytes(f"https://www.youtube.com/@{handle}").decode("utf-8", "replace")
-            match = re.search(r'"channelId":"(UC[^"]+)"', page)
-            if not match:
-                continue
-            feed = ET.fromstring(_http_bytes(f"https://www.youtube.com/feeds/videos.xml?channel_id={match.group(1)}"))
+            feed = ET.fromstring(_http_bytes(f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"))
         except (HTTPError, URLError, OSError, ET.ParseError):
             continue
         ns = {"atom":"http://www.w3.org/2005/Atom", "yt":"http://www.youtube.com/xml/schemas/2015"}
@@ -419,7 +421,7 @@ def youtube_fetch(limit: int, profile: dict) -> list[dict]:
             if video_id and title:
                 out.append({"id":f"youtube:{video_id}", "title":title,
                             "url":f"https://www.youtube.com/watch?v={video_id}",
-                            "domain":"youtube.com", "text":f"Видео канала @{handle}",
+                            "domain":"youtube.com", "text":f"Видео официального канала {label}",
                             "score":30, "image_url":f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"})
     return out[:limit]
 
