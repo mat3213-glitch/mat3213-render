@@ -17,6 +17,14 @@ on:
         required: false
         type: boolean
         default: false
+      image_test_style:
+        description: "Style for manual image test only"
+        required: false
+        type: choice
+        options:
+          - current
+          - who-does-what-flat
+        default: current
   schedule:
     - cron: "0 6 * * *"
     - cron: "0 14 * * *"
@@ -80,11 +88,16 @@ jobs:
           GH_PAT: ${{ secrets.GH_PAT }}
           S2C_DRY_RUN: ${{ inputs.dry_run || 'false' }}
           S2C_IMAGE_TEST: ${{ inputs.image_test || 'false' }}
+          S2C_IMAGE_TEST_STYLE: ${{ inputs.image_test_style || 'current' }}
         run: |
           if [ "$S2C_DRY_RUN" = "true" ]; then
             .s2c-image-venv/bin/python s2c_daily.py --dry-run
           elif [ "$S2C_IMAGE_TEST" = "true" ]; then
-            .s2c-image-venv/bin/python s2c_image_smoke.py
+            if [ "$S2C_IMAGE_TEST_STYLE" = "who-does-what-flat" ]; then
+              .s2c-image-venv/bin/python s2c_image_poster_test.py
+            else
+              .s2c-image-venv/bin/python s2c_image_smoke.py
+            fi
           else
             .s2c-image-venv/bin/python s2c_daily.py
           fi
