@@ -652,6 +652,59 @@ def og_image(url: str, timeout: int = 15) -> str | None:
     return img
 
 
+def _imagefree_prompt(candidate: dict) -> str:
+    title = str(candidate.get("title") or "").strip()
+    summary = re.sub(r"\s+", " ", str(candidate.get("text") or "")).strip()
+    topic = f"{title}. {summary[:500]}".strip()
+    return (
+        "Editorial technology news cover image, no text, no logos, no watermark. "
+        "Modern clean composition, realistic objects or abstract technical visual, "
+        f"topic: {topic}"
+    )
+
+
+def imagefree_image(candidate: dict, timeout: int = 60) -> str | None:
+    endpoint = os.getenv("S2C_IMAGEFREE_URL", "").strip()
+    if not endpoint:
+        return None
+    payload = json.dumps({
+        "prompt": _imagefree_prompt(candidate),
+        "aspect_ratio": "4:3",
+        "source_url": candidate.get("url") or "",
+        "source": candidate.get("source") or candidate.get("id", "").split(":", 1)[0],
+    }, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(
+        endpoint,
+        data=payload,
+        method="POST",
+        headers={"Content-Type": "application/json; charset=utf-8", "User-Agent": _UA},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read(200_000).decode("utf-8", "replace").strip()
+    except (HTTPError, URLError, OSError, TimeoutError):
+        return None
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return raw
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+    candidates = [
+        data.get("image_url"), data.get("imageUrl"), data.get("url"), data.get("output"),
+        data.get("result"), data.get("data"),
+    ]
+    while candidates:
+        value = candidates.pop(0)
+        if isinstance(value, str) and value.startswith(("http://", "https://")):
+            return value
+        if isinstance(value, list):
+            candidates.extend(value)
+        elif isinstance(value, dict):
+            candidates.extend(value.values())
+    return None
+
+
 def candidate_image(candidate: dict) -> str | None:
     if candidate.get("image_url"):
         return candidate["image_url"]
@@ -665,8 +718,8 @@ def candidate_image(candidate: dict) -> str | None:
                     return urljoin(html_url + "/", src)
         except (HTTPError, URLError, OSError):
             pass
-        return None
-    return og_image(candidate["url"])
+        return imagefree_image(candidate)
+    return og_image(candidate["url"]) or imagefree_image(candidate)
 
 
 def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, dict | str]:
@@ -826,4 +879,3 @@ if __name__ == "__main__":
     except Exception as exc:  # noqa: BLE001
         print(f"[s2c] FATAL: {type(exc).__name__}: {exc}", file=sys.stderr)
         raise SystemExit(1)
-
