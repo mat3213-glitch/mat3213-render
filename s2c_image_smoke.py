@@ -15,7 +15,7 @@ def main():
     candidate = candidates[0]
     (output / 'news.json').write_text(json.dumps(candidate, ensure_ascii=False, indent=2), encoding='utf-8')
     print('Live news:', candidate['title'], candidate['url'], flush=True)
-    result = daily.imagefree_image_bytes(candidate)
+    result = daily.imagefree_image_bytes(candidate, diagnostics=output / 'attempts')
     brief = images.load_brief(candidate)
     (output / 'brief.json').write_text(json.dumps(brief, ensure_ascii=False, indent=2), encoding='utf-8')
     if not result:

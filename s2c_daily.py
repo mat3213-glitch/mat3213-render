@@ -750,7 +750,7 @@ _IMAGEFREE_STOPPED = False
 _IMAGEFREE_TASKS = 0
 
 
-def imagefree_image_bytes(candidate: dict, aspect: str = "4:3") -> bytes | None:
+def imagefree_image_bytes(candidate: dict, aspect: str = "4:3", *, diagnostics: Path | None = None) -> bytes | None:
     global _IMAGEFREE_STOPPED, _IMAGEFREE_TASKS
     cached = s2c_images.load_image(candidate, aspect)
     if cached:
@@ -789,6 +789,11 @@ def imagefree_image_bytes(candidate: dict, aspect: str = "4:3") -> bytes | None:
             _IMAGEFREE_STOPPED = True
             return None
         verdict = s2c_images.check_image(image)
+        if diagnostics is not None:
+            diagnostics.mkdir(parents=True, exist_ok=True)
+            (diagnostics / f'attempt-{attempt + 1}.png').write_bytes(image)
+            (diagnostics / f'attempt-{attempt + 1}.json').write_text(
+                json.dumps({'prompt':prompt, 'qa':verdict}, ensure_ascii=False, indent=2), encoding='utf-8')
         print(f"[s2c] image QA attempt={attempt + 1}: {verdict['reason']}")
         if verdict.get('ok') is True:
             try:
