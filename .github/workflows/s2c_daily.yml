@@ -54,7 +54,7 @@ jobs:
 
       - name: Install Playwright
         run: |
-          pip install -q requests playwright
+          pip install -q requests playwright yt-dlp
           python -m playwright install --with-deps chromium
 
       - name: Run s2c daily cycle
