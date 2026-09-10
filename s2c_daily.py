@@ -448,6 +448,18 @@ def _invidious_latest(channel_id: str) -> list[tuple[str, str]]:
     return []
 
 
+def _yt_dlp_latest(handle: str) -> list[tuple[str, str]]:
+    """Use yt-dlp's maintained YouTube extractor as the final no-key fallback."""
+    proc = subprocess.run(
+        [sys.executable, "-m", "yt_dlp", "--flat-playlist", "--playlist-end", "5",
+         "--dump-single-json", "--no-warnings", f"https://www.youtube.com/@{handle}/videos"],
+        capture_output=True, text=True, timeout=45, check=True,
+    )
+    data = json.loads(proc.stdout)
+    return [(str(x.get("id") or ""), str(x.get("title") or "").strip())
+            for x in data.get("entries", []) if isinstance(x, dict)]
+
+
 def youtube_fetch(limit: int, profile: dict) -> list[dict]:
     raw = os.getenv("S2C_YOUTUBE_CHANNELS", "").strip()
     configured = [x.strip() for x in raw.split(",") if x.strip()]
@@ -473,6 +485,11 @@ def youtube_fetch(limit: int, profile: dict) -> list[dict]:
             ) for entry in entries[:5]]
         if not videos:
             videos = _invidious_latest(channel_id)
+        if not videos:
+            try:
+                videos = _yt_dlp_latest(label)
+            except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as ytdlp_exc:
+                print(f"::warning::youtube yt-dlp {label}: {type(ytdlp_exc).__name__}: {ytdlp_exc}")
         if not videos:
             print(f"::warning::youtube {label}: no videos parsed from YouTube or fallbacks")
         for video_id, title in videos[:5]:
