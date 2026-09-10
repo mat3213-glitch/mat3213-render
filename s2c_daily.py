@@ -54,11 +54,10 @@ _EDITOR_PROMPT = """Ты редактор русскоязычного Telegram-
 * Не используй штампы «революционный», «заслуживает внимания», «в эпоху», «это не просто».
 * Не добавляй фактов, которых нет в исходнике. Не обещай доходность и не давай инвестиционных советов.
 * Последний абзац — вывод/мораль: 1–2 предложения, зачем это важно обычному читателю.
-* Последняя строка: «Источник: <ссылка>».
 * Если данных мало или тема не относится к ИИ/роботам/технологиям, ответь ровно: SKIP.
 * Рекламные интеграции, продвижение авторских каналов, курсов, вебинаров и реферальных предложений — SKIP. Новости о продуктах допустимы.
 * Пиши обычный текст без Markdown и звёздочек. Заголовок только в первой строке, в теле не повторяй.
-* Перед ответом молча проверь: заголовок цепляет, есть хук, есть юмор/irony, есть мораль, есть ссылка.
+* Перед ответом молча проверь: заголовок цепляет, есть хук, есть юмор/irony, есть мораль, ссылки в ответе нет.
 * Весь текст ТОЛЬКО на русском языке. Никакого английского в теле поста.
 
 Заголовок сигнала: {title}
@@ -396,6 +395,43 @@ def rss_fetch(limit: int, profile: dict) -> list[dict]:
     return out[:limit]
 
 
+_OFFICIAL_FEEDS = {
+    "openai": "https://openai.com/news/rss.xml",
+    "deepmind": "https://deepmind.google/blog/rss.xml",
+    "huggingface": "https://huggingface.co/blog/feed.xml",
+    "microsoft": "https://www.microsoft.com/en-us/research/feed/",
+    "nvidia": "https://blogs.nvidia.com/blog/category/generative-ai/feed/",
+}
+
+
+def official_blogs_fetch(limit: int, profile: dict) -> list[dict]:
+    out = []
+    for source, feed_url in _OFFICIAL_FEEDS.items():
+        try:
+            root = ET.fromstring(_http_bytes(feed_url, timeout=25))
+        except (HTTPError, URLError, OSError, ET.ParseError) as exc:
+            print(f"::warning::official blog {source}: {type(exc).__name__}: {exc}")
+            continue
+        entries = root.findall(".//item") or root.findall(".//{*}entry")
+        for entry in entries[:8]:
+            title = (entry.findtext("title") or entry.findtext("{*}title") or "").strip()
+            link_node = entry.find("link")
+            if link_node is None:
+                link_node = entry.find("{*}link")
+            link = ""
+            if link_node is not None:
+                link = (link_node.get("href") or link_node.text or "").strip()
+            summary = (entry.findtext("description") or entry.findtext("{*}summary")
+                       or entry.findtext("{*}content") or "").strip()
+            summary = re.sub(r"<[^>]+>", " ", summary)
+            summary = re.sub(r"\s+", " ", summary).strip()
+            if title and link:
+                out.append({"id": f"official:{source}:{hashlib.sha1(link.encode()).hexdigest()[:16]}",
+                            "title": title, "url": link, "domain": _domain(link),
+                            "text": summary[:3000] or None, "score": 35, "source": source})
+    return out[:limit]
+
+
 _DEFAULT_YOUTUBE_CHANNELS = {
     "OpenAI": "UCXZCJLdBC09xxGZ6gcdrc6A",
     "GoogleDeepMind": "UCP7jMXSY2xbc3KCAE0MHQ-A",
@@ -511,6 +547,7 @@ SOURCES = {
     "grok": (grok_fetch, True),
     "chatgpt": (chatgpt_fetch, True),
     "youtube": (youtube_fetch, True),
+    "official": (official_blogs_fetch, True),
     "rss": (rss_fetch, False),
 }
 
@@ -641,6 +678,7 @@ def worker_add(base_url: str, secret: str, draft: dict) -> tuple[bool, dict | st
 
 def split_post(text: str) -> tuple[str, str]:
     clean = text.replace("**", "").strip()
+    clean = re.sub(r"\n*\s*Источник\s*:\s*(?:\[[^\]]+\]\([^\)]+\)|https?://\S+)\s*$", "", clean, flags=re.I).strip()
     lines = clean.splitlines()
     if len(lines) > 1 and len(lines[0]) <= 200 and lines[0].strip():
         body = "\n".join(lines[1:]).strip()
@@ -750,7 +788,7 @@ def main() -> int:
             continue
         img = candidate_image(c)
         title, body = split_post(text)
-        draft = {"id": c["id"], "source": name, "source_url": c.get("url") or "", "title": title, "text": body, "image_url": img,
+        draft = {"id": c["id"], "source": c.get("source") or name, "source_url": c.get("url") or "", "title": title, "text": body, "image_url": img,
                  "source_text": f"{c['title']}\n{c.get('text') or ''}"}
         ok, resp = worker_add(worker_url, worker_secret, draft)
         filtered = isinstance(resp, dict) and resp.get("skipped")
