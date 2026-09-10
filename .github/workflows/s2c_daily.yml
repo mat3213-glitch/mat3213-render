@@ -6,6 +6,12 @@ name: s2c daily (signals -> qwen -> worker)
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Collect and select sources without generating or sending drafts"
+        required: false
+        type: boolean
+        default: false
   schedule:
     - cron: "0 6 * * *"
     - cron: "0 14 * * *"
@@ -55,6 +61,11 @@ jobs:
         env:
           S2C_WORKER_SECRET: ${{ secrets.S2C_WORKER_SECRET }}
           GH_PAT: ${{ secrets.GH_PAT }}
-        run: python3 s2c_daily.py
-
+          S2C_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          if [ "$S2C_DRY_RUN" = "true" ]; then
+            python3 s2c_daily.py --dry-run
+          else
+            python3 s2c_daily.py
+          fi
 
