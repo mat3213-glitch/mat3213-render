@@ -56,17 +56,30 @@ def probe_fps(path: Path) -> float:
         return 24.0
 
 
-def pick_chain(effects_db: dict, n: int | None = None) -> list[str]:
+# Zoom/crop-drift effects are excluded when a track owner asks for a zoom-free
+# pool ("без зума вообще"): every one of them scales the frame up ≥1.04× and
+# pans a crop across it, which is exactly the look that reads as reused footage.
+# Baked-vignette effects drop too — the owner asked for a full-frame picture
+# without any vignette, even the subtle one baked into a color grade.
+NO_ZOOM_EXCLUDE = {"parallax", "slide_crop", "corner_sweep", "zoom_drift",
+                   "diagonal_crop", "motion_pan", "faded_film"}
+
+
+def pick_chain(effects_db: dict, n: int | None = None, *, no_zoom: bool = False) -> list[str]:
     """Choose exactly one visible effect for one source video.
 
     ``bleach_negate`` remains available for manual diagnostics, but is excluded
     from production randomization because a full-frame negative washes objects out.
+    ``no_zoom`` additionally drops every scale-up/crop-drift effect and the
+    baked-vignette grade — one uniqueizer, never a second re-crop of the same frame.
     """
     del n  # The production contract is one effect, never an effect chain.
     names = [*effects_db["vf"], *effects_db["complex"]]
     production = [name for name in names if name != "bleach_negate"]
+    if no_zoom:
+        production = [name for name in production if name not in NO_ZOOM_EXCLUDE]
     if not production:
-        raise ValueError("effects database has no production effects")
+        raise ValueError(f"effects database has no production effects (no_zoom={no_zoom})")
     return [random.choice(production)]
 
 

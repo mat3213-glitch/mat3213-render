@@ -17,6 +17,11 @@ on:
         description: "Целевое число луп (~54)"
         required: false
         default: "54"
+      no_zoom:
+        description: "Без zoom/crop-drift эффектов (1 уникализатор на луп)"
+        required: false
+        type: boolean
+        default: true
 
 concurrency:
   group: scene-cut-pool
@@ -56,11 +61,13 @@ jobs:
           python -u scene_cut_pool.py \
             --source-folder "$INPUT_SOURCE_FOLDER" \
             --out-base "$INPUT_OUT_BASE" \
-            --target "$INPUT_TARGET"
+            --target "$INPUT_TARGET" \
+            $([ "$INPUT_NO_ZOOM" = "true" ] && echo --no-zoom)
         env:
           INPUT_SOURCE_FOLDER: ${{ inputs.source_folder }}
           INPUT_OUT_BASE: ${{ inputs.out_base }}
           INPUT_TARGET: ${{ inputs.target }}
+          INPUT_NO_ZOOM: ${{ inputs.no_zoom }}
 
       - name: Summarize
         if: success()

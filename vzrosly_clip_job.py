@@ -30,8 +30,11 @@ if not JOB_ID:
     sys.exit("JOB_ID not set")
 
 REMOTE  = "ydrive"
-JOBS_YD = "Content factory/cloud_io/render_jobs"
-JOB_YD  = f"{JOBS_YD}/{JOB_ID}"
+# Путь джоб-папки: по умолчанию легаси cloud_io/render_jobs/<JOB_ID>, но может быть
+# переопределён через VZROSLY_JOB_YD для размещения по правилу cloud_io/YYYY-MM-DD/<name>/.
+JOB_YD  = os.environ.get("VZROSLY_JOB_YD", "").strip()
+if not JOB_YD:
+    JOB_YD = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 WORK    = Path("/tmp/vzrosly_job"); WORK.mkdir(parents=True, exist_ok=True)
 REPO    = Path(__file__).resolve().parent
 FONT    = str(REPO / "assets" / "Caveat.ttf")
@@ -367,6 +370,10 @@ GROOVE_TR = ["dissolve", "wipeleft", "wiperight", "slideup", "slidedown",
              "smoothright", "smoothleft", "circleopen", "fadegrays"]
 STROBE_TR = ["fade", "fade", "fade", "fadewhite", "slideleft", "fade",
              "fadeblack", "slideup", "fade", "fadewhite"]
+# переходы входа для видео-пула (полный трек): groove — короткие разнотипные,
+# drop/интро/выдох/аутро — длинные кинематографичные (не «простая подстановка фонов»).
+POOL_GROOVE_TR = ["fade", "dissolve", "fadegrays", "smoothleft", "smoothright",
+                  "wipeleft", "wiperight", "circleopen"]
 
 
 def _timeline_collage(variant="full", bpm=87.0, seed=42, calm=False, split=False):
@@ -636,9 +643,15 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
     for i, (key, dur, region, is_drop) in enumerate(raw):
         if i == 0:
             tin, tdur = None, 0.0
+        elif region == "drop":
+            tin, tdur = "fade", 0.15
+        elif region in ("intro", "breath"):
+            tin, tdur = rng.choice(["fadeblack", "dissolve"]), 0.45
+        elif region == "outro":
+            tin, tdur = "dissolve", 0.60
         else:
-            # A single blend grammar for every join, including a drop boundary.
-            tin, tdur = "fade", 1.75
+            tin = rng.choice(POOL_GROOVE_TR)
+            tdur = round(rng.uniform(0.25, 0.55), 2)
         seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
                         blend="none", tin=tin, tdur=tdur, region=region, drop=is_drop))
 
@@ -991,7 +1004,8 @@ def main():
     grade = f"eq={grade_eq}"
     if not job.get("grade_override") and style.get("balance"):
         grade += f",colorbalance={style['balance']}"
-    vig = f"vignette={style['vignette']}," if style.get("vignette") else ""
+    # job["vignette"]=false отключает виньетку стиля (владелец: полноформатная картинка).
+    vig = f"vignette={style['vignette']}," if (style.get("vignette") and job.get("vignette", True)) else ""
     result = WORK / out_name
     # Аудио-фейды рассчитаны на ОДИНОЧНЫЙ клип. При сборке трека из сегментов каждый кусок принесёт
     # свой fade-in/fade-out → трек «дышит» затуханиями каждые 22с (услышано yaromat 2026-07-17).

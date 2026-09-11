@@ -112,6 +112,8 @@ def main():
                     help="ЯД базовая папка для pool/ (создастся pool/)")
     ap.add_argument("--target", type=int, default=TARGET_DEFAULT,
                     help="целевое число луп (~54)")
+    ap.add_argument("--no-zoom", action="store_true",
+                    help="исключить zoom/crop-drift эффекты уникализации (1 эффект, без зупа)")
     a = ap.parse_args()
 
     work = Path(tempfile.mkdtemp(prefix="scene_cut_"))
@@ -188,7 +190,7 @@ def main():
         out = out_work / out_name
         src = src_dir / name
         s, e = seg
-        chain = pick_chain(effects_db)
+        chain = pick_chain(effects_db, no_zoom=a.no_zoom)
         try:
             uniquize(src, out, effects_chain=chain, effects_db=effects_db,
                      base=False, in_ss=s, in_t=e - s, out_wh=(1280, 720), drop_audio=True)

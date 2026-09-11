@@ -6,6 +6,10 @@ on:
       job_id:
         description: 'Job ID (e.g. 2026-06-05_vzrosly_square)'
         required: true
+      job_yd:
+        description: 'Полный путь джоб-папки на ЯД (например Content factory/cloud_io/2026-09-11/<job>). Пусто = легаси render_jobs/<job_id>'
+        required: false
+        type: string
 
 jobs:
   render:
@@ -48,6 +52,7 @@ jobs:
       - name: Run vzrosly_clip_job.py
         env:
           JOB_ID: ${{ inputs.job_id }}
+          VZROSLY_JOB_YD: ${{ inputs.job_yd }}
           CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_CHAT_ID:         ${{ secrets.SCOUT_CHAT_ID }}
@@ -58,6 +63,10 @@ jobs:
         if: failure()
         env:
           JOB_ID: ${{ inputs.job_id }}
+          JOB_YD: ${{ inputs.job_yd }}
         run: |
-          rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/status.txt" \
-            <<< "error: workflow failed" || true
+          if [ -n "$JOB_YD" ]; then
+            rclone rcat "ydrive:$JOB_YD/status.txt" <<< "error: workflow failed" || true
+          else
+            rclone rcat "ydrive:Content factory/cloud_io/render_jobs/$JOB_ID/status.txt" <<< "error: workflow failed" || true
+          fi
