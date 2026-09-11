@@ -35,6 +35,11 @@ on:
         required: false
         type: string
         default: "никто не придёт. это и есть взросление.\nyaromat — взрослый\nвключи звук"
+      cut_times:
+        description: "Optional section start seconds (e.g. '0,34.2,68.4,102.6,136.8'). Empty = equal split"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -69,18 +74,44 @@ jobs:
           SHORTS_PLATFORMS: ${{ inputs.shorts_platforms }}
           FULL_PLATFORMS: ${{ inputs.full_platforms }}
           CAPTION: ${{ inputs.caption }}
+          CUT_TIMES: ${{ inputs.cut_times }}
         run: |
           set -euo pipefail
           mkdir -p out
           upload(){ python3 yad_upload.py "$1" "$2"; }
           upload "ydrive:Content factory/$SOURCE" source.mp4
-          # Equal sections stay short enough for Shorts/VK Clips.
+          # Equal sections stay short enough for Shorts/VK Clips. Optional cut_times
+          # (comma-separated section start seconds) overrides equal split.
           total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source.mp4)
-          nsec="$SECTIONS"
-          section=$(python3 -c 'import sys; print(float(sys.argv[1]) / int(sys.argv[2]))' "$total" "$nsec")
+          python3 - "$total" "$SECTIONS" "$CUT_TIMES" <<'PY'
+          import json, sys
+          total = float(sys.argv[1])
+          requested = int(sys.argv[2])
+          raw = sys.argv[3].strip()
+          if raw:
+              starts = [float(x) for x in raw.split(",") if x.strip()]
+              if len(starts) < 2:
+                  raise SystemExit(f"cut_times требует >=2 секунд: {raw!r}")
+              if starts[0] != 0.0:
+                  starts = [0.0] + starts
+              for a, b in zip(starts, starts[1:]):
+                  if not 0 < b <= total:
+                      raise SystemExit(f"cut_times вне диапазона: {b} (total={total})")
+              points = [(s, e - s) for s, e in zip(starts, starts[1:] + [total])]
+              if len(points) != requested and "CUT_TIMES" in sys.argv:
+                  print(f"WARN: cut_times дал {len(points)} секций, sections={requested}", file=sys.stderr)
+          else:
+              step = total / requested
+              points = [(i * step, step) for i in range(requested)]
+          json.dump({"sections": len(points),
+                     "points": [{"start": s, "duration": d} for s, d in points]},
+                    open("/tmp/cut_plan.json", "w"), ensure_ascii=False)
+          PY
+          nsec=$(python3 -c 'import json; print(json.load(open("/tmp/cut_plan.json"))["sections"])')
           for n in $(seq 1 "$nsec"); do
-            start=$(python3 -c 'import sys; print((int(sys.argv[1])-1)*float(sys.argv[2]))' "$n" "$section")
-            ffmpeg -y -loglevel error -ss "$start" -t "$section" -i source.mp4 \
+            start=$(python3 -c 'import json,sys;i=int(sys.argv[1])-1;print(json.load(open("/tmp/cut_plan.json"))["points"][i]["start"])' "$n")
+            dur=$(python3 -c 'import json,sys;i=int(sys.argv[1])-1;print(json.load(open("/tmp/cut_plan.json"))["points"][i]["duration"])' "$n")
+            ffmpeg -y -loglevel error -ss "$start" -t "$dur" -i source.mp4 \
               -vf 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920' \
               -c:v libx264 -crf 22 -preset medium -c:a aac -b:a 160k -pix_fmt yuv420p \
               -movflags +faststart "out/${SLUG}_section_${n}.mp4"
@@ -99,7 +130,7 @@ jobs:
           # Общий writer очереди: НЕ правим queue.json сами. Собираем items →
           # submit кладёт уникально-именованный патч в queue.d/ (нет lost update),
           # reconcile — единственный writer queue.json (идемпотентный детерминированный fold).
-          python3 - "$SLUG" "$TITLE" "$CAPTION" "$SECTIONS" "$SHORTS_PLATFORMS" "$FULL_PLATFORMS" <<'PY'
+          python3 - "$SLUG" "$TITLE" "$CAPTION" "$nsec" "$SHORTS_PLATFORMS" "$FULL_PLATFORMS" <<'PY'
           import json, sys
           slug, title, caption = sys.argv[1:4]
           nsec = int(sys.argv[4])
