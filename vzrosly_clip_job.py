@@ -325,14 +325,20 @@ def xfade_chain(segs, durs, trans, tdurs, out: Path,
     # boundary uses the same fade/tdur as the rest of this recipe.
     if len(segs) > 20:
         chunks, chunk_durs = [], []
-        for start in range(0, len(segs), 20):
+        start = 0
+        while start < len(segs):
             end = min(len(segs), start + 20)
-            chunk = out.with_name(f"{out.stem}_chunk_{start // 20:02d}.mp4")
+            # хвост из одного сегмента нельзя склеивать (пустой xfade-граф → "No filters"):
+            # приклеиваем его к предыдущему чанку.
+            if len(segs) - end == 1:
+                end = len(segs)
+            chunk = out.with_name(f"{out.stem}_chunk_{len(chunks):02d}.mp4")
             if not xfade_chain(segs[start:end], durs[start:end], trans[start:end],
                                tdurs[start:end], chunk, crf=crf, preset=preset):
                 return False
             chunks.append(chunk)
             chunk_durs.append(probe_dur(chunk))
+            start = end
         bridge = [0.0] + [1.75] * (len(chunks) - 1)
         return xfade_chain(chunks, chunk_durs, ["fade"] * len(chunks), bridge,
                            out, crf=crf, preset=preset)
