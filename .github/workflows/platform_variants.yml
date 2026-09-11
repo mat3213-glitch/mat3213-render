@@ -46,7 +46,7 @@ concurrency:
 jobs:
   variants:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - name: Install ffmpeg and rclone
@@ -72,7 +72,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          rclone copyto "ydrive:Content factory/$SOURCE" source.mp4
+          upload(){ local s=$1 d=$2; for a in 1 2 3; do
+            rclone copyto --checkers 2 --transfers 2 --low-level-retries 4 --retries 3 "$s" "$d" && return 0
+            echo "↻ upload retry $a" >&2; sleep $((10*a)); done; return 1; }
+          upload "ydrive:Content factory/$SOURCE" source.mp4
           # Equal sections stay short enough for Shorts/VK Clips.
           total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source.mp4)
           nsec="$SECTIONS"
@@ -90,9 +93,9 @@ jobs:
             -c:a aac -b:a 48k -pix_fmt yuv420p -movflags +faststart "out/${SLUG}_full_720.mp4"
           base="Content factory/cloud_io/publish_queue/media/${SLUG}"
           for n in $(seq 1 "$nsec"); do
-            rclone copyto "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
+            upload "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
           done
-          rclone copyto "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
+          upload "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
           # Общий writer очереди: НЕ правим queue.json сами. Собираем items →
           # submit кладёт уникально-именованный патч в queue.d/ (нет lost update),
           # reconcile — единственный writer queue.json (идемпотентный детерминированный fold).
