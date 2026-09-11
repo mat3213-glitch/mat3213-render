@@ -33,6 +33,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from collections import OrderedDict
 
@@ -45,6 +46,30 @@ TARGET_DEFAULT = 54
 
 def sh(cmd, timeout=300):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+
+
+def upload(src: Path, dst: str, attempts: int = 3) -> bool:
+    """copyto с ретраями: Yandex.Disk душит активные/частые аплоады (P2.10).
+
+    Задаём малое число трансферов и долгий таймаут на одну попытку; при
+    TimeoutExpired/ненулевом коде — повтор с бэкоффом, потом признаём потерю.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            r = sh(["rclone", "copyto", str(src), dst,
+                    "--checkers", "2", "--transfers", "2",
+                    "--low-level-retries", "4", "--retries", "3"],
+                   timeout=900)
+        except subprocess.TimeoutExpired:
+            print(f"  ↻ upload timeout {src.name}, попытка {attempt}/{attempts}", flush=True)
+            time.sleep(10 * attempt)
+            continue
+        if r.returncode == 0:
+            return True
+        print(f"  ↻ upload fail {src.name} ({r.stderr.strip()[:120]}), "
+              f"попытка {attempt}/{attempts}", flush=True)
+        time.sleep(10 * attempt)
+    return False
 
 
 def probe_duration(path: Path) -> float:
@@ -197,9 +222,8 @@ def main():
         except Exception as ex:
             print(f"  ✗ {out_name}: uniquize fail ({ex})", flush=True)
             continue
-        if sh(["rclone", "copyto", str(out),
-               f"{REMOTE}{a.out_base}/pool/{out_name}"]).returncode != 0:
-            print(f"  ✗ upload {out_name}", flush=True)
+        if not upload(out, f"{REMOTE}{a.out_base}/pool/{out_name}"):
+            print(f"  ✗ upload {out_name} (после ретраев)", flush=True)
             continue
         uploaded += 1
 
@@ -208,7 +232,7 @@ def main():
                 for i, (nm, seg) in enumerate(all_work)]
     mp = work / "manifest.json"
     mp.write_text(json.dumps(m_simple, ensure_ascii=False, indent=2), encoding="utf-8")
-    sh(["rclone", "copyto", str(mp), f"{REMOTE}{a.out_base}/pool/manifest.json"])
+    upload(mp, f"{REMOTE}{a.out_base}/pool/manifest.json")
 
     print(f"[pool] ИТОГО залито: {uploaded} луп → {a.out_base}/pool/", flush=True)
 
