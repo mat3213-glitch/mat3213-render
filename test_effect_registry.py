@@ -113,3 +113,27 @@ def test_literal_filter_hash_is_hash_of_filtergraph_only():
     resolved = registry.resolve("faded_film", consumer="storyboard", fmt="vertical")
     import hashlib
     assert resolved["filter_hash"] == hashlib.sha256(resolved["filter"].encode()).hexdigest()
+
+
+def test_pick_chain_never_returns_bleach_negate_or_chain():
+    db = registry.load()
+    for _ in range(50):
+        res = uniquizer.pick_chain(db)
+        assert res == list(dict.fromkeys(res))
+        assert "bleach_negate" not in res
+        assert len(res) == 1
+
+
+def test_pick_chain_no_zoom_excludes_zoom_and_vignette_effects():
+    db = registry.load()
+    for _ in range(100):
+        res = uniquizer.pick_chain(db, no_zoom=True)
+        assert res[0] not in uniquizer.NO_ZOOM_EXCLUDE
+    assert "parallax" in uniquizer.NO_ZOOM_EXCLUDE
+    assert "faded_film" in uniquizer.NO_ZOOM_EXCLUDE
+
+
+def test_pool_manifest_records_applied_effect():
+    """scene_cut_pool фиксирует применённый уникализатор в манифесте (loop/effect)."""
+    source = (ROOT / "scene_cut_pool.py").read_text(encoding="utf-8")
+    assert '"effect": used_effect.get(i)' in source

@@ -192,6 +192,7 @@ def main():
     # 5. нарезать, каждый луп — 1 случайный уникализатор (single-effect), залить
     effects_db = load_effects()
     uploaded = 0
+    used_effect: dict[int, str] = {}
     for idx, (name, seg) in enumerate(all_work):
         out_name = f"loop_{idx:03d}.mp4"
         out = out_work / out_name
@@ -207,10 +208,12 @@ def main():
         if not upload(out, f"{REMOTE}{a.out_base}/pool/{out_name}"):
             print(f"  ✗ upload {out_name} (после ретраев)", flush=True)
             continue
+        used_effect[idx] = chain[0]
         uploaded += 1
 
-    # манифест
-    m_simple = [{"loop": i, "src": nm, "start": round(seg[0], 2), "end": round(seg[1], 2)}
+    # манифест (эффект фиксируется, чтобы рендер знал применённый уникализатор)
+    m_simple = [{"loop": i, "src": nm, "start": round(seg[0], 2), "end": round(seg[1], 2),
+                 "effect": used_effect.get(i)}
                 for i, (nm, seg) in enumerate(all_work)]
     mp = work / "manifest.json"
     mp.write_text(json.dumps(m_simple, ensure_ascii=False, indent=2), encoding="utf-8")
