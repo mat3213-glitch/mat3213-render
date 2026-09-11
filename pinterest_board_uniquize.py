@@ -64,6 +64,12 @@ def probe_fps(path: Path) -> float:
 NO_ZOOM_EXCLUDE = {"parallax", "slide_crop", "corner_sweep", "zoom_drift",
                    "diagonal_crop", "motion_pan", "faded_film"}
 
+# Эффекты, которые деградируют целостность кадра ломанием на части (слишком
+# яркие, тянут внимание на себя из клипа в клип). Отключены из продакшен-
+# рандома, НО не удалены из реестра effects.json — доступны для ручного
+# использования/диагностики.
+PROMINENT_FX_OFF = {"split_drift", "grid_2x2", "split_converge"}
+
 
 def pick_chain(effects_db: dict, n: int | None = None, *, no_zoom: bool = False) -> list[str]:
     """Choose exactly one visible effect for one source video.
@@ -72,10 +78,13 @@ def pick_chain(effects_db: dict, n: int | None = None, *, no_zoom: bool = False)
     from production randomization because a full-frame negative washes objects out.
     ``no_zoom`` additionally drops every scale-up/crop-drift effect and the
     baked-vignette grade — one uniqueizer, never a second re-crop of the same frame.
+    ``PROMINENT_FX_OFF`` — кадр-ломающие эффекты не попадают в случайный выбор,
+    но остаются в реестре.
     """
     del n  # The production contract is one effect, never an effect chain.
     names = [*effects_db["vf"], *effects_db["complex"]]
-    production = [name for name in names if name != "bleach_negate"]
+    production = [name for name in names
+                  if name not in PROMINENT_FX_OFF and name != "bleach_negate"]
     if no_zoom:
         production = [name for name in production if name not in NO_ZOOM_EXCLUDE]
     if not production:

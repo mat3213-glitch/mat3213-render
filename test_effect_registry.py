@@ -121,6 +121,7 @@ def test_pick_chain_never_returns_bleach_negate_or_chain():
         res = uniquizer.pick_chain(db)
         assert res == list(dict.fromkeys(res))
         assert "bleach_negate" not in res
+        assert res[0] not in uniquizer.PROMINENT_FX_OFF
         assert len(res) == 1
 
 
@@ -129,8 +130,10 @@ def test_pick_chain_no_zoom_excludes_zoom_and_vignette_effects():
     for _ in range(100):
         res = uniquizer.pick_chain(db, no_zoom=True)
         assert res[0] not in uniquizer.NO_ZOOM_EXCLUDE
+        assert res[0] not in uniquizer.PROMINENT_FX_OFF
     assert "parallax" in uniquizer.NO_ZOOM_EXCLUDE
     assert "faded_film" in uniquizer.NO_ZOOM_EXCLUDE
+    assert "split_drift" in uniquizer.PROMINENT_FX_OFF
 
 
 def test_pool_manifest_records_applied_effect():
