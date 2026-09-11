@@ -979,9 +979,10 @@ def main():
             f"borderw={bw_small}:bordercolor={bc_outro}@0.6:line_spacing=8:"
             f"x=(w-text_w)/2:y=h*0.78:enable='between(t,{ot0:.3f},{duration})':"
             f"alpha='if(lt(t,{ot0+0.3:.3f}),(t-{ot0:.3f})/0.3,1)'")
-    if watermark:
+    if watermark and os.getenv("VZROSLY_WM") == "1":
         # весь клип: кредит yaromat в нижнем углу (scroll-proof привязка охватов).
         # читаемость на любом фоне — белый текст + тёмная обводка, лёгкая прозрачность.
+        # отключено по умолчанию (2026-09-11, запрос yaromat). Включить: VZROSLY_WM=1.
         wm_file = WORK / "wm.txt"; wm_file.write_text(watermark, encoding="utf-8")
         draw.append(
             f"drawtext=fontfile={FONT}:textfile={wm_file}:fontcolor=white@0.85:fontsize={fs_wm}:"
