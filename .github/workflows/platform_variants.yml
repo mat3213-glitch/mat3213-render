@@ -72,9 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p out
-          upload(){ local s=$1 d=$2; for a in 1 2 3; do
-            rclone copyto --checkers 2 --transfers 2 --low-level-retries 4 --retries 3 "$s" "$d" && return 0
-            echo "↻ upload retry $a" >&2; sleep $((10*a)); done; return 1; }
+          upload(){ python3 yad_upload.py "$1" "$2"; }
           upload "ydrive:Content factory/$SOURCE" source.mp4
           # Equal sections stay short enough for Shorts/VK Clips.
           total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source.mp4)

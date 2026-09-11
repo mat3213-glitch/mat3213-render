@@ -49,27 +49,9 @@ def sh(cmd, timeout=300):
 
 
 def upload(src: Path, dst: str, attempts: int = 3) -> bool:
-    """copyto с ретраями: Yandex.Disk душит активные/частые аплоады (P2.10).
-
-    Задаём малое число трансферов и долгий таймаут на одну попытку; при
-    TimeoutExpired/ненулевом коде — повтор с бэкоффом, потом признаём потерю.
-    """
-    for attempt in range(1, attempts + 1):
-        try:
-            r = sh(["rclone", "copyto", str(src), dst,
-                    "--checkers", "2", "--transfers", "2",
-                    "--low-level-retries", "4", "--retries", "3"],
-                   timeout=900)
-        except subprocess.TimeoutExpired:
-            print(f"  ↻ upload timeout {src.name}, попытка {attempt}/{attempts}", flush=True)
-            time.sleep(10 * attempt)
-            continue
-        if r.returncode == 0:
-            return True
-        print(f"  ↻ upload fail {src.name} ({r.stderr.strip()[:120]}), "
-              f"попытка {attempt}/{attempts}", flush=True)
-        time.sleep(10 * attempt)
-    return False
+    """copyto с ретраями — обёртка над yad_upload.upload."""
+    from yad_upload import upload as _ya_upload
+    return _ya_upload(str(src), dst, attempts=attempts)
 
 
 def probe_duration(path: Path) -> float:
