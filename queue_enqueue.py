@@ -96,13 +96,16 @@ def load_queue(text: str) -> dict:
     return queue
 
 
-def validate_entry(platform: str, entry: dict) -> None:
+def validate_entry(platform: str, entry: dict, *, op: str = "add") -> None:
     if platform not in PLATFORMS:
         raise ValueError(f"неизвестная platform: {platform!r}")
     if not isinstance(entry.get("id"), str) or not entry["id"]:
         raise ValueError("entry.id обязателен")
     if not re.fullmatch(r"[A-Za-z0-9_.-]+", entry["id"]):
         raise ValueError(f"небезопасный entry.id: {entry['id']!r}")
+    if op == "remove":
+        # Удаление по (platform,id): кроме безопасного id ничего не требуется.
+        return
     media = entry.get("media")
     if not isinstance(media, str) or not media or media.startswith("/") or ".." in Path(media).parts:
         raise ValueError("entry.media обязателен и должен быть относительным безопасным путём")
@@ -119,7 +122,10 @@ def validate_entry(platform: str, entry: dict) -> None:
 
 
 def parse_patch(text: str) -> list[dict]:
-    """Валидирует патч и возвращает список items [{"platform", "entry"}, ...]."""
+    """Валидирует патч и возвращает items [{"platform", "entry", "op"}, ...].
+
+    op = "add" (default) | "remove". remove удаляет по (platform,id).
+    """
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
@@ -132,24 +138,38 @@ def parse_patch(text: str) -> list[dict]:
             raise ValueError("элемент патча должен быть объектом")
         platform = item.get("platform")
         entry = item.get("entry")
+        op = item.get("op", "add")
         if not isinstance(platform, str) or not platform or not isinstance(entry, dict):
             raise ValueError("элемент патча требует platform (str) и entry (dict)")
-        validate_entry(platform, entry)
-        items.append({"platform": platform, "entry": entry})
+        if op not in ("add", "remove"):
+            raise ValueError(f"неизвестная операция патча: {op!r}")
+        validate_entry(platform, entry, op=op)
+        items.append({"platform": platform, "entry": entry, "op": op})
     return items
 
 
 def fold(queue: dict, items: list[dict]) -> int:
-    """Дополняет очередь элементами (force-add по (platform,id)); чужие позиции сохраняются."""
-    added = 0
+    """Дополняет/правит очередь по (platform,id); чужие позиции сохраняются.
+
+    op="add" — добавить, если id ещё нет; op="remove" — удалить id.
+    Возвращает число применённых изменений.
+    """
+    changed = 0
     for item in items:
         platform = item["platform"]
         entry = item["entry"]
+        op = item.get("op", "add")
         bucket = queue.setdefault(platform, [])
+        if op == "remove":
+            before = len(bucket)
+            bucket[:] = [x for x in bucket if x.get("id") != entry["id"]]
+            if len(bucket) != before:
+                changed += 1
+            continue
         if all(isinstance(x, dict) and x.get("id") != entry["id"] for x in bucket):
             bucket.append(entry)
-            added += 1
-    return added
+            changed += 1
+    return changed
 
 
 def sha256_bytes(data: bytes) -> str:

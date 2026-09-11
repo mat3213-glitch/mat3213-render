@@ -166,6 +166,46 @@ class QueueEnqueueTests(unittest.TestCase):
             parse_patch(json.dumps({"items": [
                 {"platform": "unknown", "entry": {"id": "x", "media": "m.mp4", "caption": "c"}}]}))
 
+    def test_parse_patch_accepts_remove_by_id(self) -> None:
+        items = parse_patch(json.dumps({"items": [
+            {"platform": "vk", "op": "remove", "entry": {"id": "old_vk"}}]}))
+        self.assertEqual(items, [{"platform": "vk", "entry": {"id": "old_vk"}, "op": "remove"}])
+
+    def test_parse_patch_rejects_remove_without_id_and_unknown_op(self) -> None:
+        with self.assertRaisesRegex(ValueError, "id"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "vk", "op": "remove", "entry": {}}]}))
+        with self.assertRaisesRegex(ValueError, "операция"):
+            parse_patch(json.dumps({"items": [
+                {"platform": "vk", "op": "wipe", "entry": {"id": "x"}}]}))
+
+    def test_fold_removes_by_id_keeping_others(self) -> None:
+        q = base_queue()  # te tg/ok/vk buckets
+        self.assertEqual(fold(q, [{"platform": "vk", "entry": {"id": "old_vk"}, "op": "remove"}]), 1)
+        self.assertEqual(q["vk"], [])
+        self.assertEqual(q["tg"], [{"id": "keep_tg", "media": "a/1.mp4"}])
+
+    def test_fold_remove_idempotent_and_reconcile_applies_remove(self) -> None:
+        remote = RemoteStore()
+        runner = RemoteSubprocess(remote)
+        with patch("queue_enqueue.rclone", side_effect=runner):
+            submit_patch(QUEUE_DST, [{"platform": "vk", "op": "remove", "entry": {"id": "old_vk"}}],
+                         "cleanup", work=self.work)
+            added, code = reconcile(QUEUE_DST, work=self.work)
+            self.assertEqual((added, code), (1, 0))
+            q = load_queue(remote.store[QUEUE_DST])
+            self.assertEqual(q["vk"], [])
+            self.assertEqual(q["tg"], [{"id": "keep_tg", "media": "a/1.mp4"}])
+            # повторный reconcile (патч уже в queue.processed) — без изменений
+            added, code = reconcile(QUEUE_DST, work=self.work)
+            self.assertEqual((added, code), (0, 0))
+
+    def test_fold_remove_and_add_last_wins(self) -> None:
+        q = base_queue()
+        fold(q, [{"platform": "vk", "entry": {"id": "old_vk"}, "op": "remove"}])
+        fold(q, [{"platform": "vk", "entry": {"id": "old_vk", "media": "new/full.mp4", "caption": "c"}}])
+        self.assertEqual(q["vk"], [{"id": "old_vk", "media": "new/full.mp4", "caption": "c"}])
+
     def test_submit_then_reconcile(self) -> None:
         remote = RemoteStore()
         runner = RemoteSubprocess(remote)

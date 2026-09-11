@@ -26,10 +26,10 @@ on:
         type: string
         default: "youtube"
       full_platforms:
-        description: "Comma-separated platforms that receive the full 720p cut (tg,vk,ok)"
+        description: "Comma-separated platforms that receive the full 720p cut (tg,vk,ok); 'none' = skip full"
         required: false
         type: string
-        default: "tg,vk"
+        default: "none"
       caption:
         description: "Post caption (fb-цитата + трек)"
         required: false
@@ -87,15 +87,17 @@ jobs:
               -c:v libx264 -crf 22 -preset medium -c:a aac -b:a 160k -pix_fmt yuv420p \
               -movflags +faststart "out/${SLUG}_section_${n}.mp4"
           done
-          ffmpeg -y -loglevel error -i source.mp4 \
-            -vf 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2' \
-            -c:v libx264 -preset medium -b:v 550k -maxrate 600k -bufsize 1200k \
-            -c:a aac -b:a 48k -pix_fmt yuv420p -movflags +faststart "out/${SLUG}_full_720.mp4"
           base="Content factory/cloud_io/publish_queue/media/${SLUG}"
           for n in $(seq 1 "$nsec"); do
             upload "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
           done
-          upload "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
+          if [ "$FULL_PLATFORMS" != "none" ] && [ -n "$FULL_PLATFORMS" ]; then
+            ffmpeg -y -loglevel error -i source.mp4 \
+              -vf 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2' \
+              -c:v libx264 -preset medium -b:v 550k -maxrate 600k -bufsize 1200k \
+              -c:a aac -b:a 48k -pix_fmt yuv420p -movflags +faststart "out/${SLUG}_full_720.mp4"
+            upload "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
+          fi
           # Общий writer очереди: НЕ правим queue.json сами. Собираем items →
           # submit кладёт уникально-именованный патч в queue.d/ (нет lost update),
           # reconcile — единственный writer queue.json (идемпотентный детерминированный fold).
@@ -103,8 +105,8 @@ jobs:
           import json, sys
           slug, title, caption = sys.argv[1:4]
           nsec = int(sys.argv[4])
-          shorts_platforms = [p for p in sys.argv[5].split(",") if p]
-          full_platforms = [p for p in sys.argv[6].split(",") if p]
+          shorts_platforms = [p for p in sys.argv[5].split(",") if p and p not in ("", "none")]
+          full_platforms = [p for p in sys.argv[6].split(",") if p and p not in ("", "none")]
           items = []
           for platform in full_platforms:
               items.append({"platform": platform, "entry": {"id": f"{slug}_{platform}",
