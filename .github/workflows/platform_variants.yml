@@ -15,6 +15,26 @@ on:
         description: "Publication title"
         required: true
         type: string
+      sections:
+        description: "Number of equal Shorts sections"
+        required: false
+        type: string
+        default: "4"
+      shorts_platforms:
+        description: "Comma-separated platforms that receive Shorts (vk,youtube,ok)"
+        required: false
+        type: string
+        default: "youtube"
+      full_platforms:
+        description: "Comma-separated platforms that receive the full 720p cut (tg,vk,ok)"
+        required: false
+        type: string
+        default: "tg,vk"
+      caption:
+        description: "Post caption (fb-цитата + трек)"
+        required: false
+        type: string
+        default: "никто не придёт. это и есть взросление.\nyaromat — взрослый\nвключи звук"
 
 permissions:
   contents: read
@@ -45,14 +65,19 @@ jobs:
           SOURCE: ${{ inputs.source }}
           SLUG: ${{ inputs.slug }}
           TITLE: ${{ inputs.title }}
+          SECTIONS: ${{ inputs.sections }}
+          SHORTS_PLATFORMS: ${{ inputs.shorts_platforms }}
+          FULL_PLATFORMS: ${{ inputs.full_platforms }}
+          CAPTION: ${{ inputs.caption }}
         run: |
           set -euo pipefail
           mkdir -p out
           rclone copyto "ydrive:Content factory/$SOURCE" source.mp4
-          # Four equal sections remain below one minute for Shorts and Reels.
+          # Equal sections stay short enough for Shorts/VK Clips.
           total=$(ffprobe -v error -show_entries format=duration -of csv=p=0 source.mp4)
-          section=$(python3 -c 'import sys; print(float(sys.argv[1]) / 4.0)' "$total")
-          for n in 1 2 3 4; do
+          nsec="$SECTIONS"
+          section=$(python3 -c 'import sys; print(float(sys.argv[1]) / int(sys.argv[2]))' "$total" "$nsec")
+          for n in $(seq 1 "$nsec"); do
             start=$(python3 -c 'import sys; print((int(sys.argv[1])-1)*float(sys.argv[2]))' "$n" "$section")
             ffmpeg -y -loglevel error -ss "$start" -t "$section" -i source.mp4 \
               -vf 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920' \
@@ -64,35 +89,41 @@ jobs:
             -c:v libx264 -preset medium -b:v 550k -maxrate 600k -bufsize 1200k \
             -c:a aac -b:a 48k -pix_fmt yuv420p -movflags +faststart "out/${SLUG}_full_720.mp4"
           base="Content factory/cloud_io/publish_queue/media/${SLUG}"
-          for n in 1 2 3 4; do
+          for n in $(seq 1 "$nsec"); do
             rclone copyto "out/${SLUG}_section_${n}.mp4" "ydrive:${base}/${SLUG}_section_${n}.mp4"
           done
           rclone copyto "out/${SLUG}_full_720.mp4" "ydrive:${base}/${SLUG}_full_720.mp4"
           # Общий writer очереди: НЕ правим queue.json сами. Собираем items →
           # submit кладёт уникально-именованный патч в queue.d/ (нет lost update),
           # reconcile — единственный writer queue.json (идемпотентный детерминированный fold).
-          python3 - "$SLUG" "$TITLE" <<'PY'
+          python3 - "$SLUG" "$TITLE" "$CAPTION" "$SECTIONS" "$SHORTS_PLATFORMS" "$FULL_PLATFORMS" <<'PY'
           import json, sys
-          slug, title = sys.argv[1:]
-          caption = "никто не придёт. это и есть взросление.\n\nyaromat — взрослый\nвключи звук"
+          slug, title, caption = sys.argv[1:4]
+          nsec = int(sys.argv[4])
+          shorts_platforms = [p for p in sys.argv[5].split(",") if p]
+          full_platforms = [p for p in sys.argv[6].split(",") if p]
           items = []
-          for platform, media, item_id in (
-              ("tg", f"{slug}/{slug}_full_720.mp4", f"{slug}_tg"),
-              ("vk", f"{slug}/{slug}_full_720.mp4", f"{slug}_vk"),
-          ):
-              items.append({"platform": platform, "entry": {"id": item_id, "media": media,
-                            "type": "video", "caption": caption, "own_track": True}})
-          for n in range(1, 5):
-              items.append({"platform": "youtube", "entry": {
-                  "id": f"{slug}_short_{n}", "media": f"{slug}/{slug}_section_{n}.mp4",
-                  "type": "video", "title": f"{title} · часть {n}/4 #Shorts",
-                  "description": caption + f"\n\n#Shorts #futuregarage #downtempo #yaromat",
-                  "own_track": True}})
+          for platform in full_platforms:
+              items.append({"platform": platform, "entry": {"id": f"{slug}_{platform}",
+                            "media": f"{slug}/{slug}_full_720.mp4", "type": "video",
+                            "caption": caption, "own_track": True}})
+          for n in range(1, nsec + 1):
+              for platform in shorts_platforms:
+                  if platform == "youtube":
+                      items.append({"platform": platform, "entry": {
+                          "id": f"{slug}_short_{n}", "media": f"{slug}/{slug}_section_{n}.mp4",
+                          "type": "video", "title": f"{title} · часть {n}/{nsec} #Shorts",
+                          "description": caption + f"\n\n#Shorts #futuregarage #downtempo #yaromat",
+                          "own_track": True}})
+                  else:
+                      items.append({"platform": platform, "entry": {
+                          "id": f"{slug}_{platform}_short_{n}", "media": f"{slug}/{slug}_section_{n}.mp4",
+                          "type": "video", "caption": caption, "own_track": True}})
           json.dump({"items": items}, open("items.json", "w"), ensure_ascii=False, indent=2)
           PY
           QUEUE_DST="Content factory/cloud_io/publish_queue/queue.json"
           python3 queue_enqueue.py submit --queue-dst "$QUEUE_DST" --slug "$SLUG" --items-file items.json
           # The dedicated workflow_run reconciler consumes durable patches.
           # This producer never writes queue.json.
-          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_full_720.mp4
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 out/${SLUG}_section_1.mp4
           ls -lh out/
