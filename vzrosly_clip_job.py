@@ -324,14 +324,19 @@ def xfade_chain(segs, durs, trans, tdurs, out: Path,
     # graph exhausts runner resources, so collapse bounded batches first.  Every
     # boundary uses the same fade/tdur as the rest of this recipe.
     if len(segs) > 20:
+        n = len(segs)
+        if n <= 1:
+            run(["cp", str(segs[0]), str(out)])
+            return out.exists()
         chunks, chunk_durs = [], []
         start = 0
-        while start < len(segs):
-            end = min(len(segs), start + 20)
-            # хвост из одного сегмента нельзя склеивать (пустой xfade-граф → "No filters"):
-            # приклеиваем его к предыдущему чанку.
-            if len(segs) - end == 1:
-                end = len(segs)
+        while start < n:
+            end = min(n, start + 20)
+            # Один «хвостовой» сегмент не склеивается (пустой xfade-граф → "No filters"),
+            # а чанк из 21 элемента уходит в бесконечную рекурсию: поэтому хвост из
+            # ровно одного сегмента забираем у предыдущего чанка (19 + 2).
+            if end < n and n - end == 1:
+                end -= 1
             chunk = out.with_name(f"{out.stem}_chunk_{len(chunks):02d}.mp4")
             if not xfade_chain(segs[start:end], durs[start:end], trans[start:end],
                                tdurs[start:end], chunk, crf=crf, preset=preset):
