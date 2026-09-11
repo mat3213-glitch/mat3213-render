@@ -1,0 +1,78 @@
+name: tsx-font-probe
+
+# Проба шрифтов титра MobyTitle на реальном отрезке видео. Рендер на GH Actions.
+# Шлёт 4 варианта (sans/serif/hand/mono) в TG (по умолчанию фактори, thread 5).
+# НЕ трогает боевой пул — это пред-гейт выбор болд-шрифта.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_yd:
+        description: "YD path relative to Content factory/cloud_io/"
+        required: false
+        default: "2026-09-11/submarina_vzrosly/submarina_vertical_full.mp4"
+      seg_at:
+        description: "segment start seconds"
+        required: false
+        default: "45"
+      seg_dur:
+        description: "segment duration seconds"
+        required: false
+        default: "6"
+      at:
+        description: "overlay start offset inside the segment"
+        required: false
+        default: "1.2"
+      overlay_dur:
+        description: "overlay visible duration seconds"
+        required: false
+        default: "3.0"
+      title:
+        description: "accentText (название трека)"
+        required: false
+        default: "Submarina"
+      tg_thread:
+        description: "TG thread (фактори=5, scout=634)"
+        required: false
+        default: "5"
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # was v4
+        with:
+          node-version: "20"
+      - name: System deps
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing ffmpeg rclone
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+      - name: Install remotion deps
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
+      - name: Render + send 4 font probes
+        env:
+          SOURCE_YD:          ${{ inputs.source_yd }}
+          SEG_AT:             ${{ inputs.seg_at }}
+          SEG_DUR:            ${{ inputs.seg_dur }}
+          AT:                 ${{ inputs.at }}
+          OVERLAY_DUR:        ${{ inputs.overlay_dur }}
+          TITLE:              ${{ inputs.title }}
+          TG_CHAT_ID:         ${{ secrets.SCOUT_CHAT_ID }}
+          TG_THREAD_ID:       ${{ inputs.tg_thread }}
+          CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python tsx_font_probe_job.py

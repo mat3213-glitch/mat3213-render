@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig, interpolate, Easing} from 'remotion';
 import {OverlayProps} from '../overlay_contract';
-import {TITLE_FONT} from '../fonts';
+import {TITLE_FONT, TITLE_FONT_CANDIDATES} from '../fonts';
 
 /**
  * MobyTitle — сдержанный liner-note титр в регистре ранних клипов Moby (Play-эра):
@@ -12,11 +12,14 @@ import {TITLE_FONT} from '../fonts';
  *
  * Бренд `yaromat` зафиксирован (брендбук: строчными, крупнее трека).
  * accentText (опц.) = название трека; пусто → только имя+линейка.
+ * titleFont (опц.) = ключ из TITLE_FONT_CANDIDATES (sans/serif/hand/mono),
+ * пусто → брендовый TITLE_FONT.
  */
 export const MobyTitle: React.FC<OverlayProps> = ({
   palette,
   durationSec,
   accentText,
+  titleFont,
 }) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
@@ -56,6 +59,7 @@ export const MobyTitle: React.FC<OverlayProps> = ({
   const sideMargin = Math.round(width * 0.085); // безопасное поле liner-note
   const brandSize = Math.round(width * 0.078); // имя крупнее
   const trackSize = Math.round(width * 0.036); // трек мельче
+  const family = (titleFont && TITLE_FONT_CANDIDATES[titleFont]) || TITLE_FONT;
 
   return (
     <AbsoluteFill>
@@ -66,7 +70,7 @@ export const MobyTitle: React.FC<OverlayProps> = ({
           bottom: Math.round(height * 0.14),
           opacity: groupOpacity,
           translate: `0px ${driftY}px`,
-          fontFamily: TITLE_FONT,
+          fontFamily: family,
           textAlign: 'left',
         }}
       >

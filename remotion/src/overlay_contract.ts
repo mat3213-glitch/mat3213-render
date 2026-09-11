@@ -17,6 +17,8 @@ export const overlayPropsSchema = z.object({
   palette: z.array(z.string()).default(['#e8e2d6', '#cfd6dd', '#1a2230']),
   // опц. короткий акцент-текст (1-2 слова) — НЕ обязателен, оверлей самоценен графикой
   accentText: z.string().optional(),
+  // опц. шрифтовой кандидат для текстовых оверлеев (ключ из TITLE_FONT_CANDIDATES)
+  titleFont: z.string().optional(),
 });
 
 export type OverlayProps = z.infer<typeof overlayPropsSchema>;
