@@ -1,29 +1,11 @@
-# Repo Scout — 2026-09-10T14:05:29.320131
-Всего в шортлисте: 3
-- **logbx/clip_forge** ⭐1 [video]
-  - https://github.com/logbx/clip_forge
+# Repo Scout — 2026-09-12T13:22:40.822777
+Всего в шортлисте: 1
+- **camray/dimensional-media** ⭐0 [source]
+  - https://github.com/camray/dimensional-media
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: video timeline waveform
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Этот репозиторий предлагает десктопный видеоредактор с многодорожечной временной шкалой и визуализацией аудио-волн. Он может служить компактным инструментом для ревью режиссуры, предоставляя визуальное представление таймлайна, что соответствует потребности в дешёвом обзоре без полной передачи видео в LLM. Интеграция имеет низкую стоимость, но риск дублирования высок, так как уже есть WhisperX и EDL; ценность только в компактном интерфейсе для ревью.
-  - 📄 Cross-platform desktop video editor built with Electron & React. Record screens/webcams, edit on multi-track timeline, control audio with waveform visualization
-- **MasterLeos/leos-six-department-directing-team-skill-v1** ⭐3 [craft]
-  - https://github.com/MasterLeos/leos-six-department-directing-team-skill-v1
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий представляет собой AI-навык для кинопроизводства, охватывающий планирование сцен, постановку и кинематографию, включая видео-промпты. Он предлагает операторские prompt-схемы, которые могут быть использованы для управляемой i2v-моторики, закрывая потребность в проверяемых словарях. Стоимость интеграции низкая, но риск дублирования высок, поскольку уже существуют camera_moves.json и prompt_writer; следует брать только новые проверяемые формулировки.
-  - 📄 An AI filmmaking skill by Leos, bringing together six directing roles for scene planning, performance, staging, cinematography, video prompts, and continuity re
-- **patipanpealt/alt-cinematography-reference** ⭐1 [craft]
-  - https://github.com/patipanpealt/alt-cinematography-reference
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: camera movement prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Репозиторий содержит одностраничный справочник по размерам кадра, ракурсам, движению камеры, освещению и композиции, каждая запись сопровождается промпт-словарем для AI-инструментов. Он предоставляет проверяемые операторские словари и prompt-схемы, что помогает в управляемой i2v-моторике для облачных генераторов. Интеграция недорогая, но риск дублирования высок, так как уже есть camera_moves.json и prompt_writer; ценность только в новых проверяемых формулировках.
-  - 📄 A single-page reference to shot sizes, camera angles, movement, lighting and composition — each entry paired with prompt vocabulary for AI image and video tools
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий предлагает API для стоковых фото и видео, что соответствует нашей потребности в адаптерах для легального стокового контента. Он может служить новым источником видео с лицензией и метаданными происхождения. Хотя интеграция недорога, риск дублирования высок из-за существующих аналогов, и его ценность зависит от уникальности источника или точности метаданных.
+  - 📄 Local stock photos, video, and drone footage for real estate listings. NestJS API + React web app, agent-first development.
