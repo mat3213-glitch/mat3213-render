@@ -35,3 +35,6 @@ qwen/qwen_session.json
 .agents/
 remotion/.agents/
 .s2c-image-models/
+
+# Pinterest куки (секрет; бэкап на ЯД mirror)
+Instrument/Pinterest/cookies/

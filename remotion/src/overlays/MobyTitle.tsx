@@ -12,6 +12,8 @@ import {TITLE_FONT, TITLE_FONT_CANDIDATES} from '../fonts';
  *
  * Бренд `yaromat` зафиксирован (брендбук: строчными, крупнее трека).
  * accentText (опц.) = название трека; пусто → только имя+линейка.
+ * ТРЕК ВСЕГДА СТРОЧНЫМИ (только строчные буквы — требование yaromat 2026-09-13),
+ * позиция — внизу под hairline-линией.
  * titleFont (опц.) = ключ из TITLE_FONT_CANDIDATES (sans/serif/hand/mono),
  * пусто → брендовый TITLE_FONT.
  */
@@ -113,7 +115,7 @@ export const MobyTitle: React.FC<OverlayProps> = ({
               opacity: 0.9,
             }}
           >
-            {accentText}
+            {(accentText || '').toLowerCase()}
           </div>
         ) : null}
       </div>
