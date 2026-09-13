@@ -252,29 +252,53 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
 
 def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
                    crf: str = "22", preset: str = "veryfast", tint: str = "",
-                   ss: float = 0.0) -> bool:
+                   ss: float = 0.0, feetage: Path | None = None,
+                   feetage_alpha: float = 0.25, fit_mode: str = "crop") -> bool:
     """Сегмент из видео-футажа (Pexels): slice длины dur ОТ СЕКУНДЫ ss, cover-crop в WxH, fps.
     Короткий футаж зацикливается (-stream_loop). Грейд под стиль — общим density-пассом тела.
     Энкод как у motion_seg (timescale 12800) → совместимо с xfade_chain.
     tint: арты цветные ПО ГЕНЕРАЦИИ (замок палитры), реальный сток — нет. Общий density-пасс
     (eq контраст/сатурация) серый футаж в палитру НЕ приводит → грозовые облака садятся
     серо-белым пятном посреди нуара. Тинт красит футаж в лук замка ДО сборки.
+    feetage: опциональный видео-футаж (720×1280), overlay поверх лупа с прозрачностью
+    (feetage_alpha = 0.25 = футаж с 75% прозрачностью, запрос yaromat 2026-09-13).
 
     🔴 ss ОБЯЗАТЕЛЕН ПРИ ПОВТОРНЫХ ПОКАЗАХ КЛЮЧА (правка 2026-08-06). Раньше `-ss` не было
     вовсе: каждое появление ключа откручивало файл С НУЛЯ, и зритель по 5–8 раз за часть видел
     одно и то же начало одного и того же клипа. Замер на полном клипе: 89 различимых картинок
     из 210 проб, **58% экранного времени — повтор**, при том что уникального материала было
     272с на клип в 148с. Вердикт владельца: «режет глаз один и тот же луп»."""
-    vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
-          + (f"{tint}," if tint else "")
-          + f"fps={FPS},setsar=1,format=yuv420p")
-    r = run(["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "-1",
-             *(["-ss", f"{ss:.3f}"] if ss > 0 else []),
-             "-t", f"{dur:.4f}", "-i", str(src), "-vf", vf, "-an",
-             "-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
-             "-video_track_timescale", "12800", str(out)])
+    base_vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+               + (f"{tint}," if tint else "")
+               + f"fps={FPS},setsar=1,format=yuv420p")
+    if not feetage:
+        r = run(["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "-1",
+                 *(["-ss", f"{ss:.3f}"] if ss > 0 else []),
+                 "-t", f"{dur:.4f}", "-i", str(src), "-vf", base_vf, "-an",
+                 "-r", str(FPS), "-c:v", "libx264", "-crf", crf, "-preset", preset,
+                 "-video_track_timescale", "12800", str(out)])
+        if r.returncode != 0:
+            print("make_video_seg:", r.stderr[-300:])
+        return r.returncode == 0 and out.exists()
+    ft_vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+             f"fps={FPS},setsar=1,format=yuv420p")
+    fc = (
+        f"[0:v]{base_vf}[v0];"
+        f"[1:v]{ft_vf}[ft];"
+        f"[v0][ft]blend=all_mode=normal:all_opacity={feetage_alpha:.2f}[vout]"
+    )
+    cmd = ["ffmpeg", "-y", "-loglevel", "error",
+           "-stream_loop", "-1",
+           *(["-ss", f"{ss:.3f}"] if ss > 0 else []),
+           "-t", f"{dur:.4f}", "-i", str(src),
+           "-stream_loop", "-1", "-t", f"{dur:.4f}", "-i", str(feetage),
+           "-filter_complex", fc, "-map", "[vout]",
+           "-an", "-r", str(FPS), "-c:v", "libx264",
+           "-crf", crf, "-preset", preset,
+           "-video_track_timescale", "12800", str(out)]
+    r = run(cmd)
     if r.returncode != 0:
-        print("make_video_seg:", r.stderr[-300:])
+        print("make_video_seg+feetage:", r.stderr[-300:])
     return r.returncode == 0 and out.exists()
 
 
@@ -772,6 +796,29 @@ def main():
             if not yd_get(f"{JOB_YD}/{k}.mp4", WORK / f"{k}.mp4"):
                 print(f"  WARN: нет видео {k}.mp4 — упаду на стилл")
 
+    # футажи-подложка (доска yaromat-submarina-futag): каждый видео-луп подмешивается
+    # рандомным футажом с прозрачностью (feetage_alpha). job["feetage_dir"] — ЯД-папка
+    # с mp4. Ключ сегмента включает подпись футажа → кэш не отдаст «голый» сегмент.
+    feetage_files: list[Path] = []
+    feetage_dir = str(job.get("feetage_dir", "")).strip()
+    feetage_alpha = float(job.get("feetage_alpha", 0.25))
+    if feetage_dir:
+        listing = run(["rclone", "lsf", f"{REMOTE}:{feetage_dir}"])
+        if listing.returncode != 0:
+            sys.exit(f"feetage: нельзя прочитать {feetage_dir}")
+        ft_names = sorted(name.strip() for name in listing.stdout.splitlines()
+                          if name.lower().endswith((".mp4", ".mov", ".mkv", ".webm")))
+        if not ft_names:
+            sys.exit(f"feetage: в {feetage_dir} нет видео")
+        for name in ft_names:
+            dst = WORK / f"ft_{name}"
+            if not yd_get(f"{feetage_dir}/{name}", dst):
+                sys.exit(f"feetage: не скачался {name}")
+            feetage_files.append(dst)
+        print(f"  feetage: {len(feetage_files)} футажей (alpha={feetage_alpha:.2f}) из {feetage_dir}")
+    else:
+        print(f"  feetage: OFF (нет job['feetage_dir'])")
+
     # оверлеи из библиотеки Pinterest (доска yaromat/overlay) вместо репо-дефолтов.
     # job["overlays"] = {"scratch": "<pin_id>", "grit": "<pin_id>"} → assets/overlay_assets/board/.
     # Оба идут в screen через format=gray → нейтральны by design (тон оверлея кадр не красит).
@@ -877,6 +924,11 @@ def main():
             vid_ss = min(used, max(src_len - enc_dur, 0.0))
             video_cursor[s["key"]] = vid_ss + enc_dur
         use_grid  = bool(grid_srcs) and s["region"] in ("intro", "breath") and not use_video
+        # футаж для этого лупа: рандомный из пула (детерминированный по seed+idx — одинаково
+        # между перезапусками, кэш остаётся валидным). Фейд/разворот кадра футаж не меняет.
+        seg_ft = None
+        if use_video and feetage_files:
+            seg_ft = random.Random(seed + 5000 + i).choice(feetage_files)
         # ключ обязан накрывать ВСЁ, что меняет кадр: сам исходник (по содержимому!),
         # геометрию, кодек и моторные ручки. Иначе кэш отдаст чужой сегмент.
         src_for_key = vid if use_video else (grid_srcs[0] if use_grid else cover_path[s["key"]])
@@ -888,13 +940,16 @@ def main():
             "tint": footage_tint if use_video else "",
             "ss": round(vid_ss, 3) if use_video else 0.0,
             "grid": [file_sig(g) for g in grid_srcs] if use_grid else [],
+            "feetage": file_sig(seg_ft) if seg_ft else "",
+            "ft_alpha": round(feetage_alpha, 3) if seg_ft else 0.0,
         }) if seg_cache else ""
 
         ok = bool(key) and seg_cache.fetch(key, sp)
         if not ok:
             if use_video:
                 ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset,
-                                    tint=footage_tint, ss=vid_ss)
+                                    tint=footage_tint, ss=vid_ss,
+                                    feetage=seg_ft, feetage_alpha=feetage_alpha)
             elif use_grid:
                 # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
                 ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)

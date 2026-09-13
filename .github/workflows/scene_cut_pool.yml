@@ -22,6 +22,15 @@ on:
         required: false
         type: boolean
         default: true
+      parts_per_source:
+        description: "Ровно частей из каждого исходника (0 = нарезка по сценам)"
+        required: false
+        default: "0"
+      preserve_aspect:
+        description: "Сохранять вертикальную ориентацию без crop"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: scene-cut-pool
@@ -62,12 +71,16 @@ jobs:
             --source-folder "$INPUT_SOURCE_FOLDER" \
             --out-base "$INPUT_OUT_BASE" \
             --target "$INPUT_TARGET" \
-            $([ "$INPUT_NO_ZOOM" = "true" ] && echo --no-zoom)
+            --parts-per-source "$INPUT_PARTS_PER_SOURCE" \
+            $([ "$INPUT_NO_ZOOM" = "true" ] && echo --no-zoom) \
+            $([ "$INPUT_PRESERVE_ASPECT" = "true" ] && echo --preserve-aspect)
         env:
           INPUT_SOURCE_FOLDER: ${{ inputs.source_folder }}
           INPUT_OUT_BASE: ${{ inputs.out_base }}
           INPUT_TARGET: ${{ inputs.target }}
           INPUT_NO_ZOOM: ${{ inputs.no_zoom }}
+          INPUT_PARTS_PER_SOURCE: ${{ inputs.parts_per_source }}
+          INPUT_PRESERVE_ASPECT: ${{ inputs.preserve_aspect }}
 
       - name: Summarize
         if: success()

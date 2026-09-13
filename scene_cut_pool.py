@@ -119,6 +119,10 @@ def main():
                     help="ЯД базовая папка для pool/ (создастся pool/)")
     ap.add_argument("--target", type=int, default=TARGET_DEFAULT,
                     help="целевое число луп (~54)")
+    ap.add_argument("--parts-per-source", type=int, default=0,
+                    help="резать каждый источник на равные части вместо поиска сцен")
+    ap.add_argument("--preserve-aspect", action="store_true",
+                    help="сохранять исходную ориентацию и не применять crop к вертикальным видео")
     ap.add_argument("--no-zoom", action="store_true",
                     help="исключить zoom/crop-drift эффекты уникализации (1 эффект, без зупа)")
     a = ap.parse_args()
@@ -147,46 +151,57 @@ def main():
         files.append(dst)
     print(f"[pool] скачано: {len(files)}", flush=True)
 
-    # 3. нарезать по сценам
+    # 3. нарезать: равные части по ТЗ либо по реальным сценам
     all_segs = OrderedDict()   # key -> [(start,end)]
     for i, f in enumerate(files):
         dur = probe_duration(f)
-        cuts = scene_cuts(f)
-        bounds = [0.0] + cuts + [dur]
-        segs = []
-        for j in range(len(bounds) - 1):
-            s, e = bounds[j], bounds[j + 1]
-            if e - s >= MIN_SEG:
-                segs.append((s, min(e, dur)))
+        if a.parts_per_source > 0:
+            n = a.parts_per_source
+            segs = [(dur * j / n, dur * (j + 1) / n) for j in range(n)
+                    if dur * (j + 1) / n - dur * j / n >= MIN_SEG]
+            cuts_count = n - 1
+        else:
+            cuts = scene_cuts(f)
+            bounds = [0.0] + cuts + [dur]
+            segs = []
+            for j in range(len(bounds) - 1):
+                s, e = bounds[j], bounds[j + 1]
+                if e - s >= MIN_SEG:
+                    segs.append((s, min(e, dur)))
+            cuts_count = len(cuts)
         # если сцен НЕТ или файл суперкороткий — один сегмент
         if not segs:
             segs = [(0.0, max(dur, MIN_SEG))]
-        all_segs[f.parent.name if False else f.name] = segs
-        print(f"[pool] {f.name}: dur={dur:.1f}s сцен={len(cuts)} → сегментов={len(segs)}", flush=True)
+            cuts_count = 0
+        all_segs[f.name] = segs
+        print(f"[pool] {f.name}: dur={dur:.1f}s сцен={cuts_count} → сегментов={len(segs)}", flush=True)
 
-    # 4. добить до target: распилить самые длинные сегменты по всему пулу
+    # 4. добить до target только при нарезке по сценам; равные части сохраняем как есть
     flat = []
     for name, ss in all_segs.items():
         for seg in ss:
             flat.append((name, seg))
     flat_sorted = sorted(flat, key=lambda x: (x[1][1] - x[1][0]), reverse=True)
     all_work = [tuple(x) for x in flat_sorted]
-    # дробить самый длинный пополам пока не хватает
-    while len(all_work) < a.target:
-        # найти самый длинный, разбить пополам
-        if not all_work:
-            break
-        longest_i = max(range(len(all_work)), key=lambda i: all_work[i][1][1] - all_work[i][1][0])
-        name, seg = all_work[longest_i]
-        s, e = seg
-        if e - s < 2 * MIN_SEG:
-            break
-        mid = s + (e - s) / 2.0
-        all_work[longest_i] = (name, (s, mid))
-        all_work.append((name, (mid, e)))
+    if a.parts_per_source > 0:
+        print(f"[pool] parts-per-source={a.parts_per_source}: target={a.target} игнорируется", flush=True)
+    else:
+        # дробить самый длинный пополам пока не хватает
+        while len(all_work) < a.target:
+            # найти самый длинный, разбить пополам
+            if not all_work:
+                break
+            longest_i = max(range(len(all_work)), key=lambda i: all_work[i][1][1] - all_work[i][1][0])
+            name, seg = all_work[longest_i]
+            s, e = seg
+            if e - s < 2 * MIN_SEG:
+                break
+            mid = s + (e - s) / 2.0
+            all_work[longest_i] = (name, (s, mid))
+            all_work.append((name, (mid, e)))
 
     print(f"[pool] после добивки: {len(all_work)} луп (target {a.target})", flush=True)
-    if len(all_work) < a.target:
+    if a.parts_per_source <= 0 and len(all_work) < a.target:
         print(f"  ⚠ не добрали: {len(all_work)} < {a.target}", flush=True)
 
     # 5. нарезать, каждый луп — 1 случайный уникализатор (single-effect), залить
@@ -201,7 +216,8 @@ def main():
         chain = pick_chain(effects_db, no_zoom=a.no_zoom)
         try:
             uniquize(src, out, effects_chain=chain, effects_db=effects_db,
-                     base=False, in_ss=s, in_t=e - s, out_wh=(1280, 720), drop_audio=True)
+                     base=False, in_ss=s, in_t=e - s,
+                     out_wh=None if a.preserve_aspect else (1280, 720), drop_audio=True)
         except Exception as ex:
             print(f"  ✗ {out_name}: uniquize fail ({ex})", flush=True)
             continue
