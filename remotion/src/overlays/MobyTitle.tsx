@@ -56,7 +56,6 @@ export const MobyTitle: React.FC<OverlayProps> = ({
     easing: ease,
   });
 
-  const sideMargin = Math.round(width * 0.085); // безопасное поле liner-note
   const brandSize = Math.round(width * 0.078); // имя крупнее
   const trackSize = Math.round(width * 0.036); // трек мельче
   const family = (titleFont && TITLE_FONT_CANDIDATES[titleFont]) || TITLE_FONT;
@@ -66,12 +65,18 @@ export const MobyTitle: React.FC<OverlayProps> = ({
       <div
         style={{
           position: 'absolute',
-          left: sideMargin,
-          bottom: Math.round(height * 0.14),
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'column',
           opacity: groupOpacity,
           translate: `0px ${driftY}px`,
           fontFamily: family,
-          textAlign: 'left',
+          textAlign: 'center',
         }}
       >
         <div
