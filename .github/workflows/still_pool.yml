@@ -91,6 +91,11 @@ jobs:
           CLOUDFLARE_WORKER:  ${{ secrets.CLOUDFLARE_WORKER }}
           WORKER_SECRET:      ${{ secrets.WORKER_SECRET }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          INPUT_QUERIES: ${{ inputs.queries }}
+          INPUT_PER: ${{ inputs.per }}
+          INPUT_FROM_YD: ${{ inputs.from_yd }}
+          INPUT_OUT_YD: ${{ inputs.out_yd }}
+          INPUT_NO_BRAND: ${{ inputs.no_brand }}
         run: |
           set +e   # гейт может вернуть ненулевой rc; итог всё равно должен напечататься
           NO_BRAND=()
@@ -104,9 +109,3 @@ jobs:
             --out-yd "$INPUT_OUT_YD" \
             "${NO_BRAND[@]}"
           echo "still_pool rc=$?"
-        env:
-          INPUT_QUERIES: ${{ inputs.queries }}
-          INPUT_PER: ${{ inputs.per }}
-          INPUT_FROM_YD: ${{ inputs.from_yd }}
-          INPUT_OUT_YD: ${{ inputs.out_yd }}
-          INPUT_NO_BRAND: ${{ inputs.no_brand }}
