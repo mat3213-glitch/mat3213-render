@@ -26,6 +26,8 @@ try:
 except Exception as exc:  # pragma: no cover - runtime env only
     raise SystemExit(f"playwright import failed: {exc}")
 
+import yad_upload  # noqa: E402  — общий YaD-upload с retry (правило B3)
+
 UA = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
@@ -287,9 +289,10 @@ def main() -> int:
         if not local.is_file():
             continue
         remote_file = f"{raw_remote}/{local.name}"
-        r = sh(["rclone", "copyto", str(local), remote_file], timeout=300)
-        if r.returncode != 0:
-            print(r.stderr[-1000:], flush=True)
+        # YaD-троттлинг на больших файлах: прямой copyto таймаутит (300с)
+        # → общий модуль с retry 3x и таймаутом 900с (правило B3, 2026-09-11).
+        if not yad_upload.upload(str(local), remote_file):
+            print(f"[board] upload fail: {local.name}", flush=True)
             return 2
 
     kinds = Counter(t["method"] for t in tasks)
