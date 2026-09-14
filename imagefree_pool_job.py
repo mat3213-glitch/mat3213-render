@@ -108,6 +108,16 @@ STORY_BANK = {
         "Elevator hall at night, deserted, institutional overhead panel light, caged elevator doors with a gap of darkness between, long hard shadows on terrazzo floor",
         "Back seat of a parked car at night, rain dripping down the rear window, passing headlights crawling across the interior, half-open door spilling dome light",
         "Stairwell in a brutalist concrete block, endless flights, a single bare bulb high above cutting long dramatic shadow lines across the walls and steps",
+        "Late-night city bus driving through rain, empty seat-row reflections in wet glass, a single overhead light flickering at the back, rain drumming on the roof",
+        "Multi-storey car park at night, cold pool of light under each lamp, rows of concrete pillars, a lone elevator door standing open with darkness inside",
+        "Ticket hall of an old station at night, worn marble floor, one chandelier half-lit, long shadows of the ticket windows leaning across the walls, quiet and huge",
+        "Backstage corridor of an empty club after the show, cables taped to the floor, one strip of neon-free mood light in the dark, a jacket hung on a hook alone",
+        "Walking under a highway overpass at night, wet concrete, monotone orange street lighting, the hum of tyres high above, a lone puddle mirroring the glow",
+        "Gym at 3 AM, empty equipment glinting under cold fluorescents, dust in the beams, a mobile phone left charging alone on a treadmill console",
+        "Glass telephone booth lit from inside in a dark street, receiver hanging down, condensation on the pane, nobody around, late hour",
+        "Old cinema corridor after hours, patterned carpet, dim single bulbs, posters of forgotten films in dusty frames, doors to the hall closed and dark",
+        "Indoor car repair shop at night, a single fluorescent strip above a lifted empty vehicle, dark corners, tyre marks on oily concrete, silence in the dark",
+        "Warehouse loading bay at night, cold strip-light overhead, a single plastic pallet jack waiting, rolling door half-raised showing wet asphalt and a distant streetlight",
     ],
     # B1 — ноар / город, заброшка, холод
     "noir": [
@@ -117,6 +127,12 @@ STORY_BANK = {
         "Wet asphalt parking lot at night after rain, perfect mirror reflections of a single distant streetlight, a folded umbrella lying forgotten on the ground",
         "Long underground corridor, hospital-green walls, a single hanging bulb swinging, arrows on the floor peeling, deep silence and a distant lit doorway",
         "Motorcycle parked under a streetlamp in fog, warm halo of light, chain links wet with dew, mist swallowing the street behind it",
+        "Ferry terminal waiting hall late at night, a single vending machine glowing, smooth dark water beyond the glass, a folded raincoat on a bench",
+        "Hotel corridor with worn carpet at night, a single small table by the elevator holding a dying flower in a vase, strip lights off except one",
+        "Underground car garage beneath an office block, a single ceiling lamp flickering, one wide dark corner with a dilapidated barrier gate, damp floor",
+        "Night market alley at closing time, steel shutters coming down one by one, wet cobbles reflecting a few remaining warm shop lights, steam fading",
+        "Railway platform under a wide steel canopy at night, a single lit information board, long benches empty, gentle echo of a distant announcement",
+        "Abandoned shopping trolley standing alone in a rain-washed parking lot, sodium light, puddle reflections stretching toward the dark storefront row",
     ],
     # B2 — «театр тишины», одиночество пространства, интим предмета
     "silence": [
@@ -126,6 +142,12 @@ STORY_BANK = {
         "A mug of untouched coffee going cold on a wooden table beside a window, morning haze, steam long since gone",
         "An empty theater stage in darkness, a single follow-spot from above making a clean pool of light on worn floorboards, dust glinting",
         "Old radio on a sill at dawn, one warm dial glow, thin curtain stirring, a moth resting beside the speaker grill, very quiet",
+        "Milk bottle left on a doorstep at first light, one finger-width of daylight catching the glass, an empty street behind, chill in the air",
+        "Bathroom at night, the only light from a half-open door, shadows of the towel rail on the tiles, a toothbrush glass standing still",
+        "Old school desk in a decommissioned classroom, a single pencil rolled to the edge, pale winter light, dust covered blackboard wall",
+        "Unread letter on a bare hallway table, one torn corner, a lonely bulb above, the house otherwise in darkness, sound of nothing",
+        "Laundry line on a concrete balcony at dusk, one damp shirt turning slowly in warm apartment light behind the glass door",
+        "Tin whistle lying open on a small wooden shelf, a single shaft of weak light on the keys, dust in the beam, total quiet",
     ],
     # B3 — природа, свет, время (без людей)
     "nature": [
@@ -135,6 +157,12 @@ STORY_BANK = {
         "Rain dripping from a gutter onto mossy stones, each drop catching the flash, deep green shadow, no one around",
         "A greenhouse at golden hour, pale light through cracked and fogged glass, wild untended plants, dust drifting, deep quiet",
         "Snow-covered bench under a bare tree at dusk, one streetlamp warming the snow, footprints leading in and stopping",
+        "Frozen pond at grey dawn, cracked ice radiating from a single stone, bare branches hanging low over the edge, pale sky, no wind",
+        "Distant forest line seen from a wet field road, thin fog between the trunks, a lone tractor parked by the edge, just before rain",
+        "Old greenhouse with fogged panes at evening, a single open hatch spilling pale light on wet gravel, wild plants pressing from inside",
+        "Shallow river over flat stones at low light, water barely moving, a single fallen leaf spinning slowly in a quiet eddy",
+        "Cliff path with a handrail of thin rope at dusk, long grass bent by the wind, the sea grey below, one distant light of a boat",
+        "Flat tidal plain under a low grey sky, a long drainage channel full of cold water, one white buoy floating, no wind, no sound",
     ],
 }
 
