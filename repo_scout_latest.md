@@ -1,2 +1,74 @@
-# Repo Scout — 2026-09-13T14:05:06.560415
-Всего в шортлисте: 0
+# Repo Scout — 2026-09-14T16:11:26.318179
+Всего в шортлисте: 8
+- **tpt-solutions/tpt-av-ui** ⭐0 [video]
+  - https://github.com/tpt-solutions/tpt-av-ui
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: video timeline waveform
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий предлагает UI-компоненты на Rust для отображения аудио/видео, такие как осциллограммы и таймлайны. Он может закрыть потребность в компактном представлении для быстрого просмотра режиссуры, не требуя передачи всего видео в LLM. Несмотря на низкую стоимость интеграции, риск дублирования высок из-за уже имеющихся решений, и ценность только в удобном интерфейсе просмотра.
+  - 📄 Pure-Rust, GPU-accelerated media UI components — waveform renderers, timeline scrubbers, node graphs, and meters for building audio/video editors. Dual-licensed
+- **yimao1234/guoman-longtake-prompt** ⭐1 [craft]
+  - https://github.com/yimao1234/guoman-longtake-prompt
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий содержит движок промптов для создания длинных кадров в 3D-анимации, включая правила движения камеры. Он может предоставить проверяемые словари и схемы промптов для управления движением в i2v-генераторах. Интеграция недорога, но риск дублирования высок, так как уже есть похожие инструменты, и ценность только в новых, конкретных формулировках.
+  - 📄 3D 次世代国漫大场景一镜到底长镜头提示词引擎 · 十层装配模型 / 合理运镜六律 / 缝合预算 / 七拍续写 / 反解工作流
+- **upsalesvideo/MoneyPrinterCannon** ⭐0 [source]
+  - https://github.com/upsalesvideo/MoneyPrinterCannon
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот проект генерирует видео из заданной темы, включая AI-визуалы и стоковый контент. Он может предоставить надёжные адаптеры для легального стокового видео с метаданными и обработкой ошибок. Хотя интеграция недорога, риск дублирования высок из-за уже используемых источников, и ценность только в новом источнике или подтверждении происхождения.
+  - 📄 MoneyPrinterCannon — topic in, money-making video out. Karaoke captions, per-scene AI visuals or free stock, generated music, one Genosai API key + Remotion. Mo
+- **Patrickjaillet/Videotoy** ⭐0 [video]
+  - https://github.com/Patrickjaillet/Videotoy
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Приложение Videotoy рендерит шейдеры в видеофайлы с полной детерминированностью, кадр за кадром. Оно может усилить воспроизводимость рендера на CPU/GitHub Actions за счёт манифестов и проверяемых квитанций. Интеграция недорога, но риск дублирования высок, так как часть функционала уже есть, и нужен конкретный недостающий механизм защиты.
+  - 📄 Videotoy is a Windows 11 desktop application that turns a Shadertoy-style GLSL, WGSL, or HLSL shader into a video or animated image file, rendered frame by fram
+- **mfsstudio/Lily-Chou-Film-Still-Skill** ⭐1 [craft]
+  - https://github.com/mfsstudio/Lily-Chou-Film-Still-Skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает систему промптов для создания кадров в стиле японского молодёжного кино 2000-х годов. Он может предоставить проверяемые словари и схемы промптов для управления i2v-моторикой через облачные генераторы. Несмотря на низкую стоимость интеграции, риск дублирования высок, и ценность только в новых, конкретных формулировках.
+  - 📄 MFS Lily Chou Film Still Skill — 2000s Japanese youth cinema still-frame prompt system by 漫反射studio
+- **mfsstudio/French-Summer-Cinema-Atmosphere-Skill** ⭐1 [craft]
+  - https://github.com/mfsstudio/French-Summer-Cinema-Atmosphere-Skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий содержит AIGC-систему промптов для создания атмосферы французского летнего кино. Он может предоставить проверяемые словари и схемы промптов для управляемой i2v-моторики через облачные генераторы. Интеграция недорога, но риск дублирования высок, и ценность только в новых, конкретных формулировках.
+  - 📄 MFS French Summer Cinema Skill — 法国夏日电影氛围感 AIGC Prompt Skill by 漫反射studio
+- **Sirui0124/seedance-cinematic-director** ⭐0 [craft]
+  - https://github.com/Sirui0124/seedance-cinematic-director
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает систему Seedance для режиссуры с профессиональной кинематографией и примерами промптов. Он может предоставить проверяемые словари и схемы промптов для управляемой i2v-моторики через облачные генераторы. Интеграция недорога, но риск дублирования высок, и ценность только в новых, конкретных формулировках.
+  - 📄 Reference-led Seedance directing skill: professional cinematography, distinct styles, and complete prompt examples.
+- **mfsstudio/UltraWide-Distortion-Product-Visual-Skill** ⭐0 [craft]
+  - https://github.com/mfsstudio/UltraWide-Distortion-Product-Visual-Skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий содержит AIGC-систему промптов для создания ультраширокой продуктовой кинематографии с искажениями. Он может предоставить проверяемые словари и схемы промптов для управляемой i2v-моторики через облачные генераторы. Интеграция недорога, но риск дублирования высок, и ценность только в новых, конкретных формулировках.
+  - 📄 MFS Ultra-Wide Distortion Product Visual Skill — AIGC prompt system for exaggerated ultra-wide product cinematography by 漫反射studio.
