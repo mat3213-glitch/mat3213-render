@@ -37,7 +37,11 @@ if not JOB_YD:
     JOB_YD = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 WORK    = Path("/tmp/vzrosly_job"); WORK.mkdir(parents=True, exist_ok=True)
 REPO    = Path(__file__).resolve().parent
-FONT    = str(REPO / "assets" / "Caveat.ttf")
+FONT_MAP = {
+    "mono":  str(REPO / "assets" / "SpaceMono-Regular.ttf"),
+    "hand":  str(REPO / "assets" / "Caveat.ttf"),
+}
+FONT_DEFAULT = FONT_MAP["mono"]   # дефолт mono (решение yaromat 13.09, factors msg 7008)
 SCRATCH = str(REPO / "assets" / "scratch_overlay.mp4")
 GRIT    = str(REPO / "assets" / "grit_overlay.mp4")
 
@@ -760,6 +764,12 @@ def main():
     outro = job.get("outro", "")
     track_credit = job.get("track_credit", "")   # старт: «Артист — Трек» (режим reference)
     watermark    = job.get("watermark", "")       # весь клип: кредит yaromat (привязка охватов)
+    # шрифт титров: mono (дефолт) | hand (Caveat) | прямой путь к .ttf
+    font_key = str(job.get("font", "")).strip().lower()
+    font_path = FONT_MAP.get(font_key, font_key) if font_key else FONT_DEFAULT
+    if not Path(font_path).is_file():
+        print(f"  WARN: font '{font_key}' → {font_path} не найден, дефолт mono")
+        font_path = FONT_DEFAULT
     video_keys   = job.get("video_keys", [])      # ключи-сегменты из видео-футажа (Pexels) вместо стиллов
     video_source_dir = str(job.get("video_source_dir", "")).strip()
     video_duration = float(job.get("duration", 0) or 0)
@@ -822,7 +832,8 @@ def main():
     # с mp4. Ключ сегмента включает подпись футажа → кэш не отдаст «голый» сегмент.
     feetage_files: list[Path] = []
     feetage_dir = str(job.get("feetage_dir", "")).strip()
-    feetage_alpha = float(job.get("feetage_alpha", 0.15))
+    feetage_alpha = float(job.get("feetage_alpha", 0.08))   # 0.08 = 92% прозрачность (дефолт, yaromat 15.09)
+    feetage_chance = float(job.get("feetage_chance", 1.0))   # 0.0–1.0: вероятность наложить футаж на сегмент
     if feetage_dir:
         listing = run(["rclone", "lsf", f"{REMOTE}:{feetage_dir}"])
         if listing.returncode != 0:
@@ -949,7 +960,8 @@ def main():
         # между перезапусками, кэш остаётся валидным). Фейд/разворот кадра футаж не меняет.
         seg_ft = None
         if use_video and feetage_files:
-            seg_ft = random.Random(seed + 5000 + i).choice(feetage_files)
+            _rng_ft = random.Random(seed + 5000 + i)
+            seg_ft = _rng_ft.choice(feetage_files) if _rng_ft.random() < feetage_chance else None
         # ключ обязан накрывать ВСЁ, что меняет кадр: сам исходник (по содержимому!),
         # геометрию, кодек и моторные ручки. Иначе кэш отдаст чужой сегмент.
         src_for_key = vid if use_video else (grid_srcs[0] if use_grid else cover_path[s["key"]])
@@ -1030,7 +1042,7 @@ def main():
     draw = []
     if word:
         draw.append(
-            f"drawtext=fontfile={FONT}:text='{word}':fontcolor={fc_intro}:fontsize={fs_word}:"
+            f"drawtext=fontfile={font_path}:text='{word}':fontcolor={fc_intro}:fontsize={fs_word}:"
             f"borderw={bw_word}:bordercolor={bc_intro}@0.6:"
             f"x=(w-text_w)/2:y=h*0.42:"
             f"alpha='if(lt(t,{w0}),0,if(lt(t,{w1}),(t-{w0})/{w1-w0:.3f},if(lt(t,{w2:.3f}),1,if(lt(t,{w3:.3f}),({w3:.3f}-t)/{w3-w2:.3f},0))))'")
@@ -1038,20 +1050,20 @@ def main():
         # старт: «Артист — Трек» (reference-режим), адаптивный контраст, под словом
         cred_file = WORK / "cred.txt"; cred_file.write_text(track_credit, encoding="utf-8")
         draw.append(
-            f"drawtext=fontfile={FONT}:textfile={cred_file}:fontcolor={fc_intro}:fontsize={fs_cred}:"
+            f"drawtext=fontfile={font_path}:textfile={cred_file}:fontcolor={fc_intro}:fontsize={fs_cred}:"
             f"borderw={bw_small}:bordercolor={bc_intro}@0.6:"
             f"x=(w-text_w)/2:y=h*0.60:"
             f"alpha='if(lt(t,{w0}),0,if(lt(t,{w1}),(t-{w0})/{w1-w0:.3f},if(lt(t,{w2+1.2:.3f}),1,if(lt(t,{w3+1.2:.3f}),({w3+1.2:.3f}-t)/{w3-w2:.3f},0))))'")
     if hook:
         draw.append(
-            f"drawtext=fontfile={FONT}:textfile={hook_file}:fontcolor=white:fontsize={fs_hook}:"
+            f"drawtext=fontfile={font_path}:textfile={hook_file}:fontcolor=white:fontsize={fs_hook}:"
             f"line_spacing=10:box=1:boxcolor=black@0.35:boxborderw=26:"
             f"x=(w-text_w)/2:y=h*0.60:enable='between(t,{hk0:.3f},{hk1:.3f})':"
             f"alpha='if(lt(t,{hk0:.3f}),0,if(lt(t,{hk0+0.6:.3f}),(t-{hk0:.3f})/0.6,1))'")
     if outro:
         # адаптивный контраст под кадр аутро (фикс: на тёмном фоне тёмный текст пропадал)
         draw.append(
-            f"drawtext=fontfile={FONT}:textfile={outro_file}:fontcolor={fc_outro}:fontsize={fs_outro}:"
+            f"drawtext=fontfile={font_path}:textfile={outro_file}:fontcolor={fc_outro}:fontsize={fs_outro}:"
             f"borderw={bw_small}:bordercolor={bc_outro}@0.6:line_spacing=8:"
             f"x=(w-text_w)/2:y=h*0.78:enable='between(t,{ot0:.3f},{duration})':"
             f"alpha='if(lt(t,{ot0+0.3:.3f}),(t-{ot0:.3f})/0.3,1)'")
@@ -1061,7 +1073,7 @@ def main():
         # отключено по умолчанию (2026-09-11, запрос yaromat). Включить: VZROSLY_WM=1.
         wm_file = WORK / "wm.txt"; wm_file.write_text(watermark, encoding="utf-8")
         draw.append(
-            f"drawtext=fontfile={FONT}:textfile={wm_file}:fontcolor=white@0.85:fontsize={fs_wm}:"
+            f"drawtext=fontfile={font_path}:textfile={wm_file}:fontcolor=white@0.85:fontsize={fs_wm}:"
             f"borderw={bw_small}:bordercolor=black@0.7:"
             f"x=w-text_w-{int(W*0.04)}:y=h-text_h-{int(H*0.035)}")
     draw_chain = ("," + ",".join(draw)) if draw else ""
