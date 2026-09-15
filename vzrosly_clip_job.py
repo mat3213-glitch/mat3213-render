@@ -1214,7 +1214,7 @@ def main():
     if title_ov_path:
         cmd += ["-i", str(title_ov_path)]
     cmd += ["-filter_complex", fc, "-map", "[vout]"]
-    audio_idx = 4 if title_ov_path else 3
+    audio_idx = 3 if not silent else None  # аудио всегда вход #3 (track.mp3); оверлей — вход #4 без аудио
     cmd += ["-an"] if silent else [f"-map", f"{audio_idx}:a", "-af", af_chain]
     cmd += [
         "-c:v", "libx264",
