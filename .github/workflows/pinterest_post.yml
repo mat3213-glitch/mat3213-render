@@ -65,6 +65,11 @@ jobs:
           rclone copyto "ydrive:Content factory/mirror/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
           test -s pinterest/publish_pinterest.py && echo "✓ poster fetched"
 
+      - name: Fetch runtime_safety.py (poster dependency)
+        run: |
+          rclone copyto "ydrive:Content factory/mirror/Instrument/runtime_safety.py" pinterest/runtime_safety.py
+          test -s pinterest/runtime_safety.py && echo "✓ runtime_safety fetched"
+
       - name: Write Pinterest cookies from secret
         env:
           PINTEREST_COOKIES: ${{ secrets.PINTEREST_COOKIES }}

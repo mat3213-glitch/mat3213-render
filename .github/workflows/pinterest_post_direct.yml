@@ -98,6 +98,12 @@ jobs:
           rclone copyto "ydrive:Content factory/mirror/Instrument/Pinterest/publish_pinterest.py" pinterest/publish_pinterest.py
           test -s pinterest/publish_pinterest.py && echo "✓ poster fetched"
 
+      - name: Fetch runtime_safety.py (poster dependency)
+        if: env.QUEUE_EMPTY != '1'
+        run: |
+          rclone copyto "ydrive:Content factory/mirror/Instrument/runtime_safety.py" pinterest/runtime_safety.py
+          test -s pinterest/runtime_safety.py && echo "✓ runtime_safety fetched"
+
       - name: Resolve job from queue (queue mode)
         if: steps.mode.outputs.queue == 'true'
         run: |
