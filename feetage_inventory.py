@@ -30,7 +30,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from art_judge import MODELS, ask_vision, to_jpeg_b64
+from art_judge import MODELS, PANEL, ask_vision, to_jpeg_b64
 
 REMOTE = "ydrive:"
 QUANT_NUMS = 5        # сколько доминирующих цветов возвращать
@@ -203,15 +203,32 @@ def run_inventory(feetage_dir: str, workdir: Path) -> list[Path]:
                 record = {"file": name, "dur_s": round(dur, 2), "palette": palette,
                           "scene_cpm": scpm, "sheet": sheet.name if sheet_ok else None}
                 if sheet_ok:
-                    v, err = ask_vision(MODELS[0], build_prompt(name, palette, scpm),
-                                        to_jpeg_b64(sheet))
-                    if v:
-                        record["labels"] = {k: v.get(k) for k in
+                    # Ансамбль с failover, как в art_judge.judge_file: PANEL живых судей,
+                    # резерв подключается при выбытии по квоте (dead), а не один MODELS[0].
+                    b64 = to_jpeg_b64(sheet)
+                    votes, dead = [], {}
+                    for m in MODELS:
+                        if len(votes) >= PANEL:
+                            break
+                        if dead.get(m, 0) >= 2:
+                            continue
+                        v, err = ask_vision(m, build_prompt(name, palette, scpm), b64)
+                        if v is None and err and "rate-limit" in err:
+                            dead[m] = dead.get(m, 0) + 1
+                        elif v is not None:
+                            dead[m] = 0
+                            v["_judge"] = m
+                            votes.append(v)
+                        time.sleep(1)
+                    if votes:
+                        record["labels"] = {k: votes[0].get(k) for k in
                                             ("subject", "vibe", "motion", "palette_ok",
                                              "scale_hint", "flaws", "use")}
+                        record["labels"]["_judges"] = [v.get("_judge") for v in votes]
+                        if len(votes) > 1:
+                            record["labels"]["_n"] = len(votes)
                     else:
-                        record["labels"] = {"_err": err}
-                    time.sleep(1)
+                        record["labels"] = {"_err": "нет живых судей (квота)"}
                 (inv_dir / f"{Path(name).stem}.json").write_text(
                     json.dumps(record, ensure_ascii=False), encoding="utf-8")
                 ok.append(name)
