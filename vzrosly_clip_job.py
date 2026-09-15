@@ -260,24 +260,34 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
 def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
                    crf: str = "22", preset: str = "veryfast", tint: str = "",
                    ss: float = 0.0, feetage: Path | None = None,
-                   feetage_alpha: float = 0.15, fit_mode: str = "crop") -> bool:
+                   feetage_cfg: dict | None = None, fit_mode: str = "crop") -> bool:
     """Сегмент из видео-футажа (Pexels): slice длины dur ОТ СЕКУНДЫ ss, cover-crop в WxH, fps.
     Короткий футаж зацикливается (-stream_loop). Грейд под стиль — общим density-пассом тела.
     Энкод как у motion_seg (timescale 12800) → совместимо с xfade_chain.
     tint: арты цветные ПО ГЕНЕРАЦИИ (замок палитры), реальный сток — нет. Общий density-пасс
     (eq контраст/сатурация) серый футаж в палитру НЕ приводит → грозовые облака садятся
     серо-белым пятном посреди нуара. Тинт красит футаж в лук замка ДО сборки.
-    feetage: опциональный видео-футаж (720×1280), overlay поверх лупа с прозрачностью
-    (feetage_alpha = 0.15 = футаж с 85% прозрачностью, рецепт 2, решение yaromat 2026-09-14).
+    feetage: опциональный видео-футаж (720×1280), бленд поверх лупа. feetage_cfg:
+      blend   — режим blend (normal|overlay|soft_light|screen...). Дефолт overlay:
+                мягкая «текстурка», на тёмной teal-базе не перекрывает, а высвечивает
+                структуру (консенсус kimi/qwen/glm/openrouter 15.09; normal+alpha давал
+                «кадр-футаж» против базы и на тёмном кадре футаж оставался единственным).
+      opacity — интенсивность бленда 0..1 (у blend НЕТ alpha, это all_opacity). 0.5 дефолт.
+      desat   — десатурация футажа >0, 1 = без изменений (0.3 = 30% sat). Серый футаж
+                не конкурирует по цвету с палитрой, работает как зерно/текстура.
+      dim     — eq brightness футажа (0.0 без изменений, -0.15 затемнить на 15%).
+    🔴 gbrp на ОБА входа перед blend (правило 16.07): overlay/softlight/screen в YUV
+    дают магента-сдвиг по U/V. После blend — формат на выходе yuv420p.
 
     🔴 ss ОБЯЗАТЕЛЕН ПРИ ПОВТОРНЫХ ПОКАЗАХ КЛЮЧА (правка 2026-08-06). Раньше `-ss` не было
     вовсе: каждое появление ключа откручивало файл С НУЛЯ, и зритель по 5–8 раз за часть видел
     одно и то же начало одного и того же клипа. Замер на полном клипе: 89 различимых картинок
     из 210 проб, **58% экранного времени — повтор**, при том что уникального материала было
     272с на клип в 148с. Вердикт владельца: «режет глаз один и тот же луп»."""
-    base_vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
-               + (f"{tint}," if tint else "")
-               + f"fps={FPS},setsar=1,format=yuv420p")
+    pre = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
+           + (f"{tint}," if tint else "")
+           + f"fps={FPS},setsar=1,")
+    base_vf = pre + "format=yuv420p"
     if not feetage:
         r = run(["ffmpeg", "-y", "-loglevel", "error", "-stream_loop", "-1",
                  *(["-ss", f"{ss:.3f}"] if ss > 0 else []),
@@ -287,12 +297,24 @@ def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
         if r.returncode != 0:
             print("make_video_seg:", r.stderr[-300:])
         return r.returncode == 0 and out.exists()
+    cfg = feetage_cfg or {}
+    fblend  = str(cfg.get("blend", "overlay")).strip() or "overlay"
+    fopac   = float(cfg.get("opacity", 0.5))
+    fdesat  = float(cfg.get("desat", 0.3))
+    fdim    = float(cfg.get("dim", -0.15))
+    eq_parts = []
+    if abs(fdesat - 1.0) > 0.01:
+        eq_parts.append(f"saturation={fdesat:.2f}")
+    if abs(fdim) > 0.001:
+        eq_parts.append(f"brightness={fdim:.2f}")
     ft_vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
-             f"fps={FPS},setsar=1,format=yuv420p")
+             f"fps={FPS},setsar=1,"
+             + (f"eq={':'.join(eq_parts)}," if eq_parts else "")
+             + f"format=gbrp")
     fc = (
-        f"[0:v]{base_vf}[v0];"
+        f"[0:v]{pre}format=gbrp[v0];"
         f"[1:v]{ft_vf}[ft];"
-        f"[v0][ft]blend=all_mode=normal:all_opacity={feetage_alpha:.2f}[vout]"
+        f"[v0][ft]blend=all_mode={fblend}:all_opacity={fopac:.2f}[vout]"
     )
     cmd = ["ffmpeg", "-y", "-loglevel", "error",
            "-stream_loop", "-1",
@@ -700,23 +722,33 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
     raw.append((tail_key, outro, "outro", False))
 
     seq = []
+    prev_dur: float | None = None
     for i, (key, dur, region, is_drop) in enumerate(raw):
         if i == 0:
             tin, tdur = None, 0.0
-        elif region == "drop":
-            # бит-слот (~0.4-0.6с): жёсткий кат — tdur мал, чтобы переход не
-            # «съедал» слот целиком (раньше 0.25-0.55 сливались в мерцание).
-            tin, tdur = "fade", round(max(0.04, min(0.10, dur * 0.25)) * tdur_scale, 2)
-        elif region in ("intro", "breath"):
-            tin, tdur = rng.choice(["fadeblack", "dissolve"]), round(0.45 * tdur_scale, 2)
-        elif region == "outro":
-            tin, tdur = "dissolve", round(0.60 * tdur_scale, 2)
         else:
-            # groove: переход пропорционален плану — заметный, но не заливающий кадр.
-            tin = rng.choice(POOL_GROOVE_TR)
-            tdur = round(max(0.06, min(0.28, dur * 0.35)) * tdur_scale, 2)
+            # cap = 0.3 × min(длины двух соседних сегментов) — règle кинематографа:
+            # переход не должен съедать >30% короткого сегмента, иначе «смазанное
+            # месиво» (kimi/glm/openrouter 15.09).
+            cap = 0.3 * min(dur, prev_dur) if prev_dur else dur
+            if region == "drop":
+                tin, tdur = "fade", round(max(0.04, min(0.10, dur * 0.25)) * tdur_scale, 2)
+            elif region in ("intro", "breath"):
+                tin, tdur = rng.choice(["fadeblack", "dissolve"]), min(round(0.45 * tdur_scale, 2), cap)
+            elif region == "outro":
+                tin, tdur = "dissolve", min(round(0.60 * tdur_scale, 2), cap)
+            else:
+                # groove: бит-сетка {0.416=бит, 0.208=полбита} + cap 0.3×min_dur
+                tin = rng.choice(POOL_GROOVE_TR)
+                if cap >= 0.416:
+                    tdur = 0.416   # 1 бит — заметный, но «почти на долю»
+                elif cap >= 0.208:
+                    tdur = 0.208   # полбита — плотнее, но не мельтешит
+                else:
+                    tdur = max(0.06, round(cap, 2))
         seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
                         blend="none", tin=tin, tdur=tdur, region=region, drop=is_drop))
+        prev_dur = dur
 
     # xfade overlap is already included in each encoded segment. The final shot
     # absorbs rounding so the rendered body is exactly the requested duration.
@@ -831,11 +863,18 @@ def main():
                 print(f"  WARN: нет видео {k}.mp4 — упаду на стилл")
 
     # футажи-подложка (доска yaromat-submarina-futag): каждый видео-луп подмешивается
-    # рандомным футажом с прозрачностью (feetage_alpha). job["feetage_dir"] — ЯД-папка
-    # с mp4. Ключ сегмента включает подпись футажа → кэш не отдаст «голый» сегмент.
+    # рандомным футажом. job["feetage_dir"] — ЯД-папка с mp4. Ключ сегмента включает
+    # подпись футажа → кэш не отдаст «голый» сегмент.
+    # Конфиг бленда — feetage_alpha/blend/opacity/desat/dim (см. make_video_seg).
+    # Консенсус воркеров 15.09: blend=overlay(desat+dim), gbrp на оба входа.
     feetage_files: list[Path] = []
     feetage_dir = str(job.get("feetage_dir", "")).strip()
-    feetage_alpha = float(job.get("feetage_alpha", 0.05))   # 0.05 = 95% прозрачность (дефолт, yaromat 15.09)
+    feetage_cfg = {
+        "blend":   str(job.get("feetage_blend", "overlay")).strip() or "overlay",
+        "opacity": float(job.get("feetage_opacity", 0.5)),
+        "desat":   float(job.get("feetage_desat", 0.3)),
+        "dim":     float(job.get("feetage_dim", -0.15)),
+    }
     feetage_chance = float(job.get("feetage_chance", 1.0))   # 0.0–1.0: вероятность наложить футаж на сегмент
     if feetage_dir:
         listing = run(["rclone", "lsf", f"{REMOTE}:{feetage_dir}"])
@@ -850,7 +889,9 @@ def main():
             if not yd_get(f"{feetage_dir}/{name}", dst):
                 sys.exit(f"feetage: не скачался {name}")
             feetage_files.append(dst)
-        print(f"  feetage: {len(feetage_files)} футажей (alpha={feetage_alpha:.2f}) из {feetage_dir}")
+        print(f"  feetage: {len(feetage_files)} футажей blend={feetage_cfg['blend']} "
+              f"opacity={feetage_cfg['opacity']:.2f} desat={feetage_cfg['desat']:.2f} "
+              f"dim={feetage_cfg['dim']:.2f} из {feetage_dir}")
     else:
         print(f"  feetage: OFF (нет job['feetage_dir'])")
 
@@ -978,7 +1019,7 @@ def main():
             "ss": round(vid_ss, 3) if use_video else 0.0,
             "grid": [file_sig(g) for g in grid_srcs] if use_grid else [],
             "feetage": file_sig(seg_ft) if seg_ft else "",
-            "ft_alpha": round(feetage_alpha, 3) if seg_ft else 0.0,
+            "ft_alpha": round(feetage_cfg["opacity"], 3) if seg_ft else 0.0,
         }) if seg_cache else ""
 
         ok = bool(key) and seg_cache.fetch(key, sp)
@@ -986,7 +1027,7 @@ def main():
             if use_video:
                 ok = make_video_seg(vid, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset,
                                     tint=footage_tint, ss=vid_ss,
-                                    feetage=seg_ft, feetage_alpha=feetage_alpha)
+                                    feetage=seg_ft, feetage_cfg=feetage_cfg)
             elif use_grid:
                 # анимированная сетка 2×2 (лев↓/прав↑ + внутренний дрейф + шум) в hook/выдохе
                 ok = grid_seg(grid_srcs, enc_dur, sp, W, H, crf=seg_crf, preset=seg_preset)
@@ -1011,6 +1052,9 @@ def main():
         print(f"  {seg_cache.summary()}")
 
     # --- TSX MobyTitle overlay (если title_overlay задан в job.json) ---
+    # ⭐ БРЕНДБУК РЕЦЕПТА 2 (консилиум 15.09): MobyTitle = стандартный титр.
+    # Spec: approved:yes, mono Space Mono, центр кадра, accentText строчными, 6с интро.
+    # job.json: "title_overlay":"MobyTitle", "accent_text":"<track>", "title_dur":6.
     title_overlay = str(job.get("title_overlay", "")).strip()
     title_ov_path = None
     if title_overlay:
