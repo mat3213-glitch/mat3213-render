@@ -253,7 +253,7 @@ def motion_seg(cover: Path, dur: float, mode: str, theta: float, blend: str,
 def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
                    crf: str = "22", preset: str = "veryfast", tint: str = "",
                    ss: float = 0.0, feetage: Path | None = None,
-                   feetage_alpha: float = 0.25, fit_mode: str = "crop") -> bool:
+                   feetage_alpha: float = 0.15, fit_mode: str = "crop") -> bool:
     """Сегмент из видео-футажа (Pexels): slice длины dur ОТ СЕКУНДЫ ss, cover-crop в WxH, fps.
     Короткий футаж зацикливается (-stream_loop). Грейд под стиль — общим density-пассом тела.
     Энкод как у motion_seg (timescale 12800) → совместимо с xfade_chain.
@@ -261,7 +261,7 @@ def make_video_seg(src: Path, dur: float, out: Path, W: int, H: int,
     (eq контраст/сатурация) серый футаж в палитру НЕ приводит → грозовые облака садятся
     серо-белым пятном посреди нуара. Тинт красит футаж в лук замка ДО сборки.
     feetage: опциональный видео-футаж (720×1280), overlay поверх лупа с прозрачностью
-    (feetage_alpha = 0.25 = футаж с 75% прозрачностью, запрос yaromat 2026-09-13).
+    (feetage_alpha = 0.15 = футаж с 85% прозрачностью, рецепт 2, решение yaromat 2026-09-14).
 
     🔴 ss ОБЯЗАТЕЛЕН ПРИ ПОВТОРНЫХ ПОКАЗАХ КЛЮЧА (правка 2026-08-06). Раньше `-ss` не было
     вовсе: каждое появление ключа откручивало файл С НУЛЯ, и зритель по 5–8 раз за часть видел
@@ -620,6 +620,12 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
     raw: list[tuple[str, float, str, bool]] = [(keys[0], intro, "intro", False)]
     tail_key = keys[0]
     if energy_groups:
+        # Ре-шаффл по образцу бэкап-ветки (655-675): каждый источник пула получает
+        # слот хотя бы раз за круг, порядок кругов не повторяет «карусель» одного
+        # цикла. Ради этого же в raw берётся перетасованный cycle, а не keys.
+        cycle = list(keys)
+        rng.shuffle(cycle)
+        i = 0
         cursor = intro
         for group in energy_groups:
             start, dur, energy = float(group.track_pos), float(group.duration), group.energy
@@ -627,8 +633,12 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
             if end <= cursor + 0.03:
                 continue
             if start > cursor + 0.03:
-                raw.append((keys[len(raw) % len(keys)], start - cursor, "groove", False))
+                key = cycle[i % len(cycle)]
+                if i > 0 and i % len(cycle) == 0:
+                    rng.shuffle(cycle)
+                raw.append((key, start - cursor, "groove", False))
                 cursor = start
+                i += 1
             take = min(end, target - outro) - cursor
             if take <= 0.08:
                 break
@@ -639,10 +649,18 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
                 left = take
                 while left > 0.08:
                     slot = min(beat, left)
-                    raw.append((keys[len(raw) % len(keys)], slot, "drop", True))
+                    key = cycle[i % len(cycle)]
+                    if i > 0 and i % len(cycle) == 0:
+                        rng.shuffle(cycle)
+                    raw.append((key, slot, "drop", True))
                     left -= slot
+                    i += 1
             else:
-                raw.append((keys[len(raw) % len(keys)], take, "groove", False))
+                key = cycle[i % len(cycle)]
+                if i > 0 and i % len(cycle) == 0:
+                    rng.shuffle(cycle)
+                raw.append((key, take, "groove", False))
+                i += 1
             cursor += take
             if cursor >= target - outro - 0.03:
                 break
@@ -679,14 +697,17 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
         if i == 0:
             tin, tdur = None, 0.0
         elif region == "drop":
-            tin, tdur = "fade", 0.15
+            # бит-слот (~0.4-0.6с): жёсткий кат — tdur мал, чтобы переход не
+            # «съедал» слот целиком (раньше 0.25-0.55 сливались в мерцание).
+            tin, tdur = "fade", round(max(0.04, min(0.10, dur * 0.25)), 2)
         elif region in ("intro", "breath"):
             tin, tdur = rng.choice(["fadeblack", "dissolve"]), 0.45
         elif region == "outro":
             tin, tdur = "dissolve", 0.60
         else:
+            # groove: переход пропорционален плану — заметный, но не заливающий кадр.
             tin = rng.choice(POOL_GROOVE_TR)
-            tdur = round(rng.uniform(0.25, 0.55), 2)
+            tdur = round(max(0.06, min(0.28, dur * 0.35)), 2)
         seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
                         blend="none", tin=tin, tdur=tdur, region=region, drop=is_drop))
 
@@ -801,7 +822,7 @@ def main():
     # с mp4. Ключ сегмента включает подпись футажа → кэш не отдаст «голый» сегмент.
     feetage_files: list[Path] = []
     feetage_dir = str(job.get("feetage_dir", "")).strip()
-    feetage_alpha = float(job.get("feetage_alpha", 0.25))
+    feetage_alpha = float(job.get("feetage_alpha", 0.15))
     if feetage_dir:
         listing = run(["rclone", "lsf", f"{REMOTE}:{feetage_dir}"])
         if listing.returncode != 0:
