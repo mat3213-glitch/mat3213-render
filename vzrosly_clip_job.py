@@ -143,8 +143,10 @@ def send_tg(video: Path, caption: str) -> None:
 def yd_put_text(text: str, remote: str):
     t = WORK / "_s.txt"; t.write_text(text); yd_put(t, remote)
 
-def run(cmd) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True)
+def run(cmd, **kw) -> subprocess.CompletedProcess:
+    kw.setdefault("capture_output", True)
+    kw.setdefault("text", True)
+    return subprocess.run(cmd, **kw)
 
 
 def make_cover(src: Path, dst: Path, W: int, H: int, zoom: float = 1.0, flip: bool = False):
