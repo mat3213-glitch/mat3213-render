@@ -37,6 +37,7 @@ if not JOB_YD:
     JOB_YD = f"Content factory/cloud_io/render_jobs/{JOB_ID}"
 WORK    = Path("/tmp/vzrosly_job"); WORK.mkdir(parents=True, exist_ok=True)
 REPO    = Path(__file__).resolve().parent
+REMOTION = REPO / "remotion"
 FONT_MAP = {
     "mono":  str(REPO / "assets" / "SpaceMono-Regular.ttf"),
     "hand":  str(REPO / "assets" / "Caveat.ttf"),
@@ -610,7 +611,7 @@ def build_timeline(variant="full", bpm=87.0, seed=42, calm=False, split=False, s
 
 
 def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: int,
-                              energy_groups=None):
+                              energy_groups=None, tdur_scale: float = 1.0):
     """Build a pool EDL with cuts on analysed high-energy drop boundaries."""
     if not keys:
         sys.exit("video_pool: пустой список видео")
@@ -703,15 +704,15 @@ def build_video_pool_timeline(keys: list[str], target: float, bpm: float, seed: 
         elif region == "drop":
             # бит-слот (~0.4-0.6с): жёсткий кат — tdur мал, чтобы переход не
             # «съедал» слот целиком (раньше 0.25-0.55 сливались в мерцание).
-            tin, tdur = "fade", round(max(0.04, min(0.10, dur * 0.25)), 2)
+            tin, tdur = "fade", round(max(0.04, min(0.10, dur * 0.25)) * tdur_scale, 2)
         elif region in ("intro", "breath"):
-            tin, tdur = rng.choice(["fadeblack", "dissolve"]), 0.45
+            tin, tdur = rng.choice(["fadeblack", "dissolve"]), round(0.45 * tdur_scale, 2)
         elif region == "outro":
-            tin, tdur = "dissolve", 0.60
+            tin, tdur = "dissolve", round(0.60 * tdur_scale, 2)
         else:
             # groove: переход пропорционален плану — заметный, но не заливающий кадр.
             tin = rng.choice(POOL_GROOVE_TR)
-            tdur = round(max(0.06, min(0.28, dur * 0.35)), 2)
+            tdur = round(max(0.06, min(0.28, dur * 0.35)) * tdur_scale, 2)
         seq.append(dict(key=key, dur=dur, mode="single", theta=rng.choice(DIRS),
                         blend="none", tin=tin, tdur=tdur, region=region, drop=is_drop))
 
@@ -832,7 +833,7 @@ def main():
     # с mp4. Ключ сегмента включает подпись футажа → кэш не отдаст «голый» сегмент.
     feetage_files: list[Path] = []
     feetage_dir = str(job.get("feetage_dir", "")).strip()
-    feetage_alpha = float(job.get("feetage_alpha", 0.08))   # 0.08 = 92% прозрачность (дефолт, yaromat 15.09)
+    feetage_alpha = float(job.get("feetage_alpha", 0.05))   # 0.05 = 95% прозрачность (дефолт, yaromat 15.09)
     feetage_chance = float(job.get("feetage_chance", 1.0))   # 0.0–1.0: вероятность наложить футаж на сегмент
     if feetage_dir:
         listing = run(["rclone", "lsf", f"{REMOTE}:{feetage_dir}"])
@@ -919,7 +920,8 @@ def main():
                 print(f"  WARN: energy_map unavailable ({e}); BPM fallback")
         else:
             print("  energy_map: OFF — строгий монтаж по доле bpm (fallback)")
-        seq, total = build_video_pool_timeline(video_pool, video_duration, bpm, seed, energy_groups)
+        seq, total = build_video_pool_timeline(video_pool, video_duration, bpm, seed, energy_groups,
+                                               tdur_scale=float(job.get("tdur_scale", 1.0)))
         scenario = "video_pool"
     else:
         seq, total = build_timeline(variant, bpm, seed, calm, split, scenario,
@@ -1005,6 +1007,53 @@ def main():
     print(f"  body duration={duration}s")
     if seg_cache:
         print(f"  {seg_cache.summary()}")
+
+    # --- TSX MobyTitle overlay (если title_overlay задан в job.json) ---
+    title_overlay = str(job.get("title_overlay", "")).strip()
+    title_ov_path = None
+    if title_overlay:
+        # проверка approved: yes в README хука
+        md_path = REMOTION / "src" / "overlays" / f"{title_overlay}.md"
+        if md_path.exists():
+            md_text = md_path.read_text(encoding="utf-8")
+            ov_approved = any(
+                l.strip().lower().startswith("approved:") and
+                l.strip().split(":", 1)[1].strip() in ("yes", "true", "да")
+                for l in md_text.splitlines()
+            )
+            if not ov_approved and not job.get("allow_unapproved"):
+                print(f"  ⚠ {title_overlay} не approved — пропуск оверлея")
+                title_overlay = ""
+        else:
+            print(f"  ⚠ нет README для {title_overlay} — пропуск оверлея")
+            title_overlay = ""
+    if title_overlay:
+        title_dur = min(float(job.get("title_dur", 6.0)), duration)  # интро-титр, не весь трек
+        props = {"seed": seed, "format": fmt, "durationSec": title_dur}
+        if job.get("palette"):
+            props["palette"] = job["palette"]
+        if job.get("accent_text"):
+            props["accentText"] = job["accent_text"]
+        (REMOTION / "props.json").write_text(json.dumps(props, ensure_ascii=False))
+        ov_mov = WORK / "title_overlay.mov"
+        r = run(["npx", "remotion", "render", "src/index.ts", title_overlay, str(ov_mov),
+                 "--props=./props.json", "--codec=prores", "--prores-profile=4444",
+                 "--image-format=png", "--pixel-format=yuva444p10le"],
+                cwd=str(REMOTION))
+        if r.returncode == 0 and ov_mov.exists():
+            # проверка альфы
+            pf = run(["ffprobe", "-v", "error", "-select_streams", "v:0",
+                      "-show_entries", "stream=pix_fmt", "-of", "csv=p=0", str(ov_mov)],
+                     capture_output=True, text=True)
+            pix_fmt = (pf.stdout or "").strip()
+            has_alpha = "a" in pix_fmt.lower()
+            print(f"  title overlay {title_overlay}: {ov_mov.stat().st_size//1024}KB pix_fmt={pix_fmt} alpha={has_alpha}")
+            if has_alpha:
+                title_ov_path = ov_mov
+            else:
+                print(f"  ⚠ overlay без альфы — пропуск")
+        else:
+            print(f"  ⚠ overlay render failed rc={r.returncode} — продолжаем без титра")
 
     # onset каждого сегмента в финальном xfade-таймлайне (та же математика, что в xfade_chain)
     onsets, running = [0.0], durs[0]
@@ -1136,6 +1185,7 @@ def main():
         edge_fade = min(edge_fade, duration / 2.0)
         edge_chain = (f",fade=t=in:st=0:d={edge_fade:.3f},"
                       f"fade=t=out:st={max(0.0, duration-edge_fade):.3f}:d={edge_fade:.3f}")
+    tail = f"trim=duration={duration},setpts=PTS-STARTPTS{draw_chain}{edge_chain}"
     fc = (
         f"[0:v]fps={FPS},{grade},"
         f"format=gbrp,setpts=PTS-STARTPTS[v];"
@@ -1145,7 +1195,10 @@ def main():
         f"[b1][grt]blend=all_mode=screen:all_opacity={grt_op}[b2];"
         f"[b2]format=yuv420p,{'' if not noise_enabled else f'noise=alls={nz_str}:all_seed={nz_seed}:allf=t+u,'}"
         f"{vig}"
-        f"trim=duration={duration},setpts=PTS-STARTPTS{draw_chain}{edge_chain}[vout]"
+        + (f"{tail}[base];[4:v]scale={W}:{H},format=yuva420p[ov];"
+           f"[base][ov]overlay=0:0:eof_action=pass,format=yuv420p[vout]"
+           if title_ov_path else
+           f"{tail}[vout]")
     )
     silent = audio_mode == "none"
     cmd = [
@@ -1156,8 +1209,11 @@ def main():
     ]
     if not silent:
         cmd += ["-ss", str(audio_start), "-t", str(duration), "-i", str(WORK / "track.mp3")]
+    if title_ov_path:
+        cmd += ["-i", str(title_ov_path)]
     cmd += ["-filter_complex", fc, "-map", "[vout]"]
-    cmd += ["-an"] if silent else ["-map", "3:a", "-af", af_chain]
+    audio_idx = 4 if title_ov_path else 3
+    cmd += ["-an"] if silent else [f"-map", f"{audio_idx}:a", "-af", af_chain]
     cmd += [
         "-c:v", "libx264",
         *(["-crf", "24", "-preset", "medium"] if preview

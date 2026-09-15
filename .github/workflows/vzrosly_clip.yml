@@ -26,6 +26,11 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Setup Node (для TSX overlay титра)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # was v4
+        with:
+          node-version: "20"
+
       - name: Cache apt packages
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # was v4
         with:
@@ -48,6 +53,10 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Install remotion deps (для TSX overlay титра)
+        working-directory: remotion
+        run: npm install --no-audit --no-fund
 
       - name: Run vzrosly_clip_job.py
         env:
