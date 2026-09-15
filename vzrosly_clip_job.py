@@ -1081,8 +1081,9 @@ def main():
     else:
         scr_op   = round(tex.uniform(0.5, 0.7), 2)
         grt_op   = round(tex.uniform(0.4, 0.6), 2)
-    nz_str   = tex.randint(style["grain"][0], style["grain"][1])   # сила зерна — из стиля
-    nz_seed  = tex.randint(1, 99999)
+    noise_enabled = bool(job.get("noise", True))   # job["noise"]=false — без зерна/шума (футажи дают свой)
+    nz_str   = tex.randint(style["grain"][0], style["grain"][1]) if noise_enabled else 0   # сила зерна — из стиля
+    nz_seed  = tex.randint(1, 99999) if noise_enabled else 0
     scr_ss   = round(tex.uniform(0.0, 4.0), 2)   # старт scratch-петли
     grt_ss   = round(tex.uniform(0.0, 4.0), 2)   # старт grit-петли
     # грейд+виньетка — из per-track стиля (раньше были зашиты одним луком на все треки).
@@ -1130,7 +1131,7 @@ def main():
         f"[2:v]scale={W}:{H},fps={FPS},format=gray{grt_flip},format=gbrp,setpts=PTS-STARTPTS[grt];"
         f"[v][scr]blend=all_mode=screen:all_opacity={scr_op}[b1];"
         f"[b1][grt]blend=all_mode=screen:all_opacity={grt_op}[b2];"
-        f"[b2]format=yuv420p,noise=alls={nz_str}:all_seed={nz_seed}:allf=t+u,"
+        f"[b2]format=yuv420p,{'' if not noise_enabled else f'noise=alls={nz_str}:all_seed={nz_seed}:allf=t+u,'}"
         f"{vig}"
         f"trim=duration={duration},setpts=PTS-STARTPTS{draw_chain}{edge_chain}[vout]"
     )
