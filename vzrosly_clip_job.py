@@ -780,6 +780,29 @@ COVER_SPEC = {
 }
 
 
+# Полный набор прочитанных движком ключей job.json. Ключ вне списка = движок его
+# игнорирует (тихий drift): печатаем WARN, чтобы мёртвая конфигурация не выглядела
+# живой. Исторический пример: feetage_alpha (старая схема альфы) — не читается,
+# работает feetage_opacity.
+def _warn_unknown_job_keys(job: dict) -> None:
+    known = {
+        "accent_text", "allow_unapproved", "amplitude", "audio", "audio_fade",
+        "audio_start", "blend_opacity", "bpm", "cache", "calm", "cue_min_gap",
+        "dark_fade_seconds", "duration", "energy_map", "feetage_blend",
+        "feetage_chance", "feetage_desat", "feetage_dim", "feetage_dir",
+        "feetage_opacity", "font", "footage_tint", "format", "grade_override",
+        "grid", "hook", "noise", "out_name", "outro", "overlay_opacity",
+        "overlays", "palette", "preview", "scenario", "seed", "send_tg",
+        "speed", "split", "stems", "style", "tdur_scale", "tg_caption",
+        "title_dur", "title_overlay", "track_credit", "track_remote",
+        "variant", "video_keys", "video_source_dir", "vignette", "watermark",
+        "word",
+    }
+    unknown = sorted(set(job) - known)
+    if unknown:
+        print(f"  WARN: неизвестные/неиспользуемые ключи job.json: {', '.join(unknown)}")
+
+
 def main():
     global MOTION_SPEED, MOTION_AMP, BLEND_OPACITY, SCRATCH, GRIT
     print(f"Job: {JOB_ID}")
@@ -787,6 +810,7 @@ def main():
     if not yd_get(f"{JOB_YD}/job.json", jf):
         sys.exit("no job.json")
     job = json.loads(jf.read_text())
+    _warn_unknown_job_keys(job)
     fmt = job.get("format", "square")
     W, H = FMT.get(fmt, FMT["square"])
     out_name = job["out_name"]
