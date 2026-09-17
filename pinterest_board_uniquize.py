@@ -392,14 +392,18 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
         else:
             cmd += ["-filter_complex", graph, "-map", "[vs]", "-an"]
     elif has_audio:
+        v_label = f"[0:v]{vf}[v]" if vf else "[0:v]null[v]"
         cmd += [
             "-filter_complex",
-            f"[0:v]{vf}[v];[0:a]atempo={speed}[a]",
+            f"{v_label};[0:a]atempo={speed}[a]",
             "-map", "[v]", "-map", "[a]",
             "-c:a", "aac", "-ar", "44100", "-ac", "2", "-b:a", "160k",
         ]
     else:
-        cmd += ["-vf", vf, "-an"]
+        if vf:
+            cmd += ["-vf", vf, "-an"]
+        else:
+            cmd += ["-filter_complex", "[0:v]null[v]", "-map", "[v]", "-an"]
     cmd += [
         "-threads", "2",
         "-c:v", "libx264", "-profile:v", "baseline", "-level:v", "3.1",
