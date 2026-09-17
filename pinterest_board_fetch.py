@@ -178,8 +178,13 @@ def collect_pins(board_ref: str, max_idle: int = 6) -> dict:
         except Exception:
             pass
 
-    want = f"/{board_slug}/".lower()
-    scoped = {pid: i for pid, i in pins.items() if want in (i.get("board_url") or "").lower()}
+    from urllib.parse import unquote
+
+    want = {f"/{s}/".lower() for s in {board_slug, unquote(board_slug)} if s}
+    scoped = {
+        pid: i for pid, i in pins.items()
+        if any(w in (i.get("board_url") or "").lower() for w in want)
+    }
     seen_ig, dedup = set(), {}
     for pid, i in scoped.items():
         link = i.get("link") or ""
