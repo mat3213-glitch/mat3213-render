@@ -3,6 +3,10 @@
   "_updated": "2026-08-26",
 
   "vf": {
+    "minimal_zoom": {
+      "desc": "единственный production-уникализатор (решение 17.09): равномерный центр-зум 1.05, без кроп-дрифта, качки и виньетки",
+      "_generator": "minimal_zoom_filter"
+    },
     "faded_film": {
       "desc": "unsharp + low contrast + warm grade + vignette",
       "filter": "unsharp=5:5:1.0:5:5:0.5,eq=contrast=0.88:brightness=0.03:gamma=1.05,colorbalance=rs=0.04:gs=0.02:bs=-0.03,vignette=PI/3.5"
@@ -101,6 +105,7 @@
   "profiles": {
     "storyboard": {
       "vertical": {
+        "minimal_zoom": {"type": "vf", "filter": "scale=ceil(iw*1.05/2)*2:ceil(ih*1.05/2)*2,crop=ceil(iw/1.05/2)*2:ceil(ih/1.05/2)*2:x='trunc((iw-ow)/2/2)*2':y='trunc((ih-oh)/2/2)*2',setsar=1", "policy": "allowed"},
         "faded_film": {"type": "vf", "filter": "unsharp=5:5:1.0,eq=contrast=0.88:brightness=0.03:gamma=1.05,vignette=PI/3.5", "policy": "allowed"},
         "hue_rotate": {"type": "vf", "filter": "hue=h=150:s=0.7", "policy": "allowed"},
         "color_pulse": {"type": "vf", "filter": "hue=h=90:s=1.45,eq=contrast=1.16:brightness=-0.02", "policy": "forbidden"},
@@ -126,6 +131,7 @@
     },
     "uniquize": {
       "landscape": {
+        "minimal_zoom": {"type": "vf", "generator": "minimal_zoom_filter", "policy": "allowed"},
         "faded_film": {"type": "vf", "filter": "unsharp=5:5:1.0:5:5:0.5,eq=contrast=0.88:brightness=0.03:gamma=1.05,colorbalance=rs=0.04:gs=0.02:bs=-0.03,vignette=PI/3.5", "policy": "allowed"},
         "hue_rotate": {"type": "vf", "filter": "hue=h=150:s=0.7", "policy": "allowed"},
         "color_pulse": {"type": "vf", "filter": "hue=h=90:s=3.0,eq=contrast=1.4:brightness=-0.03", "policy": "forbidden"},

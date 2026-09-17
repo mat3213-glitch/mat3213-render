@@ -72,24 +72,15 @@ PROMINENT_FX_OFF = {"split_drift", "grid_2x2", "split_converge"}
 
 
 def pick_chain(effects_db: dict, n: int | None = None, *, no_zoom: bool = False) -> list[str]:
-    """Choose exactly one visible effect for one source video.
+    """Deterministic production uniqueizer: minimal uniform 1.05 zoom only.
 
-    ``bleach_negate`` remains available for manual diagnostics, but is excluded
-    from production randomization because a full-frame negative washes objects out.
-    ``no_zoom`` additionally drops every scale-up/crop-drift effect and the
-    baked-vignette grade — one uniqueizer, never a second re-crop of the same frame.
-    ``PROMINENT_FX_OFF`` — кадр-ломающие эффекты не попадают в случайный выбор,
-    но остаются в реестре.
+    Решение yaromat 17.09: кроп/качку/виньетку из уникализатора убрали, единственный
+    production-эффект — равномерный центр-зум 1.05 („кроп вообще удаляем, зум 1.05“).
+    Busy/ломающие кадр эффекты из реестра не выбираются ни при каких условиях
+    (в т.ч. при no_zoom); реестр сохраняется для ручной диагностики.
     """
-    del n  # The production contract is one effect, never an effect chain.
-    names = [*effects_db["vf"], *effects_db["complex"]]
-    production = [name for name in names
-                  if name not in PROMINENT_FX_OFF and name != "bleach_negate"]
-    if no_zoom:
-        production = [name for name in production if name not in NO_ZOOM_EXCLUDE]
-    if not production:
-        raise ValueError(f"effects database has no production effects (no_zoom={no_zoom})")
-    return [random.choice(production)]
+    del n, effects_db, no_zoom
+    return ["minimal_zoom"]
 
 
 def gen_parallax_filter() -> str:
@@ -131,6 +122,15 @@ def gen_zoom_drift_filter() -> str:
 def gen_diagonal_crop_filter() -> str:
     """Неглубокий диагональный дрейф внутри 1.10x crop."""
     return "scale=1408:792,crop=1280:720:'128*t/24':'72*t/24'"
+
+
+def gen_minimal_zoom_filter() -> str:
+    """Единственный production-уникализатор (решение yaromat 17.09): равномерный
+    центр-зум 1.05. Без кроп-дрифта, качки, разлома кадра и виньетки; исходное
+    разрешение сохраняется (увеличение на 5% с равномерной обрезкой краёв)."""
+    return ("scale=ceil(iw*1.05/2)*2:ceil(ih*1.05/2)*2,"
+            "crop=ceil(iw/1.05/2)*2:ceil(ih/1.05/2)*2:"
+            "x='trunc((iw-ow)/2/2)*2':y='trunc((ih-oh)/2/2)*2',setsar=1")
 
 
 def gen_split_drift_complex() -> str:
@@ -175,6 +175,7 @@ VF_GENERATORS = {
     "corner_sweep": gen_corner_sweep_filter,
     "zoom_drift": gen_zoom_drift_filter,
     "diagonal_crop": gen_diagonal_crop_filter,
+    "minimal_zoom": gen_minimal_zoom_filter,
 }
 
 COMPLEX_GENERATORS = {
@@ -223,6 +224,7 @@ def resolve_effect_filter(name: str, effects_db: dict, fps: float, duration: flo
             "corner_sweep_filter": VF_GENERATORS["corner_sweep"],
             "zoom_drift_filter": VF_GENERATORS["zoom_drift"],
             "diagonal_crop_filter": VF_GENERATORS["diagonal_crop"],
+            "minimal_zoom_filter": VF_GENERATORS["minimal_zoom"],
         }
         complex_generators = {
             "split_drift_filter": COMPLEX_GENERATORS["split_drift"],
@@ -301,53 +303,16 @@ def uniquize(src: Path, dst: Path, *, color: str = "", fps: float = 24.0,
              effects_chain: list[str] | None = None, effects_db: dict | None = None,
              base: bool = True, in_ss: float | None = None, in_t: float | None = None,
              out_wh: tuple[int, int] | None = None, drop_audio: bool = False) -> None:
-    speed = round(random.uniform(0.97, 1.03), 3) if base else 1.0
-    pts_factor = round(1.0 / speed, 4)
-    flip = random.choice(["hflip,", ""])
-    # Base crop plus the later shake crop must remain within the 1.10x zoom ceiling.
-    crop_pct = round(random.uniform(0.95, 0.97), 3)
-    margin = round((1.0 - crop_pct) / 2, 4)
-    crop = f"crop=iw*{crop_pct}:ih*{crop_pct}:iw*{margin}:ih*{margin},"
-    rr = round(random.uniform(0.84, 0.90), 3)
-    gg = round(random.uniform(0.89, 0.93), 3)
-    bb = round(random.uniform(1.07, 1.12), 3)
-    color_mix = f"colorchannelmixer=rr={rr}:gg={gg}:bb={bb},"
-    sat = round(random.uniform(0.75, 0.85), 3)
-    con = round(random.uniform(1.04, 1.09), 3)
-    bri = round(random.uniform(0.02, 0.06), 3)
-    eq = f"eq=saturation={sat}:contrast={con}:brightness={bri},"
-    noise_str = random.randint(6, 11)
-    noise = f"noise=alls={noise_str}:allf=t+u,"
-    unsharp = "unsharp=3:3:0.4:3:3:0.0,"
-    shake_amp_x = random.randint(10, 18)
-    shake_amp_y = random.randint(6, 12)
-    margin_x = shake_amp_x + 6
-    margin_y = shake_amp_y + 4
-    crop_w = 1280 - 2 * margin_x
-    crop_h = 720 - 2 * margin_y
-    base_freq = random.uniform(10.0, 13.5)
-    freq_x = round(base_freq, 1)
-    freq_y = round(base_freq * random.uniform(0.7, 0.85), 1)
-    shake = (
-        f"crop={crop_w}:{crop_h}:"
-        f"'{margin_x}+{shake_amp_x}*sin(t*{freq_x})':"
-        f"'{margin_y}+{shake_amp_y}*cos(t*{freq_y})',"
-        f"scale=1280:720,"
-    )
-    vignette = f"vignette=PI*{round(random.uniform(0.22, 0.30), 2)}"
-
-    # Базовый vf-цепочка (пропускается в режиме single-effect: 1 инструмент на луп)
+    # Решение yaromat 17.09: из базового рецепта кроп, качку, джиттер скорости,
+    # цветогрейд, зерно и виньетку убрали полностью. Уникализация = только эффект
+    # из effects_chain (production: равномерный зум 1.05). base=True лишь
+    # прикладывает опциональную color_chain — без какой-либо кадровой деградации.
+    speed = 1.0
     color_kind = color
     color_f = color_chain(color, fps) if base else ""
     base_chain = []
-    if base:
-        base_chain = [
-            flip, crop, "scale=1280:720",
-            f"setpts={pts_factor}*PTS",
-            shake, color_mix, eq, noise, unsharp, vignette,
-        ]
-        if color_f:
-            base_chain.append(color_f)
+    if base and color_f:
+        base_chain.append(color_f)
 
     vf_parts = [c.rstrip(",") for c in base_chain if c]
 
