@@ -69,12 +69,20 @@ def ov_search(query: str, count: int, token: str | None) -> list[str]:
     headers = {"User-Agent": "yaromat-style-scout/1.0"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    try:
-        req = urllib.request.Request(f"{OV_API}/images/?{params}", headers=headers)
-        res = json.loads(urllib.request.urlopen(req, timeout=20).read().decode())
-        return [it["url"] for it in res.get("results", []) if it.get("url")]
-    except Exception as e:
-        print(f"  [ov] search '{query}' fail: {e}"); return []
+    # Openverse периодически капризничает с раннера (таймауты/502) — 3 попытки
+    # с откатом, иначе потом весь scout падает на 0 референсов (exit 1).
+    for attempt in (1, 2, 3):
+        try:
+            req = urllib.request.Request(f"{OV_API}/images/?{params}", headers=headers)
+            res = json.loads(urllib.request.urlopen(req, timeout=30).read().decode())
+            return [it["url"] for it in res.get("results", []) if it.get("url")]
+        except Exception as e:
+            if attempt == 3:
+                print(f"  [ov] search '{query}' fail ({attempt}/3): {e}"); return []
+            wait = 5 * attempt
+            print(f"  [ov] search '{query}' retry {attempt}/3 (wait {wait}s): {e}")
+            time.sleep(wait)
+    return []
 
 
 def ov_download(url: str, dst: Path) -> bool:
