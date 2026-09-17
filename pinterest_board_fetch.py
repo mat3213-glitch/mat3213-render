@@ -290,6 +290,11 @@ def main() -> int:
         encoding="utf-8",
     )
 
+    if got == 0:
+        print(f"[board] НОЛЬ видео скачано (pins={len(pins)}) — папку-скелет не заливаем, fail loudly",
+              flush=True)
+        return 1
+
     for local in sorted(TMP.iterdir()):
         if not local.is_file():
             continue
