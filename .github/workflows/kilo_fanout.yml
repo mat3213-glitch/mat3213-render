@@ -1,0 +1,126 @@
+name: kilo-gh fanout worker
+
+# Воркер kilo-gh оркестра fan-out (патч см. docs/FANOUT_PATCH.md в этом репо).
+# US-IP раннера обходит обходной блок Kilo: api.kilo.ai режется Vercel WAF
+# только из RU-сети (403 x-vercel-mitigated: deny), раннеры ubuntu-latest — US-IP.
+# Установщик kilo.ai/cli/install сам пишет ~/.kilo/bin в $GITHUB_PATH.
+# Вход:  ЯД Content factory/cloud_io/kilo_ci/in/<batch_id>.json
+# Выход: ЯД Content factory/cloud_io/kilo_ci/out/<batch_id>.json
+
+on:
+  workflow_dispatch:
+    inputs:
+      batch_id:
+        description: "id батча (имя in/out файла на ЯД)"
+        required: true
+        type: string
+      model:
+        description: "модель по умолчанию (пусто = дефолт шлюза)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kilo-shared-session
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Пин после первого зелёного прогона, напр. KILO_CLI_VERSION: "1.0.180"
+      KILO_CLI_VERSION: ""
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Kilo CLI
+        run: |
+          set -e
+          if [ -n "$KILO_CLI_VERSION" ]; then
+            curl -fsSL https://kilo.ai/cli/install | bash -s -- --version "$KILO_CLI_VERSION"
+          else
+            curl -fsSL https://kilo.ai/cli/install | bash
+          fi
+          echo "$HOME/.kilo/bin" >> "$GITHUB_PATH"
+          kilo --version
+
+      - name: Install rclone
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          umask 077
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      - name: Restore Kilo auth (optional snapshot)
+        run: |
+          umask 077
+          mkdir -p "$HOME/.local/share/kilo"
+          if rclone lsf "ydrive:Content factory/cloud_io/kilo_ci/" --include "kilo_auth.json" \
+             | grep -q "kilo_auth.json"; then
+            rclone copyto "ydrive:Content factory/cloud_io/kilo_ci/kilo_auth.json" \
+              "$HOME/.local/share/kilo/auth.json"
+            test "$(stat -c%s "$HOME/.local/share/kilo/auth.json")" -gt 100
+            echo "auth restored from YAD snapshot"
+          else
+            echo "no kilo_auth.json on YAD — relying on KILO_API_KEY secret / snapshot is empty"
+          fi
+
+      - name: Prepare kilo.jsonc (permission allow + default model)
+        env:
+          KILO_MODEL_DEFAULT: ${{ inputs.model }}
+        run: |
+          umask 077
+          mkdir -p "$HOME/.config/kilo"
+          python3 - <<'PY'
+          import json
+          import os
+
+          cfg = {"$schema": "https://app.kilo.ai/config.json", "permission": "allow"}
+          model = os.environ.get("KILO_MODEL_DEFAULT", "").strip()
+          if model:
+              cfg["model"] = model
+          path = os.path.expanduser("~/.config/kilo/kilo.jsonc")
+          with open(path, "w", encoding="utf-8") as stream:
+              json.dump(cfg, stream, ensure_ascii=False, indent=2)
+          os.chmod(path, 0o600)
+          print(f"kilo.jsonc written (model={model or 'gateway-default'})")
+          PY
+
+      - name: Run serialized batch
+        env:
+          INPUT_BATCH_ID: ${{ inputs.batch_id }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+        run: python3 kilo_runner.py "$INPUT_BATCH_ID"
+
+      - name: Persist refreshed auth
+        if: always()
+        run: |
+          # Токен шлюза может обновиться за прогон — снимок выживет в очереди.
+          if test -s "$HOME/.local/share/kilo/auth.json"; then
+            rclone copyto "$HOME/.local/share/kilo/auth.json" \
+              "ydrive:Content factory/cloud_io/kilo_ci/kilo_auth.json"
+          fi
+
+      - name: Remove credentials
+        if: always()
+        run: |
+          rm -rf "$HOME/.kilo" "$HOME/.config/kilo" "$HOME/.local/share/kilo" \
+                 "$HOME/.config/rclone/rclone.conf"
+          rm -f batch.json out.json
