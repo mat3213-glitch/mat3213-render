@@ -50,7 +50,7 @@ jobs:
           else
             curl -fsSL https://kilo.ai/cli/install | bash
           fi
-          echo "$HOME/.kilo/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.kilo/bin:$PATH"
           kilo --version
 
       - name: Install rclone

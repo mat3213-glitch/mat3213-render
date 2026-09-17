@@ -1,0 +1,134 @@
+name: kilo-gh smoke worker
+
+# Ручной смоук kilo-gh: одна задача, без ЯД и rclone.
+# Делит лок kilo-shared-session с fanout (одна сессия/креды не пересекаются).
+# Падает на пустом ответе или несовпадении expected.
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: "промпт задачи"
+        required: false
+        type: string
+        default: "Ответь одним словом: готов."
+      expected:
+        description: "ожидаемый фрагмент ответа (пусто = не проверять)"
+        required: false
+        type: string
+        default: "готов"
+      model:
+        description: "модель (пусто = дефолт шлюза)"
+        required: false
+        type: string
+        default: ""
+      variant:
+        description: "вариант reasoning effort (напр. high)"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kilo-shared-session
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      KILO_CLI_VERSION: ""  # пин как в kilo_fanout.yml после первого зелёного прогона
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # was v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Kilo CLI
+        run: |
+          set -e
+          if [ -n "$KILO_CLI_VERSION" ]; then
+            curl -fsSL https://kilo.ai/cli/install | bash -s -- --version "$KILO_CLI_VERSION"
+          else
+            curl -fsSL https://kilo.ai/cli/install | bash
+          fi
+          export PATH="$HOME/.kilo/bin:$PATH"
+          kilo --version
+
+      - name: Restore Kilo auth (optional snapshot)
+        run: |
+          # Смоук без ЯД: снапшот достаётся только если секретам это не нужно.
+          echo "smoke uses KILO_API_KEY secret only (no YAD access on this run)"
+
+      - name: Prepare case
+        env:
+          KILO_PROMPT:   ${{ inputs.prompt }}
+          KILO_MODEL:    ${{ inputs.model }}
+          KILO_VARIANT:  ${{ inputs.variant }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          case = {"id": "smoke", "prompt": os.environ.get("KILO_PROMPT", "").strip()}
+          if not case["prompt"]:
+              case["prompt"] = "Ответь одним словом: готов."
+          model = os.environ.get("KILO_MODEL", "").strip()
+          if model:
+              case["model"] = model
+          variant = os.environ.get("KILO_VARIANT", "").strip()
+          if variant:
+              case["variant"] = variant
+          with open("case.json", "w", encoding="utf-8") as stream:
+              json.dump([case], stream, ensure_ascii=False, indent=2)
+          os.chmod("case.json", 0o600)
+          print(json.dumps({"id": case["id"], "model": case.get("model", "gateway-default")}))
+          PY
+
+      - name: Run case
+        env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+        run: |
+          set +e
+          python3 kilo_runner.py local --batch case.json --out out.json
+          echo "KILO_LOCAL_RC=$?" >> "$GITHUB_ENV"
+          set -e
+          exit 0
+
+      - name: Check smoke answer
+        env:
+          KILO_EXPECTED: ${{ inputs.expected }}
+        run: |
+          rc="${KILO_LOCAL_RC:-1}"
+          python3 - "$rc" <<'PY'
+          import json
+          import os
+          import sys
+
+          rc = int(sys.argv[1])
+          expected = (os.environ.get("KILO_EXPECTED") or "").strip()
+          if rc != 0:
+              print(f"smoke: ран упал (rc={rc})")
+              sys.exit(1)
+          results = json.load(open("out.json", encoding="utf-8"))
+          item = results[0]
+          print("=== ответ smoke ===")
+          print(item.get("text") or item.get("error"))
+          print("===================")
+          if not item.get("ok"):
+              sys.exit(1)
+          if expected and expected not in (item.get("text") or ""):
+              print(f"expected-фрагмент не найден: {expected}")
+              sys.exit(1)
+          PY
+
+      - name: Remove credentials
+        if: always()
+        run: |
+          rm -rf "$HOME/.kilo" "$HOME/.config/kilo" "$HOME/.local/share/kilo"
+          rm -f case.json out.json
