@@ -78,9 +78,8 @@ jobs:
           case = {"id": "smoke", "prompt": os.environ.get("KILO_PROMPT", "").strip()}
           if not case["prompt"]:
               case["prompt"] = "Ответь одним словом: готов."
-          model = os.environ.get("KILO_MODEL", "").strip()
-          if model:
-              case["model"] = model
+          # Бесплатный дефолт: без кредитов платный дефолт шлюза падает.
+          case["model"] = os.environ.get("KILO_MODEL", "").strip() or "kilo/poolside/laguna-s-2.1:free"
           variant = os.environ.get("KILO_VARIANT", "").strip()
           if variant:
               case["variant"] = variant

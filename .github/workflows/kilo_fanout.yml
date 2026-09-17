@@ -94,8 +94,9 @@ jobs:
 
           cfg = {"$schema": "https://app.kilo.ai/config.json", "permission": "allow"}
           model = os.environ.get("KILO_MODEL_DEFAULT", "").strip()
-          if model:
-              cfg["model"] = model
+          # Дефолт бесплатный: у аккаунта может не быть кредитов, платный дефолт
+          # шлюза падает с "Add credits to continue".
+          cfg["model"] = model or "kilo/poolside/laguna-s-2.1:free"
           path = os.path.expanduser("~/.config/kilo/kilo.jsonc")
           with open(path, "w", encoding="utf-8") as stream:
               json.dump(cfg, stream, ensure_ascii=False, indent=2)
