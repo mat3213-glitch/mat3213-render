@@ -2,60 +2,62 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 2.7,
-      "votes": "0/3",
-      "status": "отклонён",
-      "reason": "Слишком тёплый и яркий, не соответствует холодному тону и бирюзово-зелёному сдви"
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "близок к deep teal, но с не слишком сильным сдвигом"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 4.7,
-      "votes": "1/3",
-      "status": "спорный",
-      "reason": "Недостаточно холодный, не соответствует бренду."
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "близок к deep teal, но с не слишком сильным сдвигом"
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": false,
-      "score": 2.7,
-      "votes": "0/3",
-      "status": "отклонён",
-      "reason": "Слишком яркий и не соответствует холодному тону и бирюзово-зелёному сдвигу бренд"
+      "keep": true,
+      "score": 6.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "близок к deep teal, но с не слишком сильным сдвигом, но ярче"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
-      "score": 3.7,
-      "votes": "1/3",
+      "score": 6.0,
+      "votes": "1/2",
       "status": "спорный",
-      "reason": "Слишком тёплый и не соответствует холодному тону и бирюзово-зелёному сдвигу брен"
+      "reason": "слишком тускло, не яркий контур, не наш фирменный цвет"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": false,
-      "score": 3.3,
-      "votes": "1/3",
+      "score": 6.0,
+      "votes": "1/2",
       "status": "спорный",
-      "reason": "Слишком тёплый и не соответствует холодному тону и бирюзово-зелёному сдвигу брен"
+      "reason": "слишком тускло, не яркий контур, не наш фирменный цвет"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 5.3,
-      "votes": "1/3",
-      "status": "спорный",
-      "reason": "Близок к deep teal и холодному тону бренда, но не идеально."
+      "score": 4.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "слишком зеленоват, не наш фирменный цвет"
     }
   ],
-  "recommend_merge": [],
-  "disputed": [
+  "recommend_merge": [
+    "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
+    "scout_neutral_bright_muted"
   ],
-  "_generated": "2026-09-18",
-  "_judge": "gh-vision-ensemble(3/5)"
+  "disputed": [
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2"
+  ],
+  "_generated": "2026-09-19",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
