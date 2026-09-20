@@ -3,61 +3,60 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "близок к deep teal, но с не слишком сильным сдвигом"
+      "reason": "Хороший холодный тон, приглушённый, соответствует deep teal."
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "близок к deep teal, но с не слишком сильным сдвигом"
+      "reason": "Темный, но холодный и приглушённый, подходит."
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": true,
-      "score": 6.5,
-      "votes": "2/2",
+      "score": 7.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "близок к deep teal, но с не слишком сильным сдвигом, но ярче"
+      "reason": "Ярче, но всё ещё холодный и приглушённый."
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 6.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "слишком тускло, не яркий контур, не наш фирменный цвет"
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Мягкий, холодный, приглушённый, подходит."
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 6.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "слишком тускло, не яркий контур, не наш фирменный цвет"
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Мягкий, холодный, приглушённый, соответствует бренду."
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 4.0,
-      "votes": "0/2",
+      "score": 5.0,
+      "votes": "0/1",
       "status": "отклонён",
-      "reason": "слишком зеленоват, не наш фирменный цвет"
+      "reason": "Зелёный оттенок слишком далёк от deep teal."
     }
   ],
   "recommend_merge": [
     "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
-    "scout_neutral_bright_muted"
-  ],
-  "disputed": [
+    "scout_neutral_bright_muted",
     "scout_neutral_night_soft",
     "scout_neutral_night_soft_2"
   ],
-  "_generated": "2026-09-19",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [],
+  "_generated": "2026-09-20",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
