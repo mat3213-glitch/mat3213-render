@@ -1,2 +1,56 @@
-# Repo Scout — 2026-09-22T14:22:22.672514
-Всего в шортлисте: 0
+# Repo Scout — 2026-09-23T14:43:41.183870
+Всего в шортлисте: 6
+- **AethronX300/Nano-Banana-Prompt-generator** ⭐0 [craft]
+  - https://github.com/AethronX300/Nano-Banana-Prompt-generator
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий генерирует точные кинематографические промпты для AI-моделей изображений и видео, используя реальные элементы управления. Он может помочь в создании проверяемых операторских словарей и схем промптов для управляемой i2v-моторики. Однако, интеграция рискованна из-за уже существующих инструментов и ценности только новых, проверяемых формулировок.
+  - 📄 A desktop and web application for constructing precise, cinematic image and video prompts for AI generation models using real-world cinematography controls
+- **adisriv07/media-search-app** ⭐0 [source]
+  - https://github.com/adisriv07/media-search-app
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Это React-приложение для поиска и сохранения стоковых фото и видео через API Unsplash и Pexels. Оно предлагает headless-адаптеры для легального стокового видео с метаданными, закрывая пробел в надёжных источниках. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как Coverr/Pexels/Wikimedia уже используются; ценен только новый источник или подтверждение происхождения.
+  - 📄 A React-based stock media search app for discovering and saving photos and videos using the Unsplash and Pexels APIs.
+- **23kb/html-video-engine** ⭐2 [video]
+  - https://github.com/23kb/html-video-engine
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий представляет собой детерминированный HTML-видеодвижок для рендеринга обучающих материалов и рекламных роликов в MP4. Его детерминированный характер соответствует задаче усиления воспроизводимости рендера на CPU/GitHub Actions. Однако, риск дублирования высок, поскольку chunk cache и Video Receipt уже частично внедрены, и требуется конкретный незакрытый guardrail.
+  - 📄 Deterministic HTML video engine for product tutorials and ad-style films. Real UI from captured snapshot packs, GSAP camera and cursor primitives, narration-syn
+- **zinxan/motion-graphics** ⭐1 [video]
+  - https://github.com/zinxan/motion-graphics
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает моушн-графику в виде детерминированных React-компонентов, рендеримых покадрово. Его детерминированный стек может усилить воспроизводимость рендера на CPU/GitHub Actions. Интеграция несёт высокий риск дублирования, так как chunk cache и Video Receipt уже частично внедрены, и нужен конкретный незакрытый guardrail.
+  - 📄 Motion graphics as React components, rendered frame by frame. Deterministic, MIT-licensed film stack behind ZXN Studio.
+- **f-aiz/Vidgen-using-HTML** ⭐1 [video]
+  - https://github.com/f-aiz/Vidgen-using-HTML
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот экспериментальный пайплайн генерирует MP4-видео из описаний на естественном языке через детерминированные HTML/CSS анимации. Его детерминированный процесс рендеринга способствует усилению воспроизводимости рендера на CPU/GitHub Actions. Однако, высокий риск дублирования означает, что он ценен только для конкретных незакрытых guardrail'ов, поскольку chunk cache и Video Receipt частично внедрены.
+  - 📄 Natural language → HTML/CSS animation → rendered frames → MP4.  VidGen for HTML is an experimental video generation pipeline that turns a natural-language anima
+- **doideaco/crammer** ⭐0 [video]
+  - https://github.com/doideaco/crammer
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот инструмент создаёт 5-минутные поясняющие видеоролики из одного промпта, используя лицензированные изображения и детерминированный рендеринг через Remotion. Его детерминированный рендеринг усиливает воспроизводимость рендера на CPU/GitHub Actions. Несмотря на низкую стоимость интеграции, высокий риск дублирования указывает на полезность только для конкретных недостающих guardrail'ов, так как chunk cache и Video Receipt уже частично внедрены.
+  - 📄 Turns one prompt into a ~5 minute narrated explainer video — real licensed images, animated maps, timelines and a voiceover. Every claim traces to a source. Ren
