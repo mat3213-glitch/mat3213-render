@@ -249,7 +249,21 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
         await page.goto(BASE_URL, wait_until="domcontentloaded", timeout=90000)
         await page.wait_for_timeout(8000)
 
-        body = await page.locator("body").inner_text()
+        page.on("pageerror", lambda e: print(f"  [pageerror] {str(e)[:200]}", file=sys.stderr))
+
+        body = None
+        for attempt in range(2):
+            try:
+                await page.wait_for_selector("body", timeout=60000)
+                body = await page.locator("body").inner_text()
+                break
+            except Exception as e:
+                print(f"  [warn] body не отрисовался за таймаут (попытка {attempt+1}/2): "
+                      f"{str(e)[:110]} url={page.url[:80]}", file=sys.stderr)
+                await page.reload(wait_until="domcontentloaded", timeout=90000)
+                await page.wait_for_timeout(12000)
+        if body is None:
+            raise RuntimeError("SPA не отрисовалось: body так и не пришёл")
         if "Войти" in body and not re.search(r"выход|выйти|logout", body, re.IGNORECASE):
             print("  [warn] SPA показывает «Войти» (гость?) — SPA не ожидает отказ сессии",
                   file=sys.stderr)
