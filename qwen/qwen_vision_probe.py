@@ -16,30 +16,49 @@
 import argparse
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from qwen_chat import (  # noqa: E402
     BASE_URL, SESSION_FILE, OUTPUTS, poll_for_text, _token_exp, _exp_human,
+    PROFILE_DIR, STEALTH_JS, CHROMIUM_ARGS, _ensure_profile,
+    _cookie_auth_exp, _cookie_auth_exp_human,
 )
 from playwright.async_api import async_playwright  # noqa: E402
 
 
 async def ask_image(image: Path, prompt: str, timeout: int) -> str:
-    if not SESSION_FILE.exists():
-        sys.exit("нет сессии qwen_session.json")
-    state = json.loads(SESSION_FILE.read_text())
-    cookies = {c["name"]: c["value"] for c in state.get("cookies", [])
-               if any(d in c.get("domain", "") for d in ["qwen.ai", "alibaba", "aliyun"])}
+    profile_mode = _ensure_profile()
+    if not profile_mode and not SESSION_FILE.exists():
+        sys.exit("нет сессии: нужен qwen/qwen_profile (tar профиля) или qwen_session.json")
+    state = {}
+    if SESSION_FILE.exists():
+        try:
+            state = json.loads(SESSION_FILE.read_text())
+        except Exception:
+            pass
 
     async with async_playwright() as p:
-        try:
-            browser = await p.chromium.launch(channel="chrome", headless=True)
-        except Exception:
-            browser = await p.chromium.launch(headless=True)
-        ctx = await browser.new_context(storage_state=state, viewport={"width": 1280, "height": 900})
-        page = await ctx.new_page()
+        if profile_mode:
+            ctx = await p.chromium.launch_persistent_context(
+                user_data_dir=str(PROFILE_DIR), headless=True,
+                viewport={"width": 1400, "height": 900},
+                user_agent=("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                            "(KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36"),
+                locale="ru-RU",
+                args=list(CHROMIUM_ARGS))
+            await ctx.add_init_script(STEALTH_JS)
+            page = ctx.pages[0] if ctx.pages else await ctx.new_page()
+        else:
+            try:
+                browser = await p.chromium.launch(channel="chrome", headless=True)
+            except Exception:
+                browser = await p.chromium.launch(headless=True)
+            ctx = await browser.new_context(storage_state=state,
+                                            viewport={"width": 1280, "height": 900})
+            page = await ctx.new_page()
 
         cdp = await ctx.new_cdp_session(page)
         await cdp.send("Network.enable")
@@ -159,11 +178,33 @@ async def ask_image(image: Path, prompt: str, timeout: int) -> str:
             print(f"  [session] не сохранил: {str(e)[:80]}", file=sys.stderr)
 
         await page.screenshot(path=str(OUTPUTS / "qwen_vision_final.png"), full_page=True)
-        await browser.close()
+        post_cookies = {c["name"]: c["value"] for c in await ctx.cookies()
+                        if any(d in c.get("domain", "") for d in ["qwen.ai", "alibaba", "aliyun"])}
+        try:
+            fresh = await ctx.storage_state()
+            cookie_exp = _cookie_auth_exp(post_cookies)
+            ref_exp = _token_exp(state) if state else 0
+            if ref_exp <= 0:
+                ref_exp = _token_exp(fresh) or cookie_exp
+            if cookie_exp >= ref_exp and cookie_exp > 0:
+                fresh["_auth_cookie_exp"] = cookie_exp
+                tmp = SESSION_FILE.with_suffix(".json.tmp")
+                tmp.write_text(json.dumps(fresh, ensure_ascii=False))
+                os.chmod(tmp, 0o600)
+                os.replace(tmp, SESSION_FILE)
+                print(f"  [session] обновлена, HTTP cookie JWT до"
+                      f" {_cookie_auth_exp_human(cookie_exp)}", file=sys.stderr)
+            else:
+                print(f"  [session] exp куки ({cookie_exp}) не новее, пропуск",
+                      file=sys.stderr)
+        except Exception as e:
+            print(f"  [session] не сохранил: {str(e)[:80]}", file=sys.stderr)
+
+        await ctx.close()
 
     if not chat_ids:
         sys.exit("chat_id не перехвачен")
-    return poll_for_text(cookies, chat_ids[-1], timeout=timeout)
+    return poll_for_text(post_cookies, chat_ids[-1], timeout=timeout)
 
 
 def main():
