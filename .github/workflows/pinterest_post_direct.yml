@@ -127,12 +127,25 @@ jobs:
           echo "Q_FILE=$NEXT" >> "$GITHUB_ENV"
           echo "✓ взят из очереди: $NEXT"
 
-      - name: Write Pinterest cookies from secret
+      - name: Write Pinterest cookies (ЯД mirror first, secret fallback)
         if: env.QUEUE_EMPTY != '1'
         env:
           PINTEREST_COOKIES: ${{ secrets.PINTEREST_COOKIES }}
         run: |
-          printf '%s\n' "$PINTEREST_COOKIES" > pinterest/cookies/pinterest_cookies.txt
+          set -euo pipefail
+          SRC=""
+          if rclone copyto "ydrive:Content factory/mirror/Instrument/Pinterest/cookies/pinterest_cookies.txt" \
+                           pinterest/cookies/pinterest_cookies.txt 2>/dev/null \
+             && [ -s pinterest/cookies/pinterest_cookies.txt ]; then
+            SRC="ydrive-mirror"
+          elif [ -n "$PINTEREST_COOKIES" ]; then
+            printf '%s\n' "$PINTEREST_COOKIES" > pinterest/cookies/pinterest_cookies.txt
+            SRC="secret"
+          else
+            echo "::error::нет кук ни на ЯД, ни в секрете"
+            exit 1
+          fi
+          echo "cookie source: $SRC"
           echo "cookie lines: $(grep -c pinterest.com pinterest/cookies/pinterest_cookies.txt)"
 
       - name: Install Playwright + Chromium
