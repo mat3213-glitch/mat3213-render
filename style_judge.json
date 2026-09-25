@@ -2,61 +2,62 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Холодные приглушённые средние тона, подходят под deep teal"
+      "keep": false,
+      "score": 3.5,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Хороший нейтральный холодный тон, глубокие тени, подходит под вайб"
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
+      "score": 5.3,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Тёмные приглушённые тона teal, кинематографичный ночной настрой"
+      "reason": "Близко к эталону, глубокий холодный teal и правильная дымка"
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Ярко приглушённый, всё ещё холодный, приемлемо"
+      "keep": false,
+      "score": 2.5,
+      "votes": "0/3",
+      "status": "отклонён",
+      "reason": "Слишком светло, теряется кинематографичная глубина и нуар"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Мягкая ночь, глубокие teal тени, кинематографично"
+      "keep": false,
+      "score": 4.0,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Чистый холодный тон, отличная работа с тенями и светом"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
+      "score": 5.0,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Мягкая ночь, deep teal, последовательно"
+      "reason": "Глубокий холодный сине-зеленый, идеально попадает в палитру"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 5.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "Слишком зелёный, не deep teal, менее согласован"
+      "score": 3.3,
+      "votes": "1/3",
+      "status": "спорный",
+      "reason": "Грязный желто-зеленый каст, уходит в болотный цвет, брак"
     }
   ],
   "recommend_merge": [
-    "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
-    "scout_neutral_bright_muted",
-    "scout_neutral_night_soft",
     "scout_neutral_night_soft_2"
   ],
-  "disputed": [],
-  "_generated": "2026-09-24",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "disputed": [
+    "scout_neutral_mid_muted",
+    "scout_neutral_night_soft",
+    "scout_green_mid_soft"
+  ],
+  "_generated": "2026-09-25",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
