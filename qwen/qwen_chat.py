@@ -59,6 +59,47 @@ if (gp) { navigator.permissions.query = (p) => (p && p.name === 'notifications')
 
 CHROMIUM_ARGS = ("--disable-blink-features=AutomationControlled", "--no-sandbox",
                  "--disable-dev-shm-usage", "--no-first-run")
+QWEN_CI = "ydrive:Content factory/cloud_io/qwen_ci"
+
+
+def _ensure_profile() -> bool:
+    """Гарантировать рабочий persistent-профиль (фикс 25.09).
+
+    Полный профиль — единственный источник сессии: storage_state/куки сабмит не
+    держат, работает только профиль (sessionStorage/IndexedDB/SW). Если профиля
+    нет локально, пробуем качнуть с ЯД (на GH-раннере rclone настроен воркфлоу).
+    """
+    try:
+        if PROFILE_DIR.exists() and any(PROFILE_DIR.iterdir()):
+            return True
+    except OSError:
+        pass
+    import shutil
+    tar = HERE / "qwen_profile.tar.gz"
+    if not shutil.which("rclone"):
+        print("  [profile] rclone не найден в PATH", file=sys.stderr)
+        return False
+    try:
+        import subprocess
+        r1 = subprocess.run(["rclone", "copyto", f"{QWEN_CI}/qwen_profile.tar.gz", str(tar)],
+                            capture_output=True, text=True, timeout=120)
+        if r1.returncode != 0:
+            print(f"  [profile] rclone copyto rc={r1.returncode}: {r1.stderr[-150:]}",
+                  file=sys.stderr)
+        elif tar.exists():
+            PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+            r2 = subprocess.run(["tar", "xzf", str(tar), "-C", str(PROFILE_DIR)],
+                                capture_output=True, text=True, timeout=120)
+            if r2.returncode != 0:
+                print(f"  [profile] tar rc={r2.returncode}: {r2.stderr[-150:]}", file=sys.stderr)
+            if PROFILE_DIR.exists() and any(PROFILE_DIR.iterdir()):
+                print("  [profile] качнул профиль с ЯД", file=sys.stderr)
+                return True
+    except Exception as e:
+        print(f"  [profile] не удалось скачать: {str(e)[:80]}", file=sys.stderr)
+    print("  [profile] профиля нет и с ЯД не пришёл — storage_state как fallback",
+          file=sys.stderr)
+    return False
 
 
 def poll_for_text(cookies: dict, chat_id: str, timeout: int = 240) -> str:
@@ -155,7 +196,7 @@ def _cookie_auth_exp_human(exp: int) -> str:
 
 
 async def chat(prompt: str, model: str, timeout: int) -> str:
-    profile_mode = PROFILE_DIR.exists()
+    profile_mode = _ensure_profile()
     if not profile_mode and not SESSION_FILE.exists():
         print("Нет сессии: нужен qwen/qwen_profile (tar профиля) или qwen_session.json",
               file=sys.stderr)
