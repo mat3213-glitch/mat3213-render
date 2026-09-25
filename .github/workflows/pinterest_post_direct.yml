@@ -213,18 +213,21 @@ jobs:
                         "ydrive:Content factory/cloud_io/pinterest_queue/done/$Q_FILE" \
             && echo "✓ джоб $Q_FILE → done/"
 
-      - name: Notify Telegram (личка admin)
+      - name: Notify Telegram (сервис · логи, тред 2182)
         if: always()
         env:
           TG_TOKEN:  ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TG_SECRET: ${{ secrets.TG_WORKER_SECRET }}
+          TG_CHAT:   '-1003946370426'
+          TG_THREAD: '2182'
         run: |
           python3 - <<'PYEOF'
           import os, json, urllib.request
           worker = "https://content-factory-worker-2.mat3213.workers.dev"
           token  = os.environ.get("TG_TOKEN", "")
           secret = os.environ.get("TG_SECRET", "")
-          admin  = 967686357
+          chat   = int(os.environ.get("TG_CHAT", "-1003946370426"))
+          thread = int(os.environ.get("TG_THREAD", "2182"))
           pin    = os.environ.get("PIN_URL", "").strip()
           empty  = os.environ.get("QUEUE_EMPTY", "") == "1"
           board  = os.environ.get("BOARD", "?") or "?"
@@ -237,7 +240,7 @@ jobs:
               msg = f"❗️Pinterest: пост НЕ опубликован (dry-run или ошибка)\nrun {run_id}"
           if not token or not secret:
               print("TG: нет токена/секрета — пропуск"); raise SystemExit(0)
-          data = json.dumps({"chat_id": admin, "text": msg}).encode()
+          data = json.dumps({"chat_id": chat, "message_thread_id": thread, "text": msg}).encode()
           req = urllib.request.Request(
               f"{worker}/bot{token}/sendMessage", data=data,
               headers={"Content-Type": "application/json",
