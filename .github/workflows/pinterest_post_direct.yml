@@ -220,6 +220,8 @@ jobs:
           TG_SECRET: ${{ secrets.TG_WORKER_SECRET }}
           TG_CHAT:   '-1003946370426'
           TG_THREAD: '2182'
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_CONFIRM: ${{ inputs.confirm }}
         run: |
           python3 - <<'PYEOF'
           import os, json, urllib.request
@@ -232,12 +234,16 @@ jobs:
           empty  = os.environ.get("QUEUE_EMPTY", "") == "1"
           board  = os.environ.get("BOARD", "?") or "?"
           run_id = os.environ.get("GITHUB_RUN_ID", "")
-          if pin:
+          is_publish = (os.environ.get("EVENT_NAME", "") == "schedule"
+                        or os.environ.get("INPUT_CONFIRM", "") == "true")
+          if not is_publish:
+              msg = f"🧪 Pinterest: dry-run, публикации не было\nrun {run_id}"
+          elif pin:
               msg = f"✅ Pinterest: пост ушёл\n{pin}\nдоска: {board}"
           elif empty:
               msg = "⚠️ Pinterest: очередь пуста — пост не ушёл (добавь джоб в pinterest_queue/pending/)"
           else:
-              msg = f"❗️Pinterest: пост НЕ опубликован (dry-run или ошибка)\nrun {run_id}"
+              msg = f"❗️Pinterest: пост НЕ опубликован (ошибка)\nrun {run_id}"
           if not token or not secret:
               print("TG: нет токена/секрета — пропуск"); raise SystemExit(0)
           data = json.dumps({"chat_id": chat, "message_thread_id": thread, "text": msg}).encode()
