@@ -60,7 +60,7 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-- name: Pull Qwen profile + session + dedup state
+      - name: Pull Qwen profile + session + dedup state
         run: |
           rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz" qwen/qwen_profile.tar.gz
           mkdir -p qwen/qwen_profile
@@ -105,7 +105,7 @@ jobs:
             .s2c-image-venv/bin/python s2c_daily.py
           fi
 
-- name: Persist Signals image cache
+      - name: Persist Signals image cache
         if: always()
         run: |
           if [ -d s2c_image_cache ]; then
