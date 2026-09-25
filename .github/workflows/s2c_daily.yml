@@ -60,8 +60,11 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Pull Qwen session + dedup state
+- name: Pull Qwen profile + session + dedup state
         run: |
+          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz" qwen/qwen_profile.tar.gz
+          mkdir -p qwen/qwen_profile
+          tar xzf qwen/qwen_profile.tar.gz -C qwen/qwen_profile
           rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
           rclone copyto "ydrive:Content factory/cloud_io/s2c/state.json" s2c_state.json || true
 
@@ -102,12 +105,28 @@ jobs:
             .s2c-image-venv/bin/python s2c_daily.py
           fi
 
-      - name: Persist Signals image cache
+- name: Persist Signals image cache
         if: always()
         run: |
           if [ -d s2c_image_cache ]; then
             rclone copy s2c_image_cache "ydrive:Content factory/cloud_io/s2c/image_cache"
           fi
+
+      - name: Push Qwen profile back to ЯД
+        if: always()
+        run: |
+          if [ ! -d qwen/qwen_profile ]; then echo "::warning::нет профиля — нечего заливать"; exit 0; fi
+          tar czf qwen_profile.tar.gz -C qwen/qwen_profile \
+            --exclude='Cache' --exclude='Code Cache' --exclude='GPUCache' \
+            --exclude='DawnWebGPUCache' --exclude='DawnGraphiteCache' \
+            --exclude='GrShaderCache' --exclude='ShaderCache' \
+            --exclude='GraphiteDawnCache' --exclude='BrowserMetrics-spare.pma' \
+            --exclude='Safe Browsing' --exclude='segmentation_platform' . || exit 0
+          SIZE=$(stat -c%s qwen_profile.tar.gz)
+          if [ "$SIZE" -lt 1000 ]; then echo "::warning::профиль подозрительно мал ($SIZE б) — не заливаю"; exit 0; fi
+          rclone copyto qwen_profile.tar.gz "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz"
+          rclone copyto qwen/qwen_session.json "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" || true
+          echo "профиль залит обратно на ЯД ($SIZE б)"
 
       - name: Keep image smoke evidence
         if: always() && inputs.image_test

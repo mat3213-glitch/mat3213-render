@@ -58,8 +58,12 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Pull Qwen session
-        run: rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+      - name: Pull Qwen profile + session
+        run: |
+          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz" qwen/qwen_profile.tar.gz
+          mkdir -p qwen/qwen_profile
+          tar xzf qwen/qwen_profile.tar.gz -C qwen/qwen_profile
+          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
 
       - name: Install Playwright
         run: |
@@ -76,15 +80,30 @@ jobs:
       - name: Push refreshed session back to ЯД
         if: steps.touch.outcome == 'success'
         run: |
-          # Заливаем только осмысленный файл: qwen_chat.py сам отказывается писать
-          # сессию хуже прежней, но подстрахуемся от пустышки/огрызка.
+          # Заливаем только осмысленные артефакты: qwen_chat.py сам отказывается
+          # писать сессию хуже прежней, но подстрахуемся от пустышки/огрызка.
           SIZE=$(stat -c%s qwen/qwen_session.json)
           if [ "$SIZE" -lt 1000 ]; then
             echo "::warning::сессия подозрительно мала ($SIZE б) — на ЯД НЕ заливаю"
-            exit 0
+          else
+            rclone copyto qwen/qwen_session.json "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json"
+            echo "сессия залита обратно на ЯД ($SIZE б)"
           fi
-          rclone copyto qwen/qwen_session.json "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json"
-          echo "сессия залита обратно на ЯД ($SIZE б)"
+          # Полный профиль (stealth-патч работает ТОЛЬКО с ним) — пакетом всегда,
+          # если touch удался: внутри уже обновлённые sessionStorage/IndexedDB.
+          tar czf qwen_profile.tar.gz -C qwen/qwen_profile \
+            --exclude='Cache' --exclude='Code Cache' --exclude='GPUCache' \
+            --exclude='DawnWebGPUCache' --exclude='DawnGraphiteCache' \
+            --exclude='GrShaderCache' --exclude='ShaderCache' \
+            --exclude='GraphiteDawnCache' --exclude='BrowserMetrics-spare.pma' \
+            --exclude='Safe Browsing' --exclude='segmentation_platform' . || exit 0
+          PSIZE=$(stat -c%s qwen_profile.tar.gz)
+          if [ "$PSIZE" -lt 1000 ]; then
+            echo "::warning::профиль подозрительно мал ($PSIZE б) — на ЯД НЕ заливаю"
+          else
+            rclone copyto qwen_profile.tar.gz "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz"
+            echo "профиль залит обратно на ЯД ($PSIZE б)"
+          fi
 
       - name: Report expiry (и алерт, если срок на исходе)
         env:
@@ -97,13 +116,15 @@ jobs:
           from datetime import datetime
 
           state = json.load(open("qwen/qwen_session.json"))
-          exp = 0
-          for o in state.get("origins", []):
-              for kv in o.get("localStorage", []):
-                  if kv.get("name") == "token" and kv.get("value", "").count(".") == 2:
-                      pl = kv["value"].split(".")[1]
-                      pl += "=" * (-len(pl) % 4)
-                      exp = int(json.loads(base64.urlsafe_b64decode(pl)).get("exp", 0))
+          exp = int(state.get("_auth_cookie_exp", 0) or 0)
+          if not exp:
+              # старый формат / нет пометки — fallback на localStorage-токен
+              for o in state.get("origins", []):
+                  for kv in o.get("localStorage", []):
+                      if kv.get("name") == "token" and kv.get("value", "").count(".") == 2:
+                          pl = kv["value"].split(".")[1]
+                          pl += "=" * (-len(pl) % 4)
+                          exp = int(json.loads(base64.urlsafe_b64decode(pl)).get("exp", 0))
 
           left = (exp - datetime.now().timestamp()) / 86400 if exp else -1
           touch = os.environ.get("TOUCH_OUTCOME", "?")
