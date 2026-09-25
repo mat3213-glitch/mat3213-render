@@ -326,7 +326,7 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
         for attempt_fill in range(3):
             try:
                 ta = page.locator("textarea").first
-                await ta.wait_for(state="visible", timeout=30000)
+                await ta.wait_for(state="visible", timeout=60000)
                 await _close_popups()
                 await ta.click(timeout=5000)
                 await ta.fill(prompt, timeout=30000)
@@ -334,9 +334,20 @@ async def chat(prompt: str, model: str, timeout: int) -> str:
                 break
             except Exception as e:
                 last_err = str(e)
-                print(f"  [submit] попытка {attempt_fill + 1}: {last_err[:90]}", file=sys.stderr)
+                print(f"  [submit] попытка {attempt_fill + 1}: {last_err[:90]} url={page.url[:70]}",
+                      file=sys.stderr)
                 if attempt_fill < 2:
-                    _try_fresh_reset()
+                    await page.reload(wait_until="domcontentloaded", timeout=90000)
+                    await page.wait_for_timeout(12000)
+                    await _close_popups()
+                    try:
+                        nc2 = page.get_by_role(
+                            "button", name=re.compile(r"Новый чат|New chat", re.IGNORECASE))
+                        if await nc2.count() and await nc2.first.is_visible():
+                            await nc2.first.click(timeout=5000)
+                            await page.wait_for_timeout(2000)
+                    except Exception:
+                        pass
         if textarea is None:
             print(f"  [submit] ошибка: {last_err}", file=sys.stderr)
             await page.screenshot(path=str(OUTPUTS / "debug_chat_fail.png"))
