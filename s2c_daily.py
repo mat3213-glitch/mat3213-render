@@ -640,7 +640,7 @@ def qwen_generate(prompt: str, model: str, timeout: int = 300) -> str:
         input=prompt, capture_output=True, text=True, timeout=timeout + 90,
     )
     if proc.returncode:
-        raise RuntimeError(f"Qwen exited with code {proc.returncode}")
+        raise RuntimeError(f"Qwen exited with code {proc.returncode}: {proc.stderr[-300:]}")
     text = (proc.stdout or "").strip()
     text = _CITATION_RE.sub("", text).replace("[[", "").replace("]]", "").strip()
     return text
@@ -989,7 +989,7 @@ def main() -> int:
         try:
             text = qwen_generate(prompt, qwen_model)
         except Exception as exc:
-            print(f"::error::generation {c['id']}: {type(exc).__name__}")
+            print(f"::error::generation {c['id']}: {exc}")
             failures += 1
             continue
         if not text or text.strip().upper() == "SKIP":
