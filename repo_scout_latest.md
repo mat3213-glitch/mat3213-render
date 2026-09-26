@@ -1,11 +1,56 @@
-# Repo Scout — 2026-09-25T15:01:04.441155
-Всего в шортлисте: 1
-- **Sba-Stuff/AI-Local-Video-Generator** ⭐1 [source]
-  - https://github.com/Sba-Stuff/AI-Local-Video-Generator
+# Repo Scout — 2026-09-26T14:09:31.373715
+Всего в шортлисте: 6
+- **ngaitom928/Cinematic-prompt-master** ⭐1 [craft]
+  - https://github.com/ngaitom928/Cinematic-prompt-master
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий преобразует обычные описания сцен в кинематографические AI-видео промпты с движением камеры и переходами. Он помогает создавать проверяемые операторские словари для управляемой i2v-моторики. Интеграция недорогая, но из-за высокого риска дублирования стоит брать только новые, уникальные формулировки.
+  - 📄 Turn a plain scene description into a cinematic AI video prompt: chained camera moves, occlusion transitions, and realistic facial expressions.                 
+- **api-evangelist/artlist** ⭐0 [source]
+  - https://github.com/api-evangelist/artlist
   - ⚠️ fallback: query-grounded
   - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
   - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий генерирует короткие видео, используя бесплатные API стоковых видео (Pexels, Pixabay) и ffmpeg. Он предоставляет адаптеры для легального стокового видео, частично закрывая потребность в надёжных источниках. Однако, при высоком риске дублирования с уже работающими Pexels и отсутствии уникальных метаданных, его интеграция оправдана лишь как запасной вариант или для Pixabay.
-  - 📄 Generate short, narrated videos automatically – powered by a local LLM (LM Studio), free stock video APIs (Pexels + Pixabay), and ffmpeg. No cloud costs, no API
+  - 💡 Репозиторий описывает API платформы Artlist, предоставляющей лицензионные стоковые видео и другие креативные активы. Это потенциально новый источник легального стокового видео с метаданными происхождения, дополняющий существующие адаптеры. При низкой стоимости интеграции, ценность только в предоставлении уникального источника или улучшенных метаданных.
+  - 📄 Artlist — independent third-party profile of a public API surface, by API Evangelist. Artlist is a creative-assets platform for video creators, marketers and br
+- **Lob0Garou/opus-visual-motion-engine** ⭐1 [video]
+  - https://github.com/Lob0Garou/opus-visual-motion-engine
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот проект предлагает дисциплинированный конвейер для рендеринга видео и моушн-графики с детерминированным поиском и автоматизированным контролем качества. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions благодаря детерминированным подходам. При низкой стоимости интеграции, риск дублирования высок, поэтому актуальны только конкретные, ещё не реализованные механизмы воспроизводимости.
+  - 📄 Agent skill: disciplined pipeline for motion graphics, code-rendered video and UI — deterministic seek(t), automated render QA (works for text-only models), MP4
+- **CSd0109/dark-cinematic-movie-still-prompts** ⭐0 [craft]
+  - https://github.com/CSd0109/dark-cinematic-movie-still-prompts
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий содержит промпты для создания кинематографичных кадров в стиле известных режиссёров с указанием формата. Это может пополнить проверяемые операторские словари и prompt-схемы для более точного управления i2v-генерацией. Интеграция недорогая, но из-за высокого риска дублирования стоит включать только новые, уникальные и проверяемые формулировки.
+  - 📄 🎬 Christopher Nolan, Denis Villeneuve, and Fincher Style Dark Cinematic Film Still Prompts in 2.39:1 Anamorphic.
+- **Dudu-001/kleros-case-closed-video** ⭐0 [video]
+  - https://github.com/Dudu-001/kleros-case-closed-video
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий представляет музыкальное видео, созданное с использованием одного промпта, с детерминированным JS-рендером и производственными заметками. Его детерминированный рендер и заметки могут помочь в усилении воспроизводимости рендера на CPU/GitHub Actions. Интеграция имеет низкую стоимость, но высокий риск дублирования; ценность представляют только конкретные, ещё не реализованные механизмы воспроизводимости.
+  - 📄 CASE CLOSED — Kleros hard-rock music video. 1 prompt, .14 in tokens, autonomous iterations. Full prompt stack, deterministic JS renderer, production notes.
+- **CSd0109/google-veo-3-video-prompts** ⭐0 [craft]
+  - https://github.com/CSd0109/google-veo-3-video-prompts
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий содержит кинематографические видео промпты для Google Veo 3 и SeaDance 2.2, включая углы движения камеры и шаблоны освещения. Это может расширить проверяемые операторские словари и prompt-схемы для более точного управления i2v-генерацией. Интеграция недорогая, но из-за высокого риска дублирования стоит включать только новые, уникальные и проверяемые формулировки.
+  - 📄 🎥 Google Veo 3 & SeaDance 2.2 Cinematic Video Prompts. Camera motion angles, physics lighting, and 4K directorial templates.
