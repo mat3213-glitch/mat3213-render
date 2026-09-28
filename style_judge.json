@@ -3,26 +3,26 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 2.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Слишком тёплый и не соответствующий целевой палитре."
+      "score": 6.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Зачеркивание не соответствует эталону, слишком тёплый"
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": false,
-      "score": 5.0,
+      "score": 5.5,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "Слишком холодный и неестественный."
+      "reason": "Тёплый оттенок не соответствует холодному teal"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 5.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Неплохой баланс холодного и тёплого цвета. Похож на deep teal, но с более тёплым"
+      "score": 2.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "Слишком светлый, не соответствует нуару"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -30,33 +30,33 @@
       "score": 4.5,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "Слишком тёплый и не соответствующий целевой палитре."
+      "reason": "Тёплый оттенок не соответствует холодному teal"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "Хорошо передаёт холодный тон и глубину. Довольно близок к deep teal."
+      "keep": false,
+      "score": 4.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Тёплый оттенок не соответствует холодному teal"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 1.5,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Слишком тёплый и не соответствующий целевой палитре."
+      "score": 8.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Холодный сине-зелёный сдвиг, соответствует эталону"
     }
   ],
-  "recommend_merge": [
-    "scout_neutral_night_soft_2"
-  ],
+  "recommend_merge": [],
   "disputed": [
+    "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
-    "scout_neutral_bright_muted",
-    "scout_neutral_night_soft"
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
-  "_generated": "2026-09-27",
+  "_generated": "2026-09-28",
   "_judge": "gh-vision-ensemble(2/5)"
 }
