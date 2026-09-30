@@ -1,20 +1,20 @@
-# Repo Scout — 2026-09-29T16:21:29.735784
+# Repo Scout — 2026-09-30T16:16:47.862372
 Всего в шортлисте: 2
-- **fueledximagination/fxi-camera-moves** ⭐0 [craft]
-  - https://github.com/fueledximagination/fxi-camera-moves
+- **raphaelguilhem-dot/fashion-camera-movements** ⭐0 [craft]
+  - https://github.com/raphaelguilhem-dot/fashion-camera-movements
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
+  - 🔎 evidence: query matched: camera movement prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий содержит 43 рецепта промптов для движения камеры в AI-видео, включая dolly, orbit и FPV, с примерами. Он закрывает потребность в проверяемых операторских словарях и prompt-схемах для управляемой i2v-моторики. Несмотря на низкую стоимость интеграции, риск дублирования высок, поэтому ценность представляют только новые, уникальные формулировки.
-  - 📄 43 AI video camera-move prompt recipes (dolly, orbit, crane, FPV…) with example clips — open dataset, CC BY 4.0
-- **AutomateAlex/media-buddy-oss** ⭐0 [source]
-  - https://github.com/AutomateAlex/media-buddy-oss
+  - 💡 Этот репозиторий содержит промпты для управления движением камеры в AI-видео, что помогает создать проверяемые операторские словари и схемы для i2v-генерации. Интеграция недорогая, но из-за высокого риска дублирования брать стоит только новые, уникальные формулировки, дополняющие уже существующие инструменты.
+  - 📄 Pletor Camera Movement Library: camera movement prompts for AI fashion videos
+- **obvirm/AutoTimingSFX** ⭐0 [video]
+  - https://github.com/obvirm/AutoTimingSFX
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: render manifest ffmpeg
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Репозиторий Media Buddy позволяет создавать короткие и длинные видео из канала и заголовков, используя AI-режиссёра и стоковый материал. Он может закрыть потребность в надёжных адаптерах легального stock-видео, предлагая новый источник или улучшенную метадату происхождения. Интеграция недорога, но риск дублирования высок, так как уже используются другие источники стокового видео.
-  - 📄 Media Buddy, source-available edition: turn a channel + a few titles into finished short/long videos (AI director, stock footage, voice-over, subtitles). Bring 
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий использует ИИ для определения таймингов SFX и создания манифестов для рендера через FFmpeg. Он способствует повышению воспроизводимости рендера на CPU/GitHub Actions за счет использования манифестов. Интеграция недорогая, но оправдана только для закрытия конкретных, еще не реализованных механизмов контроля, так как часть функций уже есть.
+  - 📄 AI timing picker untuk SFX library sendiri: video -> VLM (video+audio) -> manifest beat -> picker RAG -> render FFmpeg
