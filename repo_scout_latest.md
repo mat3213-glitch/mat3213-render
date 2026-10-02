@@ -1,20 +1,56 @@
-# Repo Scout — 2026-10-01T16:54:35.905062
-Всего в шортлисте: 2
-- **YanKaFei/art-aesthetic-vault** ⭐7 [craft]
-  - https://github.com/YanKaFei/art-aesthetic-vault
+# Repo Scout — 2026-10-02T16:07:58.966898
+Всего в шортлисте: 6
+- **AKashAMode/Sutra_Cut_App** ⭐0 [video]
+  - https://github.com/AKashAMode/Sutra_Cut_App
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий содержит обширные словари и рецепты для кинематографических AI-промптов, позволяя точно управлять стилем и движением камеры в генерациях. Он закрывает потребность в проверяемых операторских словарях для управляемой i2v-моторики, предлагая готовые схемы. Несмотря на низкую стоимость интеграции, высокий риск дублирования оправдывает включение только новых, уникальных формулировок.
-  - 📄 421 movements, 274 hand-drawn styles, 100 director/film styles and 157 camera-move recipes - each decomposed into 7 swappable AI prompt layers (style / lighting
-- **aleemamjad-099/AI-Video-Generator** ⭐1 [source]
-  - https://github.com/aleemamjad-099/AI-Video-Generator
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот веб-редактор транскрибирует видео, позволяет редактировать транскрипт и таймлайн, а также находит стоковый материал. Он закрывает потребность в компактном представлении таймлайна/транскрипта для дешёвого ревью режиссуры без передачи видео в LLM. Интеграция имеет низкую стоимость, но риск дублирования высок, так как ценность только в удобном интерфейсе ревью, а WhisperX и EDL уже используются.
+  - 📄 A web-based video editor that transcribes uploaded videos and lets you edit the transcript and timeline. It can find stock footage and render the finished video
+- **alpvatansever8/automated-video-pipeline** ⭐0 [source]
+  - https://github.com/alpvatansever8/automated-video-pipeline
   - ⚠️ fallback: query-grounded
   - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
   - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Этот репозиторий представляет собой автоматизированный генератор видео, который использует Pexels API для получения стокового видеоматериала. Он может служить источником надёжного headless-адаптера для легального стокового видео, что соответствует потребности. Несмотря на низкую стоимость, высокий риск дублирования оправдывает его интеграцию только при наличии нового источника или улучшенных метаданных происхождения.
-  - 📄 An end-to-end Automated AI Video Generator built with Python. It uses Groq (Llama 3.3) for scripting, gTTS for voiceovers, Pexels API for stock footage, and Mov
+  - 💡 Репозиторий предлагает автоматизированный пайплайн для создания видео из сценария, включая сбор стоковых футажей. Он может служить адаптером для поиска легального стокового видео, что соответствует потребности в надёжных источниках. При низкой стоимости интеграции, риск дублирования высок, поскольку уже используются другие источники стока; ценность только в новом источнике или метаданных происхождения.
+  - 📄 Automated pipeline that turns a script into a documentary-style video: collects stock footage, generates a voice-over and exports a CapCut project.
+- **ayst-z/music-code-mv** ⭐1 [video]
+  - https://github.com/ayst-z/music-code-mv
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот плагин позволяет рендерить музыкальные видео, управляемые кодом, используя детерминированные кадры. Его детерминированный рендеринг видео может помочь усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для надёжности. Интеграция недорога, но риск дублирования высок, так как часть функций уже реализована; ценность только в закрытии конкретного незакрытого guardrail.
+  - 📄 DSH plugin: render code-driven music videos (music-code-mv) — deterministic Canvas2D/Three.js shots, headless-Chrome or browserless skia engine, ffmpeg AV1/HEVC
+- **makeaivideo-ai/sdk** ⭐0 [source]
+  - https://github.com/makeaivideo-ai/sdk
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Это официальный SDK для MakeAIVideo, API генератора видео с ИИ, который превращает текст или сценарий в готовое видео. SDK может выступать как адаптер для получения легального стокового видео, удовлетворяя потребность в надёжных источниках. При низкой стоимости интеграции, риск дублирования высок, так как уже используются другие источники стока; ценность только в новом источнике или метаданных происхождения.
+  - 📄 Official TypeScript/JavaScript SDK for MakeAIVideo, the AI video generator API. Turn a prompt or script into a finished video (AI voiceover, AI or stock scenes,
+- **aievolutionpl/vstudio** ⭐0 [video]
+  - https://github.com/aievolutionpl/vstudio
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это детерминированное CLI-студия для создания видео, которая управляет брифом, изображением, монтажом, звуком и выпуском. Его детерминированный подход к рендерингу видео может улучшить воспроизводимость рендера на CPU/GitHub Actions, что важно для надёжности. Интеграция недорога, но риск дублирования высок, так как часть функций уже реализована; ценность только в закрытии конкретного незакрытого guardrail.
+  - 📄 Deterministyczne studio filmowe sterowane z CLI: brief, obraz, montaz, dzwiek, wydanie. Render Playwright + FFmpeg, dzwiek proceduralny -14 LUFS, zero licencji.
+- **ooishi1221/editing-grammar** ⭐0 [video]
+  - https://github.com/ooishi1221/editing-grammar
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает грамматику монтажа для ИИ-видеоагентов с 93 шаблонами и детерминированным поиском. Его детерминированный подход к монтажу может способствовать усилению воспроизводимости рендера на CPU/GitHub Actions, что критично для надёжности. Интеграция недорога, но риск дублирования высок, так как часть функций уже реализована; ценность только в закрытии конкретного незакрытого guardrail.
+  - 📄 Editing grammar for AI video agents: 93 reusable patterns, composition grammar, deterministic search, and portable renderer handoffs.
