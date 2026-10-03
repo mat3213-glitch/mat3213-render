@@ -3,54 +3,60 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 0.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "имеет надпись внизу"
+      "score": 6.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "близок к deep teal, но слишком тёплый"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 0.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "имеет надпись внизу"
+      "keep": true,
+      "score": 7.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "холодный, но слишком серый"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 0.0,
-      "votes": "0/1",
+      "score": 4.5,
+      "votes": "0/2",
       "status": "отклонён",
-      "reason": "имеет надпись внизу"
+      "reason": "слишком тёплый, не близок к deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 0.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "имеет надпись внизу"
+      "keep": true,
+      "score": 9.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "близок к deep teal, холодный"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 0.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "имеет надпись внизу"
+      "keep": true,
+      "score": 8.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "холодный, но слишком тёплый"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 0.0,
-      "votes": "0/1",
+      "score": 3.0,
+      "votes": "0/2",
       "status": "отклонён",
-      "reason": "имеет надпись внизу"
+      "reason": "слишком зелёный, не близок к deep teal"
     }
   ],
-  "recommend_merge": [],
-  "disputed": [],
-  "_generated": "2026-10-02",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "recommend_merge": [
+    "scout_neutral_night_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2"
+  ],
+  "disputed": [
+    "scout_neutral_mid_muted"
+  ],
+  "_generated": "2026-10-03",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
