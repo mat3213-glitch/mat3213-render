@@ -113,7 +113,7 @@ class DailyTests(unittest.TestCase):
         def add(url,secret,draft,image=None):
             delivered.append(draft)
             return True,{'ok':True}
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',side_effect=['SKIP','**TITLE**\n\nBody']), patch.object(m,'og_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',side_effect=add), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'text_generate',side_effect=['SKIP','**TITLE**\n\nBody']), patch.object(m,'og_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',side_effect=add), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
         self.assertEqual(len(delivered),1)
         self.assertEqual(delivered[0]['id'],'1')
@@ -124,14 +124,14 @@ class DailyTests(unittest.TestCase):
 
     def test_one_generation_error_does_not_fail_full_delivery(self):
         items=[{'id':str(i),'title':'AI','text':'facts','url':'https://example.org','score':5-i} for i in range(2)]
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'qwen_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(m,'text_generate',side_effect=[RuntimeError('temporary'),'TITLE\n\nBody']), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
 
     def test_successful_add_is_checkpointed_immediately(self):
         items=[{'id':'1','title':'AI','text':'facts','url':'https://example.org','score':5}]
         state={'sent_ids':[], 'collected':{}}
         saves=[]
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',return_value='TITLE\n\nBody'), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push',side_effect=lambda s, y: saves.append(list(s['sent_ids']))), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'text_generate',return_value='TITLE\n\nBody'), patch.object(m,'candidate_image',return_value=None), patch.object(m,'imagefree_image_bytes',return_value=b'validated image'), patch.object(m,'worker_add',return_value=(True,{'ok':True})), patch.object(m,'save_state_and_push',side_effect=lambda s, y: saves.append(list(s['sent_ids']))), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),0)
         self.assertIn(['1'], saves)
 
@@ -139,8 +139,39 @@ class DailyTests(unittest.TestCase):
         items=[{'id':'1','title':'AI','text':'facts','url':'https://example.org','score':5}]
         state={'sent_ids':[], 'collected':{}}
         long_body='A' * 1200
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'qwen_generate',return_value=f'TITLE\n\n{long_body}'), patch.object(m,'candidate_image',return_value='https://example.org/photo.png'), patch.object(m,'worker_add') as add, patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(m,'SOURCES',{'grok':(lambda *args:items,True)}), patch.object(m,'load_state',return_value=state), patch.object(m,'text_generate',return_value=f'TITLE\n\n{long_body}'), patch.object(m,'candidate_image',return_value='https://example.org/photo.png'), patch.object(m,'worker_add') as add, patch.object(m,'save_state_and_push'), patch.object(m.sys,'argv',['test']):
             self.assertEqual(m.main(),1)
         add.assert_not_called()
+
+class TextWorkerTests(unittest.TestCase):
+    """Диспетчер текстового воркера: Kimi — дефолт, Qwen — фолбэк (05.10)."""
+
+    def test_kimi_is_the_default_worker(self):
+        with patch.dict(os.environ, {}, clear=False), patch.object(m,'kimi_generate',return_value='text') as kimi, patch.object(m,'qwen_generate') as qwen:
+            os.environ.pop('S2C_TEXT_WORKER',None)
+            self.assertEqual(m.text_generate('p','model'),'text')
+        kimi.assert_called_once()
+        qwen.assert_not_called()
+
+    def test_kimi_failure_falls_back_to_qwen(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',side_effect=RuntimeError('down')), patch.object(m,'qwen_generate',return_value='fallback'):
+            self.assertEqual(m.text_generate('p','model'),'fallback')
+
+    def test_explicit_qwen_worker_never_calls_kimi(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'qwen'}), patch.object(m,'kimi_generate') as kimi, patch.object(m,'qwen_generate',return_value='qwen-text'):
+            self.assertEqual(m.text_generate('p','model'),'qwen-text')
+        kimi.assert_not_called()
+
+    def test_all_workers_failing_raises_with_both_errors(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',side_effect=RuntimeError('kimi down')), patch.object(m,'qwen_generate',side_effect=RuntimeError('qwen down')):
+            with self.assertRaises(RuntimeError) as ctx:
+                m.text_generate('p','model')
+        self.assertIn('kimi down',str(ctx.exception))
+        self.assertIn('qwen down',str(ctx.exception))
+
+    def test_empty_answer_is_a_failure_not_a_delivery(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',return_value=''), patch.object(m,'qwen_generate',side_effect=RuntimeError('qwen down')):
+            with self.assertRaises(RuntimeError):
+                m.text_generate('p','model')
 
 if __name__=='__main__': unittest.main()

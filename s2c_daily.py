@@ -5,8 +5,8 @@
   1. собрать свежие сигналы из нескольких источников (HN, Lobsters, arXiv, Grok),
   2. отфильтровать по профилю канала (s2c_channel_profile.json),
   3. отсечь уже отправленные (общий дедуп по namespaced-id, состояние на ЯД),
-  4. для каждого отобранного — сгенерить авторский рус. пост через Qwen
-     (qwen/qwen_chat.py --stdin), SKIP если нерелевантно/мало данных,
+  4. для каждого отобранного — сгенерить авторский рус. пост текстовым воркером
+     (Kimi — основной, Qwen — фолбэк; см. text_generate), SKIP если нерелевантно/мало данных,
   5. отправить через Cloudflare Worker POST /add (X-Worker-Secret) →
      модерация с кнопками в ЛС владельца → публикация в канале (Worker+KV).
 
@@ -39,6 +39,28 @@ import s2c_images
 HERE = Path(__file__).resolve().parent
 PROFILE_FILE = HERE / "s2c_channel_profile.json"
 QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"
+
+
+def _find_kimi_driver() -> Path:
+    """Kimi-драйвер: на GH-раннере s2c_daily.py лежит в корне репо, локально — в
+    github_actions_clips/. Драйверов два (в render-репо и в зеркале), поэтому выбираем
+    тот, рядом с которым лежит живая kimi_session.json — иначе воркер уходит в rc=2
+    «Файл сессии не найден». Kimi — чистый urllib (stdlib-only): не ловит ни
+    возрастной гейт chat.qwen.ai, ни WAF-капчу, ни маркер вылогина.
+    """
+    candidates = [root / "Instrument" / "CnChat" / "kimi_chat.py"
+                  for root in (HERE, HERE.parent)]
+    for p in candidates:
+        if p.is_file() and (p.parent / "kimi_session.json").is_file():
+            return p
+    for p in candidates:
+        if p.is_file():
+            return p
+    return candidates[0]
+
+
+KIMI_CHAT = _find_kimi_driver()
+KIMI_SESSION = os.getenv("KIMI_SESSION_FILE", "").strip()
 
 DEFAULT_WORKER_URL = "https://s2c-moderation-1.mat3213.workers.dev"
 DEFAULT_YD_STATE = "Content factory/cloud_io/s2c/state.json"
@@ -629,7 +651,7 @@ def relevant(item: dict, profile: dict) -> bool:
 
 
 # ----------------------------------------------------------------------------
-# Qwen / og:image / Worker
+# Текстовый воркер: Kimi (по умолчанию) → Qwen (фолбэк) / og:image / Worker
 # ----------------------------------------------------------------------------
 
 def qwen_generate(prompt: str, model: str, timeout: int = 300) -> str:
@@ -644,6 +666,45 @@ def qwen_generate(prompt: str, model: str, timeout: int = 300) -> str:
     text = (proc.stdout or "").strip()
     text = _CITATION_RE.sub("", text).replace("[[", "").replace("]]", "").strip()
     return text
+
+
+def kimi_generate(prompt: str, timeout: int = 300) -> str:
+    """Текст через Kimi K2.5. Одна сессия → строго последовательно (как и Qwen)."""
+    if not KIMI_CHAT.exists():
+        return ""
+    cmd = ["python3", str(KIMI_CHAT), "--stdin", "--timeout", str(timeout)]
+    if KIMI_SESSION:
+        cmd += ["--session", KIMI_SESSION]
+    proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True,
+                          timeout=timeout + 90)
+    if proc.returncode:
+        raise RuntimeError(f"Kimi exited with code {proc.returncode}: {proc.stderr[-300:]}")
+    return (proc.stdout or "").strip()
+
+
+def text_generate(prompt: str, model: str, timeout: int = 300) -> str:
+    """Единая точка генерации текста. S2C_TEXT_WORKER: kimi (default) | qwen | auto.
+
+    Kimi — основной: драйвер на stdlib urllib, поэтому не зависит от SPA/профиля/
+    WAF. Qwen остаётся фолбэком, чтобы откат был одной переменной окружения.
+    """
+    worker = os.getenv("S2C_TEXT_WORKER", "kimi").strip().lower() or "kimi"
+    order = [worker]
+    if worker == "auto":
+        order = ["kimi", "qwen"]
+    errors = []
+    for name in order:
+        try:
+            text = kimi_generate(prompt, timeout) if name == "kimi" \
+                else qwen_generate(prompt, model, timeout)
+        except Exception as exc:
+            errors.append(f"{name}: {exc}")
+            print(f"  [text-worker] {name} не ответил — {str(exc)[:160]}")
+            continue
+        if text:
+            return text
+        errors.append(f"{name}: пустой ответ")
+    raise RuntimeError("текстовый воркер не ответил — " + " | ".join(errors))
 
 
 def og_image(url: str, timeout: int = 15) -> str | None:
@@ -670,7 +731,7 @@ def og_image(url: str, timeout: int = 15) -> str | None:
 def _imagefree_brief(candidate: dict) -> dict:
     brief = s2c_images.load_brief(candidate)
     if brief is None:
-        raw = qwen_generate(s2c_images.brief_prompt(candidate),
+        raw = text_generate(s2c_images.brief_prompt(candidate),
                             os.getenv('QWEN_MODEL', 'Qwen3-Coder').strip())
         brief = s2c_images.parse_brief(raw, candidate)
         s2c_images.save_brief(candidate, brief)
@@ -987,13 +1048,13 @@ def main() -> int:
         state["source_cursor"] = (list(buckets).index(name) + 1) % len(buckets)
         prompt = _EDITOR_PROMPT.format(title=c["title"], summary=(c["text"] or "нет"), source_url=(c["url"] or "не указан"))
         try:
-            text = qwen_generate(prompt, qwen_model)
+            text = text_generate(prompt, qwen_model)
         except Exception as exc:
             print(f"::error::generation {c['id']}: {exc}")
             failures += 1
             continue
         if not text or text.strip().upper() == "SKIP":
-            print(f"  [skip] {c['id']}: Qwen вернул SKIP/пусто")
+            print(f"  [skip] {c['id']}: воркер вернул SKIP/пусто")
             if text.strip().upper() == "SKIP":
                 deferred[c["id"]] = (now + timedelta(days=1)).isoformat()
             else:

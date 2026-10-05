@@ -228,7 +228,7 @@ def build_chat_body(prompt: str, thinking: bool, web: bool) -> bytes:
 
 
 def iter_connect_frames(stream: Any) -> Iterator[tuple[int, bytes]]:
-    """Parse Connect frames: [1 byte flag][4 byte BE length][payload]."""
+    """Parse Connect frames; emit (-1, b"") after each network read."""
     buf = b""
     total = 0
     while True:
@@ -251,6 +251,9 @@ def iter_connect_frames(stream: Any) -> Iterator[tuple[int, bytes]]:
             payload = buf[5 : 5 + length]
             buf = buf[5 + length :]
             yield flag, payload
+        # The Kimi endpoint may keep the HTTP stream open after its completion
+        # event. The caller needs a non-blocking boundary for frames already read.
+        yield -1, b""
 
 
 class KimiRefused(RuntimeError):
@@ -324,11 +327,16 @@ def chat_once(
     deadline = time.monotonic() + timeout
     recent: list[str] = []
     try:
+        completed = False
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            for _flag, payload in iter_connect_frames(resp):
+            for flag, payload in iter_connect_frames(resp):
                 if time.monotonic() > deadline:
                     eprint("Kimi wall-timeout; recent events: " + " | ".join(recent[-12:]))
                     return "", events, 408
+                if flag == -1:
+                    if completed:
+                        break
+                    continue
                 if not payload:
                     continue
                 try:
@@ -350,7 +358,9 @@ def chat_once(
                 if (pieces and isinstance(message, dict)
                         and message.get("role") == "assistant"
                         and message.get("status") == "MESSAGE_STATUS_COMPLETED"):
-                    break
+                    # Keep parsing frames already buffered by this read. Kimi can
+                    # put trailing text after the status event, then leave HTTP open.
+                    completed = True
     except urllib.error.HTTPError as exc:
         return "", events, int(exc.code)
     except urllib.error.URLError as exc:

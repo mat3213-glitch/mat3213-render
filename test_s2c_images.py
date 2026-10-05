@@ -63,7 +63,7 @@ class ImageTests(unittest.TestCase):
             images.parse_brief('{}', NEWS)
 
     def test_cached_brief_prevents_second_text_request(self):
-        with patch.object(daily, 'qwen_generate', return_value=json.dumps(BRIEF)) as model:
+        with patch.object(daily, 'text_generate', return_value=json.dumps(BRIEF)) as model:
             self.assertEqual(daily._imagefree_brief(NEWS), BRIEF)
             self.assertEqual(daily._imagefree_brief(NEWS), BRIEF)
         model.assert_called_once()
@@ -127,13 +127,13 @@ class ImageTests(unittest.TestCase):
 
     def test_failed_image_stays_unsent_for_later(self):
         state = {'sent_ids':[], 'collected':{}}
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test'}), patch.object(daily.sys,'argv',['test']), patch.object(daily,'SOURCES',{'arxiv':(lambda *args:[NEWS],True)}), patch.object(daily,'load_state',return_value=state), patch.object(daily,'qwen_generate',return_value='TITLE\n\nBody'), patch.object(daily,'candidate_image',return_value=None), patch.object(daily,'imagefree_image_bytes',return_value=None), patch.object(daily,'worker_add') as add, patch.object(daily,'save_state_and_push'):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test'}), patch.object(daily.sys,'argv',['test']), patch.object(daily,'SOURCES',{'arxiv':(lambda *args:[NEWS],True)}), patch.object(daily,'load_state',return_value=state), patch.object(daily,'text_generate',return_value='TITLE\n\nBody'), patch.object(daily,'candidate_image',return_value=None), patch.object(daily,'imagefree_image_bytes',return_value=None), patch.object(daily,'worker_add') as add, patch.object(daily,'save_state_and_push'):
             self.assertEqual(daily.main(),1)
         add.assert_not_called()
         self.assertEqual(state['sent_ids'],[])
 
     def test_original_image_does_not_call_generator(self):
-        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(daily.sys,'argv',['test']), patch.object(daily,'SOURCES',{'arxiv':(lambda *args:[NEWS],True)}), patch.object(daily,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(daily,'qwen_generate',return_value='TITLE\n\nBody'), patch.object(daily,'candidate_image',return_value='https://example.org/photo.png'), patch.object(daily,'imagefree_image_bytes') as gen, patch.object(daily,'worker_add',return_value=(True,{'ok':True})), patch.object(daily,'save_state_and_push'):
+        with patch.dict(os.environ, {'S2C_WORKER_SECRET':'test','S2C_MAX_DRAFTS':'1'}), patch.object(daily.sys,'argv',['test']), patch.object(daily,'SOURCES',{'arxiv':(lambda *args:[NEWS],True)}), patch.object(daily,'load_state',return_value={'sent_ids':[],'collected':{}}), patch.object(daily,'text_generate',return_value='TITLE\n\nBody'), patch.object(daily,'candidate_image',return_value='https://example.org/photo.png'), patch.object(daily,'imagefree_image_bytes') as gen, patch.object(daily,'worker_add',return_value=(True,{'ok':True})), patch.object(daily,'save_state_and_push'):
             self.assertEqual(daily.main(),0)
         gen.assert_not_called()
 

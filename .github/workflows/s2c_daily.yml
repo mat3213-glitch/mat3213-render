@@ -1,8 +1,9 @@
-name: s2c daily (signals -> qwen -> worker)
+name: s2c daily (signals -> text worker -> channel)
 
 # Автономный цикл Signal-to-Channel «ИИшница» на GH-раннере (бук не участвует):
-# HN-сигналы -> фильтр по профилю -> Qwen (US-IP) -> Cloudflare Worker POST /add
-# -> модерация с кнопками в ЛС владельца -> публикация в канале (Worker+KV).
+# HN-сигналы -> фильтр по профилю -> текстовый воркер (Kimi, фолбэк Qwen) ->
+# Cloudflare Worker POST /add -> модерация с кнопками в ЛС владельца ->
+# публикация в канале (Worker+KV).
 
 on:
   workflow_dispatch:
@@ -60,16 +61,36 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Pull Qwen profile + session + dedup state
+      - name: Pull Kimi session + Qwen session/profile (fallback) + dedup state
+        env:
+          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
         run: |
-          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz" qwen/qwen_profile.tar.gz
-          mkdir -p qwen/qwen_profile
-          tar xzf qwen/qwen_profile.tar.gz -C qwen/qwen_profile
-          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+          mkdir -p kimi
+          rclone copyto "ydrive:Content factory/cloud_io/cnchat_ci/kimi_session.json" \
+            kimi/kimi_session.json
+          SIZE=$(stat -c%s kimi/kimi_session.json)
+          if [ "$SIZE" -lt 5000 ]; then
+            echo "::error::сессия Kimi битая/пустая ($SIZE б) — s2c без текстового воркера"
+            exit 1
+          fi
+          echo "Kimi-сессия: $SIZE б (текстовый воркер: $S2C_TEXT_WORKER)"
+          # Qwen остаётся фолбэком (S2C_TEXT_WORKER=qwen|auto) — тянем только когда нужен.
+          if [ "$S2C_TEXT_WORKER" != "kimi" ]; then
+            rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz" qwen/qwen_profile.tar.gz
+            mkdir -p qwen/qwen_profile
+            tar xzf qwen/qwen_profile.tar.gz -C qwen/qwen_profile
+            rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+          fi
           rclone copyto "ydrive:Content factory/cloud_io/s2c/state.json" s2c_state.json || true
 
-      - name: Install Playwright
+      - name: Install Playwright (only for the Qwen fallback path)
+        env:
+          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
         run: |
+          if [ "$S2C_TEXT_WORKER" = "kimi" ]; then
+            echo "текстовый воркер = Kimi (stdlib urllib) — Chromium не нужен"
+            exit 0
+          fi
           pip install -q requests playwright yt-dlp
           python -m playwright install --with-deps chromium
 
@@ -92,6 +113,8 @@ jobs:
           S2C_DRY_RUN: ${{ inputs.dry_run || 'false' }}
           S2C_IMAGE_TEST: ${{ inputs.image_test || 'false' }}
           S2C_IMAGE_TEST_STYLE: ${{ inputs.image_test_style || 'current' }}
+          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
+          KIMI_SESSION_FILE: ${{ github.workspace }}/kimi/kimi_session.json
         run: |
           if [ "$S2C_DRY_RUN" = "true" ]; then
             .s2c-image-venv/bin/python s2c_daily.py --dry-run
@@ -112,10 +135,10 @@ jobs:
             rclone copy s2c_image_cache "ydrive:Content factory/cloud_io/s2c/image_cache"
           fi
 
-      - name: Push Qwen profile back to ЯД
+      - name: Push Qwen profile back to ЯД (only on the fallback path)
         if: always()
         run: |
-          if [ ! -d qwen/qwen_profile ]; then echo "::warning::нет профиля — нечего заливать"; exit 0; fi
+          if [ ! -d qwen/qwen_profile ]; then echo "::warning::Qwen-профиль не использовался — нечего заливать"; exit 0; fi
           tar czf qwen_profile.tar.gz -C qwen/qwen_profile \
             --exclude='Cache' --exclude='Code Cache' --exclude='GPUCache' \
             --exclude='DawnWebGPUCache' --exclude='DawnGraphiteCache' \
