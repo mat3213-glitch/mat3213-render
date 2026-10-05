@@ -1,20 +1,65 @@
-# Repo Scout — 2026-10-04T15:10:22.996747
-Всего в шортлисте: 2
-- **quanluo/awesome-gemini-omni-prompts** ⭐1 [craft]
-  - https://github.com/quanluo/awesome-gemini-omni-prompts
+# Repo Scout — 2026-10-05T19:05:20.312833
+Всего в шортлисте: 7
+- **OsirisMedici/Stich** ⭐0 [video]
+  - https://github.com/OsirisMedici/Stich
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий позволяет редактировать видео на основе транскрипта, предлагая человекочитаемую таймлайн. Он закрывает потребность в компактном представлении для дешёвого ревью режиссуры без передачи всего видео в LLM. При низкой стоимости интеграции, риск дублирования средний, так как WhisperX и EDL уже используются, и ценен только компактный интерфейс ревью.
+  - 📄 Local video editing by transcript, with a human timeline and MCP tools for AI agents. Based on WeftCut.
+- **MdSadman2004/ai-prompt-collection** ⭐0 [craft]
+  - https://github.com/MdSadman2004/ai-prompt-collection
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: camera movement prompt
+  - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Репозиторий содержит проверенные промпты, формулы движений камеры и рецепты для генерации видео через Gemini Omni AI. Он предлагает проверяемые операторские словари для управляемой i2v-моторики. Интеграция недорогая, но ценность ограничена новыми, уникальными формулировками из-за высокого риска дублирования с уже имеющимися внутренними инструментами.
-  - 📄 Curated cinema-grade prompts, camera movement control formulas, and keyframe directing recipes for Gemini Omni AI Video Generator.
-- **cyc05/video-ocr-storyboard-skill** ⭐0 [vision]
-  - https://github.com/cyc05/video-ocr-storyboard-skill
+  - 💡 Репозиторий представляет собой архив промптов для изображений и кинематографии. Он может предоставить проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Интеграция недорогая, но риск дублирования очень высок, поскольку camera_moves.json и prompt_writer уже есть; брать стоит только новые проверяемые формулировки.
+  - 📄 A small, browsable archive of image, cinematography and Arduino project prompts.
+- **Oxygen1616/techky1-nocode-toolskit** ⭐0 [source]
+  - https://github.com/Oxygen1616/techky1-nocode-toolskit
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `preview_verification_contracts` (priority 8): Renderer-agnostic preview evidence: sampled keyframes/contact sheet и machine-readable ошибки поверх существующего рендера.
-  - 🔎 evidence: query matched: video visual verification contact sheet
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — contact sheets и preview receipts уже есть; ценен только единый renderer-agnostic contract
-  - 💡 Этот репозиторий извлекает текст из видео и создает контактные листы для визуальной проверки данных. Он закрывает потребность в независимых от рендера доказательствах предпросмотра через семплированные кадры и машиночитаемые ошибки. Интеграция имеет низкую стоимость, но оправдана лишь для получения единого renderer-agnostic контракта, так как функционал контактных листов уже существует.
-  - 📄 A Trae/Claude skill for extracting on-screen text from videos without ffmpeg. Per-second frame sampling with OpenCV, batch OCR via RapidOCR (Chinese + English),
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот набор инструментов генерирует короткие видео со стоковым видео и TTS, предлагая REST API. Он может предоставить надёжные headless-адаптеры для легального стокового видео с лицензией и метаданными происхождения. Интеграция имеет низкую стоимость, но высокий риск дублирования, так как Coverr/Pexels/Wikimedia уже используются; ценен только новый источник или улучшенная информация о происхождении.
+  - 📄 No-code AI media toolkit — generate short-form videos with TTS, stock footage, animated subtitles, and color filters. OpenCode dark web UI + REST API for n8n au
+- **ddercvo/dsh-video-hyperframes** ⭐1 [video]
+  - https://github.com/ddercvo/dsh-video-hyperframes
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Репозиторий преобразует HTML-сцены в MP4-видео с детерминированным рендерингом. Он помогает усилить воспроизводимость рендера на CPU/GitHub Actions за счёт детерминированного подхода. Интеграция недорогая, но риск дублирования высокий, так как chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail.
+  - 📄 Model-facing HyperFrames HTML-to-video tools for the DeepSeek Harness: author scenes as plain HTML, render deterministically to MP4
+- **aievolutionpl/TABASCO-FRAMECORE-STUDIO** ⭐0 [video]
+  - https://github.com/aievolutionpl/TABASCO-FRAMECORE-STUDIO
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это детерминированное CLI-студия для создания видео, использующая Playwright и FFmpeg. Она способствует усилению воспроизводимости рендера на CPU/GitHub Actions благодаря своему детерминированному подходу. При низкой стоимости интеграции, риск дублирования высокий, так как chunk cache и Video Receipt частично внедрены; требуется найти конкретный незакрытый guardrail.
+  - 📄 Deterministyczne studio filmowe sterowane z CLI: brief, obraz, montaz, dzwiek, wydanie. Render Playwright + FFmpeg, dzwiek proceduralny -14 LUFS, zero licencji.
+- **q2522879285-source/code-music-video-skill** ⭐0 [video]
+  - https://github.com/q2522879285-source/code-music-video-skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Репозиторий предлагает навык агента для создания детерминированных, музыкальных видео из кода с валидацией таймлайна. Он помогает усилить воспроизводимость рендера на CPU/GitHub Actions благодаря детерминированному подходу и валидации. Интеграция недорогая, но риск дублирования высокий, так как часть функций уже есть; нужен конкретный незакрытый guardrail.
+  - 📄 A portable Agent Skill for deterministic, music-driven code videos: workflow, timeline validation and renderer adapters.
+- **makuchpatryk/screencaster** ⭐0 [video]
+  - https://github.com/makuchpatryk/screencaster
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий рендерит видео-демонстрации из YAML-скриптов, используя Playwright, TTS и FFmpeg, с детерминированным и перерендерируемым результатом. Он усиливает воспроизводимость рендера на CPU/GitHub Actions за счёт детерминированного подхода. Интеграция недорогая, но риск дублирования высокий, так как часть функций уже внедрена; необходимо определить конкретный незакрытый guardrail.
+  - 📄 Render narrated product demo videos from a YAML script. Playwright + local Piper TTS + ffmpeg, runs offline in Docker. Deterministic, re-renderable, English by 
