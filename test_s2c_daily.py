@@ -144,33 +144,33 @@ class DailyTests(unittest.TestCase):
         add.assert_not_called()
 
 class TextWorkerTests(unittest.TestCase):
-    """Диспетчер текстового воркера: Kimi — дефолт, Qwen — фолбэк (05.10)."""
+    """Диспетчер текстового воркера: Kimi — дефолт, OpenRouter — фолбэк (06.10)."""
 
     def test_kimi_is_the_default_worker(self):
-        with patch.dict(os.environ, {}, clear=False), patch.object(m,'kimi_generate',return_value='text') as kimi, patch.object(m,'qwen_generate') as qwen:
+        with patch.dict(os.environ, {}, clear=False), patch.object(m,'kimi_generate',return_value='text') as kimi, patch.object(m,'openrouter_generate') as orf:
             os.environ.pop('S2C_TEXT_WORKER',None)
             self.assertEqual(m.text_generate('p','model'),'text')
         kimi.assert_called_once()
-        qwen.assert_not_called()
+        orf.assert_not_called()
 
-    def test_kimi_failure_falls_back_to_qwen(self):
-        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',side_effect=RuntimeError('down')), patch.object(m,'qwen_generate',return_value='fallback'):
+    def test_kimi_failure_falls_back_to_openrouter(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',side_effect=RuntimeError('down')), patch.object(m,'openrouter_generate',return_value='fallback'):
             self.assertEqual(m.text_generate('p','model'),'fallback')
 
-    def test_explicit_qwen_worker_never_calls_kimi(self):
-        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'qwen'}), patch.object(m,'kimi_generate') as kimi, patch.object(m,'qwen_generate',return_value='qwen-text'):
-            self.assertEqual(m.text_generate('p','model'),'qwen-text')
+    def test_explicit_openrouter_worker_never_calls_kimi(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'openrouter'}), patch.object(m,'kimi_generate') as kimi, patch.object(m,'openrouter_generate',return_value='or-text'):
+            self.assertEqual(m.text_generate('p','model'),'or-text')
         kimi.assert_not_called()
 
     def test_all_workers_failing_raises_with_both_errors(self):
-        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',side_effect=RuntimeError('kimi down')), patch.object(m,'qwen_generate',side_effect=RuntimeError('qwen down')):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',side_effect=RuntimeError('kimi down')), patch.object(m,'openrouter_generate',side_effect=RuntimeError('openrouter down')):
             with self.assertRaises(RuntimeError) as ctx:
                 m.text_generate('p','model')
         self.assertIn('kimi down',str(ctx.exception))
-        self.assertIn('qwen down',str(ctx.exception))
+        self.assertIn('openrouter down',str(ctx.exception))
 
     def test_empty_answer_is_a_failure_not_a_delivery(self):
-        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',return_value=''), patch.object(m,'qwen_generate',side_effect=RuntimeError('qwen down')):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'auto'}), patch.object(m,'kimi_generate',return_value=''), patch.object(m,'openrouter_generate',side_effect=RuntimeError('openrouter down')):
             with self.assertRaises(RuntimeError):
                 m.text_generate('p','model')
 

@@ -44,15 +44,16 @@ try:
 except Exception:
     yaml = None
 
+import text_openrouter
+
 HERE = Path(__file__).resolve().parent
 RUBRIC_PATH = HERE / "analyst_rubric.yaml"
-QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"   # [2026-07-27] mimo free снят → Qwen-чат (текст)
 LEDGER_PATH = HERE / "repo_scout_ledger.json"
 
 
 def _find_kimi_driver() -> Path:
     """Kimi-драйвер: чистый stdlib urllib, поэтому не зависит от SPA/профиля/WAF
-    chat.qwen.ai (текстовый путь Qwen заблокирован Aliyun WAF-капчей с23.09).
+    chat.qwen.ai (текстовый путь Qwen-чата заблокирован WAF, воркер выпилен 06.10).
     Копий драйвера две (render-репо и зеркало) — берём ту, рядом с которой лежит
     живая kimi_session.json, иначе воркер уйдёт в rc=2 «Файл сессии не найден».
     """
@@ -396,24 +397,29 @@ def kimi_generate(prompt: str, timeout: int = 420) -> str:
     return _run_driver(cmd, prompt, timeout)[1].strip()
 
 
-def qwen_generate(prompt: str, timeout: int = 420) -> str:
-    cmd = ["python3", str(QWEN_CHAT), "--stdin", "--model", "", "--timeout", str(timeout)]
-    return _run_driver(cmd, prompt, timeout)[1].strip()
+def openrouter_generate(prompt: str, timeout: int = 420) -> str:
+    """Фолбэк через OpenRouter (обычный HTTPS с ключом, без браузера и сессии)."""
+    return text_openrouter.generate(prompt, timeout=timeout).strip()
 
 
 def text_generate(prompt: str, timeout: int = 420) -> str:
-    """Единая точка генерации текста. ANALYST_TEXT_WORKER: kimi (default) | qwen | auto.
+    """Единая точка генерации текста. ANALYST_TEXT_WORKER: kimi (default) | openrouter | auto.
 
     Kimi — основной: драйвер на stdlib urllib, поэтому не ловит ни возрастной гейт
-    chat.qwen.ai, ниqwen_token_logged_out_marker, ни Aliyun WAF-капчу. Qwen остаётся
-    фолбэком, чтобы откат был одной переменной окружения.
+    chat.qwen.ai, ни маркер вылогина, ни Aliyun WAF-капчу. Фолбэк — OpenRouter.
+    Qwen-чат выпилен 06.10 (токен отозван + WAF-капча на /completions).
     """
     worker = os.environ.get("ANALYST_TEXT_WORKER", "kimi").strip().lower() or "kimi"
-    order = ["kimi", "qwen"] if worker == "auto" else [worker]
+    order = ["kimi", "openrouter"] if worker == "auto" else [worker]
     errors = []
     for name in order:
-        text = kimi_generate(prompt, timeout) if name == "kimi" \
-            else qwen_generate(prompt, timeout)
+        try:
+            text = kimi_generate(prompt, timeout) if name == "kimi" \
+                else openrouter_generate(prompt, timeout)
+        except Exception as exc:
+            errors.append(f"{name}: {str(exc)[:160]}")
+            log(f"  [text-worker] {name} не ответил — {str(exc)[:160]}")
+            continue
         if text:
             return text
         errors.append(f"{name}: пустой ответ")

@@ -3,8 +3,8 @@ name: auto analyst (repo/site)
 # Автономная облачная система анализа-теста репо/сайтов по рубрике пользы.
 # Полностью в облаке (GH Actions), исполнитель — Kimi-чат на раннере (K2.5 через
 # stdlib urllib). [2026-07-27] переехал с mimo (снят free-тариф) на Qwen; [2026-10-06]
-# Qwen-текст заблокирован Aliyun WAF-капчей → Kimi, Qwen остался фолбэком
-# (ANALYST_TEXT_WORKER=qwen|auto). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
+# Qwen-текст заблокирован (токен отозван + WAF-капча) → Kimi, фолбэк OpenRouter
+# (ANALYST_TEXT_WORKER=kimi|openrouter|auto). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
 # один аккаунт воркера). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред.
 # Финал «внедряем/нет» — за yaromat. Решения хранятся в ADOPTION_BOARD.md.
 #
@@ -70,7 +70,7 @@ jobs:
           echo "targets: $OUT"
           echo "matrix=$OUT" >> "$GITHUB_OUTPUT"
 
-  # ── 2. Анализ: fan-out через matrix, 1 раннер+Qwen на цель (последовательно) ──────
+  # ── 2. Анализ: fan-out через matrix, 1 раннер + 1 текстовый воркер на цель ───────
   analyze:
     needs: plan
     if: needs.plan.outputs.matrix != '[]' && needs.plan.outputs.matrix != ''
@@ -99,12 +99,12 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
-      - name: Setup text worker (Kimi by default, Qwen fallback)
+      - name: Setup text worker (Kimi by default, OpenRouter fallback)
         # [2026-10-06] Текстовый воркер переведён на Kimi: chat.qwen.ai заблокирован
-        # Aliyun WAF-капчей (возрастной гейт + logged-out маркер в профиле), из-за чего
-        # с 23.09 каждый разбор падал в ANALYSIS_ERROR и доска/TG показывали нули.
-        # Kimi — чистый stdlib urllib: ни Chromium, ни профиль. Qwen оставлен фолбэком
-        # (ANALYST_TEXT_WORKER=qwen|auto), его окружение ставится только тогда.
+        # (токен отозван + Aliyun WAF-капча на /completions), из-за чего с 23.09 каждый
+        # разбор падал в ANALYSIS_ERROR и доска/TG показывали нули. Kimi — чистый stdlib
+        # urllib: ни Chromium, ни профиль. Фолбэк — OpenRouter (обычный HTTPS с ключом),
+        # поэтому Qwen-сессия/Playwright больше не тянутся.
         env:
           ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'kimi' }}
         run: |
@@ -117,11 +117,6 @@ jobs:
             echo "::error::сессия Kimi битая/пустая ($SIZE б) — анализатор без текстового воркера"
             exit 1
           fi
-          if [ "$ANALYST_TEXT_WORKER" != "kimi" ]; then
-            rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
-            pip install -q requests playwright
-            python -m playwright install --with-deps chromium
-          fi
       - name: Analyze target
         env:
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
@@ -131,6 +126,8 @@ jobs:
           SCOUT_THREAD:        ${{ inputs.thread }}
           ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'kimi' }}
           KIMI_SESSION_FILE:   ${{ github.workspace }}/kimi/kimi_session.json
+          OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODELS:   ${{ vars.OPENROUTER_MODELS || 'openrouter/free' }}
         run: python3 auto_analyst.py --targets "${{ matrix.target }}"
       - name: Report to memory_os feed
         if: always()

@@ -139,22 +139,22 @@ def test_board_renders_analysis_error_without_zero_score() -> None:
     assert "ANALYSIS_ERROR" in rows[0]["route"]
 
 
-def test_text_worker_defaults_to_kimi_with_qwen_fallback() -> None:
+def test_text_worker_defaults_to_kimi_with_openrouter_fallback() -> None:
     env = auto_analyst.os.environ
     saved = env.pop("ANALYST_TEXT_WORKER", None)
     try:
         with mock.patch.object(auto_analyst, "kimi_generate", return_value="kimi ok") as kimi, \
-             mock.patch.object(auto_analyst, "qwen_generate", return_value="qwen ok") as qwen:
+             mock.patch.object(auto_analyst, "openrouter_generate", return_value="or ok") as orf:
             assert auto_analyst.text_generate("p") == "kimi ok"
             kimi.assert_called_once()
-            qwen.assert_not_called()
+            orf.assert_not_called()
 
             env["ANALYST_TEXT_WORKER"] = "auto"
             assert auto_analyst.text_generate("p") == "kimi ok"
 
-            env["ANALYST_TEXT_WORKER"] = "qwen"
-            assert auto_analyst.text_generate("p") == "qwen ok"
-            # kimi был вызван в дефолтном прогоне и в auto; на явном qwen — нет
+            env["ANALYST_TEXT_WORKER"] = "openrouter"
+            assert auto_analyst.text_generate("p") == "or ok"
+            # kimi был вызван в дефолтном прогоне и в auto; на явном openrouter — нет
             assert kimi.call_count == 2
     finally:
         env.pop("ANALYST_TEXT_WORKER", None)
@@ -165,14 +165,21 @@ def test_text_worker_defaults_to_kimi_with_qwen_fallback() -> None:
 def test_text_worker_falls_through_on_empty_kimi_answer() -> None:
     with mock.patch.dict(auto_analyst.os.environ, {"ANALYST_TEXT_WORKER": "auto"}), \
          mock.patch.object(auto_analyst, "kimi_generate", return_value=""), \
-         mock.patch.object(auto_analyst, "qwen_generate", return_value="qwen ok"):
-        assert auto_analyst.text_generate("p") == "qwen ok"
+         mock.patch.object(auto_analyst, "openrouter_generate", return_value="or ok"):
+        assert auto_analyst.text_generate("p") == "or ok"
+
+
+def test_text_worker_falls_through_when_kimi_raises() -> None:
+    with mock.patch.dict(auto_analyst.os.environ, {"ANALYST_TEXT_WORKER": "auto"}), \
+         mock.patch.object(auto_analyst, "kimi_generate", side_effect=RuntimeError("kimi down")), \
+         mock.patch.object(auto_analyst, "openrouter_generate", return_value="or ok"):
+        assert auto_analyst.text_generate("p") == "or ok"
 
 
 def test_text_worker_raises_when_nobody_answers() -> None:
     with mock.patch.dict(auto_analyst.os.environ, {"ANALYST_TEXT_WORKER": "auto"}), \
          mock.patch.object(auto_analyst, "kimi_generate", return_value=""), \
-         mock.patch.object(auto_analyst, "qwen_generate", return_value=""):
+         mock.patch.object(auto_analyst, "openrouter_generate", return_value=""):
         try:
             auto_analyst.text_generate("p")
         except RuntimeError as exc:
@@ -221,8 +228,9 @@ if __name__ == "__main__":
     test_text_worker_failure_writes_analysis_error_not_zero_score()
     test_analysis_error_fails_the_analyst_job()
     test_board_renders_analysis_error_without_zero_score()
-    test_text_worker_defaults_to_kimi_with_qwen_fallback()
+    test_text_worker_defaults_to_kimi_with_openrouter_fallback()
     test_text_worker_falls_through_on_empty_kimi_answer()
+    test_text_worker_falls_through_when_kimi_raises()
     test_text_worker_raises_when_nobody_answers()
     test_analyze_rejects_response_without_scores()
     test_remote_report_requires_matching_readback()

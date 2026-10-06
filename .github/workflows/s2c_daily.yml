@@ -1,7 +1,7 @@
 name: s2c daily (signals -> text worker -> channel)
 
 # Автономный цикл Signal-to-Channel «ИИшница» на GH-раннере (бук не участвует):
-# HN-сигналы -> фильтр по профилю -> текстовый воркер (Kimi, фолбэк Qwen) ->
+# HN-сигналы -> фильтр по профилю -> текстовый воркер (Kimi, фолбэк OpenRouter) ->
 # Cloudflare Worker POST /add -> модерация с кнопками в ЛС владельца ->
 # публикация в канале (Worker+KV).
 
@@ -33,7 +33,7 @@ on:
   # 06:00/14:00/22:00 UTC = 13:00/21:00/05:00 НСК — 3 раза/сутки   # 06:00/14:00/22:00 UTC = 13:00/21:00/05:00 НСК — 3 раза/сутки
 
 concurrency:
-  group: qwen-shared-session
+  group: s2c-text-worker-session
   cancel-in-progress: false
 
 jobs:
@@ -61,7 +61,7 @@ jobs:
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
 
-      - name: Pull Kimi session + Qwen session/profile (fallback) + dedup state
+      - name: Pull Kimi session + dedup state
         env:
           S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
         run: |
@@ -74,23 +74,11 @@ jobs:
             exit 1
           fi
           echo "Kimi-сессия: $SIZE б (текстовый воркер: $S2C_TEXT_WORKER)"
-          # Qwen остаётся фолбэком (S2C_TEXT_WORKER=qwen|auto) — тянем только когда нужен.
-          if [ "$S2C_TEXT_WORKER" != "kimi" ]; then
-            rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz" qwen/qwen_profile.tar.gz
-            mkdir -p qwen/qwen_profile
-            tar xzf qwen/qwen_profile.tar.gz -C qwen/qwen_profile
-            rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
-          fi
           rclone copyto "ydrive:Content factory/cloud_io/s2c/state.json" s2c_state.json || true
 
-      - name: Install Playwright (only for the Qwen fallback path)
-        env:
-          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
+      - name: Install Playwright for image checks
+        # 06.10: Qwen-фолбэк выпилен, поэтому Chromium нужен только самому s2c (картинки/поиск).
         run: |
-          if [ "$S2C_TEXT_WORKER" = "kimi" ]; then
-            echo "текстовый воркер = Kimi (stdlib urllib) — Chromium не нужен"
-            exit 0
-          fi
           pip install -q requests playwright yt-dlp
           python -m playwright install --with-deps chromium
 
@@ -115,6 +103,8 @@ jobs:
           S2C_IMAGE_TEST_STYLE: ${{ inputs.image_test_style || 'current' }}
           S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
           KIMI_SESSION_FILE: ${{ github.workspace }}/kimi/kimi_session.json
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS || 'openrouter/free' }}
         run: |
           if [ "$S2C_DRY_RUN" = "true" ]; then
             .s2c-image-venv/bin/python s2c_daily.py --dry-run
@@ -134,22 +124,6 @@ jobs:
           if [ -d s2c_image_cache ]; then
             rclone copy s2c_image_cache "ydrive:Content factory/cloud_io/s2c/image_cache"
           fi
-
-      - name: Push Qwen profile back to ЯД (only on the fallback path)
-        if: always()
-        run: |
-          if [ ! -d qwen/qwen_profile ]; then echo "::warning::Qwen-профиль не использовался — нечего заливать"; exit 0; fi
-          tar czf qwen_profile.tar.gz -C qwen/qwen_profile \
-            --exclude='Cache' --exclude='Code Cache' --exclude='GPUCache' \
-            --exclude='DawnWebGPUCache' --exclude='DawnGraphiteCache' \
-            --exclude='GrShaderCache' --exclude='ShaderCache' \
-            --exclude='GraphiteDawnCache' --exclude='BrowserMetrics-spare.pma' \
-            --exclude='Safe Browsing' --exclude='segmentation_platform' . || exit 0
-          SIZE=$(stat -c%s qwen_profile.tar.gz)
-          if [ "$SIZE" -lt 1000 ]; then echo "::warning::профиль подозрительно мал ($SIZE б) — не заливаю"; exit 0; fi
-          rclone copyto qwen_profile.tar.gz "ydrive:Content factory/cloud_io/qwen_ci/qwen_profile.tar.gz"
-          rclone copyto qwen/qwen_session.json "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" || true
-          echo "профиль залит обратно на ЯД ($SIZE б)"
 
       - name: Keep image smoke evidence
         if: always() && inputs.image_test

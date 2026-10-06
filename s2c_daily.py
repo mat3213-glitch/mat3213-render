@@ -35,10 +35,10 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 
 import s2c_images
+import text_openrouter
 
 HERE = Path(__file__).resolve().parent
 PROFILE_FILE = HERE / "s2c_channel_profile.json"
-QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"
 
 
 def _find_kimi_driver() -> Path:
@@ -651,21 +651,14 @@ def relevant(item: dict, profile: dict) -> bool:
 
 
 # ----------------------------------------------------------------------------
-# Текстовый воркер: Kimi (по умолчанию) → Qwen (фолбэк) / og:image / Worker
+# Текстовый воркер: Kimi (по умолчанию) → OpenRouter (фолбэк) / og:image / Worker
 # ----------------------------------------------------------------------------
 
-def qwen_generate(prompt: str, model: str, timeout: int = 300) -> str:
-    if not QWEN_CHAT.exists():
-        return ""
-    proc = subprocess.run(
-        ["python3", str(QWEN_CHAT), "--stdin", "--model", model, "--timeout", str(timeout)],
-        input=prompt, capture_output=True, text=True, timeout=timeout + 90,
-    )
-    if proc.returncode:
-        raise RuntimeError(f"Qwen exited with code {proc.returncode}: {proc.stderr[-300:]}")
-    text = (proc.stdout or "").strip()
-    text = _CITATION_RE.sub("", text).replace("[[", "").replace("]]", "").strip()
-    return text
+def openrouter_generate(prompt: str, model: str = "", timeout: int = 300) -> str:
+    """Фолбэк через OpenRouter. Qwen-чат выпилен 06.10: токен отозван, а
+    /completions режет Aliyun WAF-капча (HTTP 200 + FAIL_SYS_USER_VALIDATE)."""
+    text = text_openrouter.generate(prompt, model=model or None, timeout=timeout)
+    return _CITATION_RE.sub("", text).replace("[[", "").replace("]]", "").strip()
 
 
 def kimi_generate(prompt: str, timeout: int = 300) -> str:
@@ -683,20 +676,20 @@ def kimi_generate(prompt: str, timeout: int = 300) -> str:
 
 
 def text_generate(prompt: str, model: str, timeout: int = 300) -> str:
-    """Единая точка генерации текста. S2C_TEXT_WORKER: kimi (default) | qwen | auto.
+    """Единая точка генерации текста. S2C_TEXT_WORKER: kimi (default) | openrouter | auto.
 
     Kimi — основной: драйвер на stdlib urllib, поэтому не зависит от SPA/профиля/
-    WAF. Qwen остаётся фолбэком, чтобы откат был одной переменной окружения.
+    WAF. Фолбэк — OpenRouter (обычный HTTPS с ключом, ни браузера, ни сессии).
     """
     worker = os.getenv("S2C_TEXT_WORKER", "kimi").strip().lower() or "kimi"
     order = [worker]
     if worker == "auto":
-        order = ["kimi", "qwen"]
+        order = ["kimi", "openrouter"]
     errors = []
     for name in order:
         try:
             text = kimi_generate(prompt, timeout) if name == "kimi" \
-                else qwen_generate(prompt, model, timeout)
+                else openrouter_generate(prompt, model, timeout)
         except Exception as exc:
             errors.append(f"{name}: {exc}")
             print(f"  [text-worker] {name} не ответил — {str(exc)[:160]}")
