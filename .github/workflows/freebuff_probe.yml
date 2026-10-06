@@ -73,18 +73,18 @@ jobs:
           echo "=== --help ==="
           freebuff --help 2>&1 | head -60
 
-      - name: Не-интерактивный пробный запрос
+      - name: Пробный запрос через PTY (CLI без -p/--print — только REPL)
         if: ${{ inputs.prompt != '' }}
         env:
           PROMPT: ${{ inputs.prompt }}
-          MODEL: ${{ inputs.model }}
         run: |
           set +e
           mkdir -p /tmp/fbwork && cd /tmp/fbwork
-          git init -q . && echo hello > README.md && git add -A && git -c user.email=a@b -c user.name=c commit -qm init
-          ARGS=()
-          [ -n "$MODEL" ] && ARGS+=(--model "$MODEL")
-          # таймаут наружу: агент интерактивный и может зависнуть в ожидании ввода
-          timeout 420 freebuff "$@" "${ARGS[@]}" <<< "$PROMPT" 2>&1 | tail -60
-          echo "prompt rc=$?"
-          set -e
+          git init -q . && echo hello > README.md
+          git add -A && git -c user.email=a@b -c user.name=c commit -qm init
+          # Флагов -p/--print/--json у CLI нет (см. --help): только REPL. Поэтому
+          # даём псевдо-терминал через script(1) и читаем ответ из транскрипта.
+          printf '%s\n' "$PROMPT" | timeout 300 script -qec "freebuff --trust-agents" /tmp/fb_tty.log
+          echo "pty rc=$?"
+          echo "=== транскрипт (очищенный) ==="
+          sed -e 's/\x1b\[[0-9;?]*[a-zA-Z]//g' -e 's/\r/\n/g' /tmp/fb_tty.log | grep -v '^$' | tail -70
