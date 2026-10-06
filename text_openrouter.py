@@ -27,9 +27,22 @@ def model_chain() -> list[str]:
     return models
 
 
+STRICT_SUFFIX = ("""
+
+ВАЖНО ФОРМАТА: ответь ТОЛЬКО одним JSON-объектом. Никаких рассуждений, никакого
+текста до или после. Первый символ ответа — «{{», последний — «}}".""")
+
+
 def generate(prompt: str, model: str | None = None, timeout: int = 120,
-             max_tokens: int = 4096) -> str:
-    """Один запрос (с цепочкой моделей). Бросает RuntimeError, если не ответил никто."""
+             max_tokens: int = 4096, json_mode: bool = False,
+             strict: bool = False) -> str:
+    """Один запрос (с цепочкой моделей). Бросает RuntimeError, если не ответил никто.
+
+    json_mode/strict — для второго дубля: авто-роутер free-тира иногда отдаёт
+    reasoning-модель, которая печатает «Here's a thinking process:» вместо JSON.
+    """
+    if strict:
+        prompt = prompt + STRICT_SUFFIX
     key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not key:
         raise RuntimeError("нет OPENROUTER_API_KEY в окружении")
@@ -43,12 +56,15 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
     chain = [model] if model else model_chain()
     errors = []
     for m in chain:
-        body = json.dumps({
+        payload = {
             "model": m,
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": 0.2,
-        }).encode("utf-8")
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(URL, data=body, headers=headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:

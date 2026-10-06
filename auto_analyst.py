@@ -397,9 +397,15 @@ def kimi_generate(prompt: str, timeout: int = 420) -> str:
     return _run_driver(cmd, prompt, timeout)[1].strip()
 
 
-def openrouter_generate(prompt: str, timeout: int = 420) -> str:
-    """Фолбэк через OpenRouter (обычный HTTPS с ключом, без браузера и сессии)."""
-    return text_openrouter.generate(prompt, timeout=timeout).strip()
+def openrouter_generate(prompt: str, timeout: int = 420, strict: bool = False) -> str:
+    """Фолбэк через OpenRouter (обычный HTTPS с ключом, без браузера и сессии).
+
+    strict=True — второй дубль: с json_object и явным требованием «только JSON».
+    Нужен потому, что авто-роутер free-тира иногда берёт reasoning-модель, которая
+    печатает «Here's a thinking process:» вместо JSON (поймано в CI 06.10).
+    """
+    return text_openrouter.generate(prompt, timeout=timeout, max_tokens=8192,
+                                    json_mode=strict, strict=strict).strip()
 
 
 def text_generate(prompt: str, timeout: int = 420) -> str:
@@ -497,6 +503,15 @@ def analyze(ctx: dict, rubric: dict) -> dict:
     except Exception as exc:
         return {"_error": str(exc)[:500]}
     data = _extract_json(out)
+    if not data and os.environ.get("ANALYST_TEXT_WORKER", "kimi").lower() != "kimi":
+        # Второй дубль только на не-Kimi пути: дешёвая страховка от reasoning-моделей
+        # и обрезанных по max_tokens ответов.
+        log("  [analyze] JSON не распознан — повтор с json_object и строгим форматом")
+        try:
+            out = openrouter_generate(prompt, strict=True)
+        except Exception as exc:
+            return {"_error": f"повтор не помог: {str(exc)[:200]}; первый ответ: {out[:200]}"}
+        data = _extract_json(out)
     if not data:
         return {"_error": f"текстовый воркер не вернул JSON: {out[:300]}"}
     if not isinstance(data.get("scores"), dict) or not data["scores"]:

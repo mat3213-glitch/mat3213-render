@@ -188,6 +188,54 @@ def test_text_worker_raises_when_nobody_answers() -> None:
             raise AssertionError("silent empty answers must not pass as a verdict")
 
 
+def test_analyze_retries_with_strict_json_on_fallback_worker() -> None:
+    """06.10: free-роутер отдаёт reasoning-текст вместо JSON — второй дубль спасает разбор."""
+    rubric = {
+        "criteria": {"relevance": {"desc": "да", "weight": 100}},
+        "hard_rejects": [{"id": "dead_and_no_concept", "desc": "нет"}],
+    }
+    ctx = {"url": "u", "kind": "repo", "meta": {}, "license": "?", "readme": "",
+           "tree": "", "manifests": {}}
+    prose = "Here's a thinking process:\nсначала подумаю... {'scores': {'relevance': 4}}"
+    good = '{"summary": "ок", "scores": {"relevance": 8}}'
+    env = auto_analyst.os.environ
+    saved = env.pop("ANALYST_TEXT_WORKER", None)
+    try:
+        env["ANALYST_TEXT_WORKER"] = "openrouter"
+        with mock.patch.object(auto_analyst, "text_generate", return_value=prose), \
+             mock.patch.object(auto_analyst, "openrouter_generate", return_value=good) as retry:
+            out = auto_analyst.analyze(ctx, rubric)
+        assert out["scores"] == {"relevance": 8}
+        assert retry.call_args.kwargs.get("strict") is True
+    finally:
+        env.pop("ANALYST_TEXT_WORKER", None)
+        if saved is not None:
+            env["ANALYST_TEXT_WORKER"] = saved
+
+
+def test_analyze_does_not_retry_on_kimi() -> None:
+    """Kimi отдаёт JSON стабильно; лишний дубль только тратит время и квоту."""
+    rubric = {
+        "criteria": {"relevance": {"desc": "да", "weight": 100}},
+        "hard_rejects": [{"id": "dead_and_no_concept", "desc": "нет"}],
+    }
+    ctx = {"url": "u", "kind": "repo", "meta": {}, "license": "?", "readme": "",
+           "tree": "", "manifests": {}}
+    env = auto_analyst.os.environ
+    saved = env.pop("ANALYST_TEXT_WORKER", None)
+    try:
+        env["ANALYST_TEXT_WORKER"] = "kimi"
+        with mock.patch.object(auto_analyst, "text_generate", return_value="рассуждение без JSON"), \
+             mock.patch.object(auto_analyst, "openrouter_generate") as retry:
+            out = auto_analyst.analyze(ctx, rubric)
+        retry.assert_not_called()
+        assert "_error" in out
+    finally:
+        env.pop("ANALYST_TEXT_WORKER", None)
+        if saved is not None:
+            env["ANALYST_TEXT_WORKER"] = saved
+
+
 def test_analyze_rejects_response_without_scores() -> None:
     rubric = {
         "criteria": {"relevance": {"desc": "да", "weight": 100}},
@@ -232,6 +280,8 @@ if __name__ == "__main__":
     test_text_worker_falls_through_on_empty_kimi_answer()
     test_text_worker_falls_through_when_kimi_raises()
     test_text_worker_raises_when_nobody_answers()
+    test_analyze_retries_with_strict_json_on_fallback_worker()
+    test_analyze_does_not_retry_on_kimi()
     test_analyze_rejects_response_without_scores()
     test_remote_report_requires_matching_readback()
     print("auto analyst board lifecycle: all tests passed")

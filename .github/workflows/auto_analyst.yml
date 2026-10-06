@@ -131,7 +131,7 @@ jobs:
           ANALYST_TEXT_WORKER: ${{ inputs.text_worker || vars.ANALYST_TEXT_WORKER || 'kimi' }}
           KIMI_SESSION_FILE:   ${{ github.workspace }}/kimi/kimi_session.json
           OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODELS:   ${{ vars.OPENROUTER_MODELS || 'openrouter/free' }}
+          OPENROUTER_MODELS:   ${{ vars.OPENROUTER_MODELS || 'nvidia/nemotron-3-super-120b-a12b:free,openrouter/free' }}
         run: python3 auto_analyst.py --targets "${{ matrix.target }}"
       - name: Report to memory_os feed
         if: always()
