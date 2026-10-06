@@ -1,10 +1,15 @@
 name: auto analyst (repo/site)
 
 # Автономная облачная система анализа-теста репо/сайтов по рубрике пользы.
-# Полностью в облаке (GH Actions), исполнитель — Qwen-чат на раннере (chat.qwen.ai через Playwright).
-# [2026-07-27] переехал с mimo (снят free-тариф). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
-# один Qwen-аккаунт). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред.
+# Полностью в облаке (GH Actions), исполнитель — Kimi-чат на раннере (K2.5 через
+# stdlib urllib). [2026-07-27] переехал с mimo (снят free-тариф) на Qwen; [2026-10-06]
+# Qwen-текст заблокирован Aliyun WAF-капчей → Kimi, Qwen остался фолбэком
+# (ANALYST_TEXT_WORKER=qwen|auto). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
+# один аккаунт воркера). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред.
 # Финал «внедряем/нет» — за yaromat. Решения хранятся в ADOPTION_BOARD.md.
+#
+# Честность отчётов: упавший текстовый воркер = score null + маркер ANALYSIS_ERROR
+# и красный ран, а не «0/100 — мимо». Ноль читается как честный отказ.
 #
 # Триггеры:
 #   - workflow_dispatch(targets) — дроп вручную (или из бота по очереди ЯД)
@@ -28,7 +33,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: qwen-shared-session
+  group: analyst-text-worker-session
   cancel-in-progress: false
 
 jobs:
@@ -70,9 +75,14 @@ jobs:
     needs: plan
     if: needs.plan.outputs.matrix != '[]' && needs.plan.outputs.matrix != ''
     runs-on: ubuntu-latest
+    # 05.10: джобы по 36-67 мин висели в очереди GH и падали «job was not acquired by
+    # Runner», а финальная board-джоба успевала отмениться по общему таймауту — доска
+    # не пересобиралась вообще. С Kimi один разбор занимает минуты, поэтому короткий
+    # лимит: зависший воркер должен умереть быстро, а не съедать окно прогона.
+    timeout-minutes: 20
     strategy:
       fail-fast: false
-      max-parallel: 1   # [2026-07-27] Qwen = один аккаунт/сессия → последовательно (параллель рискует конфликтом сессии)
+      max-parallel: 1   # один аккаунт текстового воркера → строго последовательно
       matrix:
         target: ${{ fromJson(needs.plan.outputs.matrix) }}
     steps:
@@ -89,14 +99,29 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
-      - name: Setup Qwen (session + Playwright)
-        # [2026-07-27] mimo снял free-тариф → Stage A на Qwen-чат (текст) через chat.qwen.ai.
-        # Тёплую сессию держит qwen_daily; тянем её с ЯД + ставим Playwright/chromium.
+      - name: Setup text worker (Kimi by default, Qwen fallback)
+        # [2026-10-06] Текстовый воркер переведён на Kimi: chat.qwen.ai заблокирован
+        # Aliyun WAF-капчей (возрастной гейт + logged-out маркер в профиле), из-за чего
+        # с 23.09 каждый разбор падал в ANALYSIS_ERROR и доска/TG показывали нули.
+        # Kimi — чистый stdlib urllib: ни Chromium, ни профиль. Qwen оставлен фолбэком
+        # (ANALYST_TEXT_WORKER=qwen|auto), его окружение ставится только тогда.
+        env:
+          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'kimi' }}
         run: |
           set -e
-          rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
-          pip install -q requests playwright
-          python -m playwright install --with-deps chromium
+          mkdir -p kimi
+          rclone copyto "ydrive:Content factory/cloud_io/cnchat_ci/kimi_session.json" \
+            kimi/kimi_session.json
+          SIZE=$(stat -c%s kimi/kimi_session.json)
+          if [ "$SIZE" -lt 5000 ]; then
+            echo "::error::сессия Kimi битая/пустая ($SIZE б) — анализатор без текстового воркера"
+            exit 1
+          fi
+          if [ "$ANALYST_TEXT_WORKER" != "kimi" ]; then
+            rclone copyto "ydrive:Content factory/cloud_io/qwen_ci/qwen_session.json" qwen/qwen_session.json
+            pip install -q requests playwright
+            python -m playwright install --with-deps chromium
+          fi
       - name: Analyze target
         env:
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
@@ -104,6 +129,8 @@ jobs:
           SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
           SCOUT_THREAD:        ${{ inputs.thread }}
+          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'kimi' }}
+          KIMI_SESSION_FILE:   ${{ github.workspace }}/kimi/kimi_session.json
         run: python3 auto_analyst.py --targets "${{ matrix.target }}"
       - name: Report to memory_os feed
         if: always()
@@ -114,6 +141,7 @@ jobs:
     needs: analyze
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
       - name: Deps

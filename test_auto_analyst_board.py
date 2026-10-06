@@ -78,7 +78,9 @@ def test_target_failure_cannot_be_reported_as_success() -> None:
             raise AssertionError("missing report must fail the analyst job")
 
 
-def test_qwen_json_failure_writes_degraded_report() -> None:
+def test_text_worker_failure_writes_analysis_error_not_zero_score() -> None:
+    """05.10: Qwen-WAF ронял разбор, но отчёт уходил в доску/TG как «0/100 — мимо».
+    Теперь score=null + ANALYSIS_ERROR: разбор не выполнен ≠ отказ."""
     rubric = {
         "hard_rejects": [{"id": "dead_and_no_concept"}],
         "criteria": {"relevance": {"weight": 100}},
@@ -98,16 +100,98 @@ def test_qwen_json_failure_writes_degraded_report() -> None:
     with tempfile.TemporaryDirectory() as td, \
          mock.patch.object(auto_analyst, "OUTDIR", Path(td)), \
          mock.patch.object(auto_analyst, "fetch", return_value=ctx), \
-         mock.patch.object(auto_analyst, "analyze", return_value={"_error": "bad qwen json"}), \
+         mock.patch.object(auto_analyst, "analyze", return_value={"_error": "bad json"}), \
          mock.patch.object(auto_analyst, "rclone", return_value=ok), \
          mock.patch.object(auto_analyst, "verify_remote_json"), \
          mock.patch.object(auto_analyst, "tg"):
         result = process("https://github.com/Owner/Broken", rubric)
         report_path = Path(td) / result["slug"] / "report.json"
         report = json.loads(report_path.read_text(encoding="utf-8"))
-    assert result["score"] == 0
-    assert result["route"] == "SKIP (analysis-error)"
-    assert report["analysis"]["_analysis_error"] == "bad qwen json"
+    assert result["score"] is None
+    assert result["analysis_failed"] is True
+    assert "ANALYSIS_ERROR" in result["route"]
+    assert report["score"] is None
+    assert report["analysis"]["_analysis_error"] == "bad json"
+
+
+def test_analysis_error_fails_the_analyst_job() -> None:
+    degraded = mock.Mock(return_value={"score": None, "analysis_failed": True,
+                                       "route": "⚠️ ANALYSIS_ERROR (разбор не выполнен)"})
+    with mock.patch.object(auto_analyst, "process", return_value=degraded.return_value), \
+         mock.patch.object(auto_analyst, "tg"):
+        try:
+            process_targets(["https://github.com/Owner/Broken"], {})
+        except RuntimeError as exc:
+            assert "без валидного анализа" in str(exc)
+        else:
+            raise AssertionError("degraded analysis must not look like a green run")
+
+
+def test_board_renders_analysis_error_without_zero_score() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        path = Path(td) / "ledger.json"
+        path.write_text(json.dumps({"schema": 1, "repos": {}}), encoding="utf-8")
+        rows, _ = board_rows_from_reports([
+            {"url": "https://github.com/Owner/Broken", "slug": "broken",
+             "score": None, "route": "⚠️ ANALYSIS_ERROR (разбор не выполнен)"},
+        ], ScoutLedger(path))
+    assert rows[0]["score"] == "—"
+    assert "ANALYSIS_ERROR" in rows[0]["route"]
+
+
+def test_text_worker_defaults_to_kimi_with_qwen_fallback() -> None:
+    env = auto_analyst.os.environ
+    saved = env.pop("ANALYST_TEXT_WORKER", None)
+    try:
+        with mock.patch.object(auto_analyst, "kimi_generate", return_value="kimi ok") as kimi, \
+             mock.patch.object(auto_analyst, "qwen_generate", return_value="qwen ok") as qwen:
+            assert auto_analyst.text_generate("p") == "kimi ok"
+            kimi.assert_called_once()
+            qwen.assert_not_called()
+
+            env["ANALYST_TEXT_WORKER"] = "auto"
+            assert auto_analyst.text_generate("p") == "kimi ok"
+
+            env["ANALYST_TEXT_WORKER"] = "qwen"
+            assert auto_analyst.text_generate("p") == "qwen ok"
+            # kimi был вызван в дефолтном прогоне и в auto; на явном qwen — нет
+            assert kimi.call_count == 2
+    finally:
+        env.pop("ANALYST_TEXT_WORKER", None)
+        if saved is not None:
+            env["ANALYST_TEXT_WORKER"] = saved
+
+
+def test_text_worker_falls_through_on_empty_kimi_answer() -> None:
+    with mock.patch.dict(auto_analyst.os.environ, {"ANALYST_TEXT_WORKER": "auto"}), \
+         mock.patch.object(auto_analyst, "kimi_generate", return_value=""), \
+         mock.patch.object(auto_analyst, "qwen_generate", return_value="qwen ok"):
+        assert auto_analyst.text_generate("p") == "qwen ok"
+
+
+def test_text_worker_raises_when_nobody_answers() -> None:
+    with mock.patch.dict(auto_analyst.os.environ, {"ANALYST_TEXT_WORKER": "auto"}), \
+         mock.patch.object(auto_analyst, "kimi_generate", return_value=""), \
+         mock.patch.object(auto_analyst, "qwen_generate", return_value=""):
+        try:
+            auto_analyst.text_generate("p")
+        except RuntimeError as exc:
+            assert "текстовый воркер не ответил" in str(exc)
+        else:
+            raise AssertionError("silent empty answers must not pass as a verdict")
+
+
+def test_analyze_rejects_response_without_scores() -> None:
+    rubric = {
+        "criteria": {"relevance": {"desc": "да", "weight": 100}},
+        "hard_rejects": [{"id": "dead_and_no_concept", "desc": "нет"}],
+    }
+    ctx = {"url": "u", "kind": "repo", "meta": {}, "license": "?",
+           "readme": "", "tree": "", "manifests": {}}
+    with mock.patch.object(auto_analyst, "text_generate",
+                           return_value='{"summary": "ок, но без оценок"}'):
+        out = auto_analyst.analyze(ctx, rubric)
+    assert "_error" in out and "scores" in out["_error"]
 
 
 def test_remote_report_requires_matching_readback() -> None:
@@ -134,6 +218,12 @@ if __name__ == "__main__":
     test_target_validation_preserves_external_route()
     test_board_is_ledger_view_and_drops_github_garbage()
     test_target_failure_cannot_be_reported_as_success()
-    test_qwen_json_failure_writes_degraded_report()
+    test_text_worker_failure_writes_analysis_error_not_zero_score()
+    test_analysis_error_fails_the_analyst_job()
+    test_board_renders_analysis_error_without_zero_score()
+    test_text_worker_defaults_to_kimi_with_qwen_fallback()
+    test_text_worker_falls_through_on_empty_kimi_answer()
+    test_text_worker_raises_when_nobody_answers()
+    test_analyze_rejects_response_without_scores()
     test_remote_report_requires_matching_readback()
     print("auto analyst board lifecycle: all tests passed")

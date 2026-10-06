@@ -49,6 +49,27 @@ RUBRIC_PATH = HERE / "analyst_rubric.yaml"
 QWEN_CHAT = HERE / "qwen" / "qwen_chat.py"   # [2026-07-27] mimo free снят → Qwen-чат (текст)
 LEDGER_PATH = HERE / "repo_scout_ledger.json"
 
+
+def _find_kimi_driver() -> Path:
+    """Kimi-драйвер: чистый stdlib urllib, поэтому не зависит от SPA/профиля/WAF
+    chat.qwen.ai (текстовый путь Qwen заблокирован Aliyun WAF-капчей с23.09).
+    Копий драйвера две (render-репо и зеркало) — берём ту, рядом с которой лежит
+    живая kimi_session.json, иначе воркер уйдёт в rc=2 «Файл сессии не найден».
+    """
+    candidates = [root / "Instrument" / "CnChat" / "kimi_chat.py"
+                  for root in (HERE, HERE.parent)]
+    for p in candidates:
+        if p.is_file() and (p.parent / "kimi_session.json").is_file():
+            return p
+    for p in candidates:
+        if p.is_file():
+            return p
+    return candidates[0]
+
+
+KIMI_CHAT = _find_kimi_driver()
+KIMI_SESSION = os.environ.get("KIMI_SESSION_FILE", "").strip()
+
 from scout_ledger import ScoutLedger, github_full_name  # noqa: E402
 
 YD = "ydrive:Content factory"
@@ -208,7 +229,9 @@ def board_rows_from_reports(reports: list[dict], ledger: ScoutLedger) -> tuple[l
         rows.append({
             "url": url,
             "slug": report.get("slug") or slug_of(url),
-            "score": report.get("score", 0),
+            # None = анализатор не отдал разбор (score:null в report.json). Показываем
+            # «—», иначе report.get("score", 0) превращал упавший анализ в честный ноль.
+            "score": "—" if report.get("score") is None else report.get("score", 0),
             "route": report.get("route", "?"),
             "status": lifecycle_status(url, ledger),
         })
@@ -349,7 +372,54 @@ def fetch(url: str, dest: Path) -> dict:
     return ctx
 
 
-# ── Stage A: Qwen-анализ по рубрике (текст) ─────────────────────────────────────────
+# ── Stage A: текстовый воркер + анализ по рубрике ───────────────────────────────────
+
+def _run_driver(cmd: list[str], prompt: str, timeout: int) -> tuple[int, str]:
+    """Промпт идёт через stdin, чтобы не светиться в списке процессов."""
+    try:
+        r = subprocess.run(cmd, input=prompt, capture_output=True, text=True,
+                           timeout=timeout + 90)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+    except subprocess.TimeoutExpired:
+        return 124, f"timeout {timeout}s"
+    except Exception as e:
+        return 1, f"{type(e).__name__}: {e}"
+
+
+def kimi_generate(prompt: str, timeout: int = 420) -> str:
+    """Текст через Kimi K2.5 (один аккаунт → строго последовательно, как и раньше Qwen)."""
+    if not KIMI_CHAT.exists():
+        return ""
+    cmd = ["python3", str(KIMI_CHAT), "--stdin", "--timeout", str(timeout)]
+    if KIMI_SESSION:
+        cmd += ["--session", KIMI_SESSION]
+    return _run_driver(cmd, prompt, timeout)[1].strip()
+
+
+def qwen_generate(prompt: str, timeout: int = 420) -> str:
+    cmd = ["python3", str(QWEN_CHAT), "--stdin", "--model", "", "--timeout", str(timeout)]
+    return _run_driver(cmd, prompt, timeout)[1].strip()
+
+
+def text_generate(prompt: str, timeout: int = 420) -> str:
+    """Единая точка генерации текста. ANALYST_TEXT_WORKER: kimi (default) | qwen | auto.
+
+    Kimi — основной: драйвер на stdlib urllib, поэтому не ловит ни возрастной гейт
+    chat.qwen.ai, ниqwen_token_logged_out_marker, ни Aliyun WAF-капчу. Qwen остаётся
+    фолбэком, чтобы откат был одной переменной окружения.
+    """
+    worker = os.environ.get("ANALYST_TEXT_WORKER", "kimi").strip().lower() or "kimi"
+    order = ["kimi", "qwen"] if worker == "auto" else [worker]
+    errors = []
+    for name in order:
+        text = kimi_generate(prompt, timeout) if name == "kimi" \
+            else qwen_generate(prompt, timeout)
+        if text:
+            return text
+        errors.append(f"{name}: пустой ответ")
+        log(f"  [text-worker] {name}: пустой ответ")
+    raise RuntimeError("текстовый воркер не ответил — " + " | ".join(errors))
+
 
 def _extract_json(s: str) -> dict | None:
     s = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", s)
@@ -416,36 +486,40 @@ def analyze(ctx: dict, rubric: dict) -> dict:
   "verdict": "1-2 предложения: брать/на заметку/мимо и почему"
 }}"""
 
-    rc, out = sh(["python3", str(QWEN_CHAT), prompt, "--model", "", "--timeout", "420"],
-                 timeout=480)
+    try:
+        out = text_generate(prompt)
+    except Exception as exc:
+        return {"_error": str(exc)[:500]}
     data = _extract_json(out)
     if not data:
-        return {"_error": f"qwen не вернул JSON (rc={rc}): {out[:300]}"}
+        return {"_error": f"текстовый воркер не вернул JSON: {out[:300]}"}
+    if not isinstance(data.get("scores"), dict) or not data["scores"]:
+        return {"_error": f"в ответе нет scores: {out[:300]}"}
     return data
 
 
 def degraded_analysis(ctx: dict, rubric: dict, error: str) -> dict:
-    """Valid fail-closed analysis payload when Qwen/browser returns no JSON.
+    """Fail-closed payload when the text worker returned no valid JSON.
 
-    Scout targets are often weak or malformed. Losing the target entirely makes the
-    board lie by omission, so analyzer-runtime failure is stored as a normal report
-    with zero score and an explicit skip route.
+    Fail-closed = НЕ пропуск цели молча (тогда доска врёт умалчиванием), но и НЕ
+    выдуманный ноль: прошлый вариант писал scores=0 и route=SKIP, и TG/доска показывали
+    «0/100 — мимо» на цели, которую никто не разбирал. Теперь score=null + явный
+    маркер ANALYSIS_ERROR: видно, что разбора не было, и это не путается с вердиктом.
     """
-    hard_rejects = {h["id"]: True for h in rubric.get("hard_rejects", [])}
-    scores = {cid: 0 for cid in rubric.get("criteria", {})}
+    hard_rejects = {h["id"]: None for h in rubric.get("hard_rejects", [])}
     short = str(error or "unknown analysis error")[:500]
     return {
         "_analysis_error": short,
-        "summary": f"Авто-анализ не получил валидный JSON от Qwen для {ctx.get('url', '?')}.",
-        "scores": scores,
+        "summary": f"Авто-анализ не выполнен: текстовый воркер не отдал валидный отчёт по {ctx.get('url', '?')}.",
+        "scores": {},
         "hard_rejects": hard_rejects,
-        "what_extract": "Ничего не внедрять до повторного ручного/автоматического анализа.",
-        "what_discard": "Текущий результат Qwen: невалидный или отсутствующий JSON.",
+        "what_extract": "Ничего не внедрять: разбора не было.",
+        "what_discard": "Текущий результат анализатора: невалидный или отсутствующий JSON.",
         "concept_note": "",
-        "risk_architecture": "high — анализ не завершён валидным отчётом, пригодность не доказана",
-        "risk_stability": "high — Qwen/browser/session вернул невалидный результат",
-        "autonomy": "no — требуется повторный анализ или ручная проверка",
-        "verdict": f"SKIP: анализатор не смог построить валидный отчёт. Причина: {short}",
+        "risk_architecture": "неизвестно — анализ не выполнен",
+        "risk_stability": "неизвестно — анализ не выполнен",
+        "autonomy": "неизвестно — анализ не выполнен",
+        "verdict": f"⚠️ РАЗБОР НЕ ВЫПОЛНЕН (анализатор упал, а не «мимо»). Причина: {short}",
     }
 
 
@@ -499,7 +573,7 @@ def make_readme(ctx, a, score, route, smoke) -> str:
     return f"""# {ctx['url']}
 
 **Проверено авто-анализатором:** {datetime.now(timezone.utc):%Y-%m-%d %H:%M UTC}
-**Тип:** {ctx['kind']} | **Лицензия:** {ctx['license']} | **Скор пользы:** {score}/100 | **Роут:** {route}
+**Тип:** {ctx['kind']} | **Лицензия:** {ctx['license']} | **Скор пользы:** {score if score is not None else '— (разбор не выполнен)'} | **Роут:** {route}
 
 ## О чём это
 {a.get('summary', '?')}
@@ -577,10 +651,14 @@ def rebuild_board():
         raise RuntimeError(f"cannot upload adoption board: {uploaded.stderr[-300:]}")
     verify_remote_text(YD_BOARD, board)
     pending = sum(1 for r in rows if r["status"] == "PENDING")
-    tg(f"🏁 <b>Авто-анализатор</b> — доска обновлена: {len(rows)} инструментов, {pending} PENDING.\n"
+    errored = sum(1 for r in rows if "ANALYSIS_ERROR" in str(r["route"]))
+    err_line = (f"\n⚠️ <b>{errored} целей без разбора</b> (текстовый воркер не ответил) — "
+                "это не «мимо», их надо перепрогнать." if errored else "")
+    tg(f"🏁 <b>Авто-анализатор</b> — доска обновлена: {len(rows)} инструментов, {pending} PENDING.{err_line}\n"
        f"Решения: repo_scout_ledger.json; view: verified_tools/ADOPTION_BOARD.md",
        thread=SERVICE_THREAD)
-    log(f"board rebuilt: {len(rows)} rows, {pending} pending, {dropped} invalid targets dropped")
+    log(f"board rebuilt: {len(rows)} rows, {pending} pending, {errored} analysis-error, "
+        f"{dropped} invalid targets dropped")
 
 
 # ── главный цикл ────────────────────────────────────────────────────────────────────
@@ -606,11 +684,15 @@ def process(url, rubric) -> dict:
     log(f"▶ {url}  →  {slug}")
     ctx = fetch(url, WORKDIR / slug)
     a = analyze(ctx, rubric)
-    if "_error" in a:
-        log(f"  QWEN_ERR {url}: {a['_error'][:300]}")
+    analysis_failed = "_error" in a
+    if analysis_failed:
+        log(f"  ANALYSIS_ERR {url}: {a['_error'][:300]}")
         a = degraded_analysis(ctx, rubric, a["_error"])
-        score = 0
-        route = "SKIP (analysis-error)"
+        # score=None, а не 0: «анализатор упал» и «инструмент мимо» — разные вещи,
+        # и доска обязана это различать (05.10: нули приходили от Qwen-WAF, а читались
+        # как честные отказы).
+        score = None
+        route = "⚠️ ANALYSIS_ERROR (разбор не выполнен)"
     else:
         score = weighted_score(a.get("scores", {}), rubric)
         route = route_of(a, score, rubric)
@@ -626,6 +708,7 @@ def process(url, rubric) -> dict:
     (out / "README.md").write_text(make_readme(ctx, a, score, route, smoke), encoding="utf-8")
     (out / "report.json").write_text(json.dumps(
         {"url": url, "slug": slug, "score": score, "route": route,
+         "analysis_failed": analysis_failed,
          "analysis": a, "smoke": smoke, "meta": ctx["meta"]},
         ensure_ascii=False, indent=2), encoding="utf-8")
     uploaded = rclone("copy", str(out), f"{YD_TOOLS}/{slug}")
@@ -646,7 +729,7 @@ def process(url, rubric) -> dict:
     else:
         lic_line = f"📄 Лицензия: <code>{lic}</code>"
     tg(
-        f"🔎 <b>Анализатор</b> — <code>{score}/100</code> — {route}\n"
+        f"🔎 <b>Анализатор</b> — <code>{score if score is not None else '—'}/100</code> — {route}\n"
         f"<b>{url}</b>\n\n"
         # Сначала «что это вообще такое», потом вердикт: раньше отчёт стартовал с
         # «брать/не брать», и читателю приходилось идти по ссылке, чтобы понять предмет.
@@ -661,19 +744,31 @@ def process(url, rubric) -> dict:
         f"🤖 Автономность: {a.get('autonomy','?')[:250]}{smoke_line}\n\n"
         f"📁 verified_tools/{slug}/ — решение фиксируется в repo_scout_ledger.json"
     )
-    return {"url": url, "slug": slug, "score": score, "route": route}
+    return {"url": url, "slug": slug, "score": score, "route": route,
+            "analysis_failed": analysis_failed}
 
 
 def process_targets(targets: list[str], rubric: dict) -> None:
-    """Process every target but fail the job if any target produced no report."""
-    failed = []
+    """Каждая цель обязана дать отчёт; падение анализатора — тоже провал джобы.
+
+    Иначе упавший анализ выглядит зелёным ранном и тихо сеет нули (05.10).
+    """
+    failed, degraded = [], []
     for url in targets:
         try:
-            process(url, rubric)
+            res = process(url, rubric)
         except Exception as exc:
             failed.append(url)
             log(f"  ERR {url}: {type(exc).__name__}: {exc}")
             tg(f"❌ Анализатор упал на {url}: {str(exc)[:200]}")
+            continue
+        if res.get("analysis_failed"):
+            degraded.append(url)
+    if degraded:
+        raise RuntimeError(
+            f"{len(degraded)} target(s) без валидного анализа (текстовый воркер не ответил): "
+            + ", ".join(degraded)
+        )
     if failed:
         raise RuntimeError(f"{len(failed)} target(s) failed to produce a verified report")
 
