@@ -6,7 +6,7 @@
       "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Холодный teal, приглушённый, без тепла"
+      "reason": "Холодный нейтральный тон, соответствует deep teal, без теплых оттенков"
     },
     {
       "name": "scout_neutral_night_muted",
@@ -14,7 +14,7 @@
       "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Темный, холодный, мягкий свет, соответствует бренду"
+      "reason": "Темный, но холодный, сохраняет teal, без тепла"
     },
     {
       "name": "scout_neutral_bright_muted",
@@ -22,7 +22,7 @@
       "score": 7.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Ярче, но всё равно muted, холодный оттенок"
+      "reason": "Ярче, но всё ещё muted, холодный, не нарушает бренд"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -30,7 +30,7 @@
       "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Ночной, мягкий, teal‑тени, чистый"
+      "reason": "Тёмный, холодный, teal в тенях, чистый"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -38,15 +38,15 @@
       "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Аналогичен ночному, мягкий, teal‑тон"
+      "reason": "Похож на предыдущий, чуть ярче, но teal сохраняется"
     },
     {
       "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 5.0,
-      "votes": "0/1",
-      "status": "отклонён",
-      "reason": "Зелёный оттенок слишком насыщен, не deep teal"
+      "keep": true,
+      "score": 7.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Зелёный оттенок близок к teal, холодный, без тепла"
     }
   ],
   "recommend_merge": [
@@ -54,9 +54,10 @@
     "scout_neutral_night_muted",
     "scout_neutral_bright_muted",
     "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
   "disputed": [],
-  "_generated": "2026-10-04",
+  "_generated": "2026-10-06",
   "_judge": "gh-vision-ensemble(1/5)"
 }
