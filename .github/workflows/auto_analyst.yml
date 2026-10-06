@@ -26,6 +26,10 @@ on:
         description: "TG-тред разборов (1653=GROK SCOUT, 1699=REPO SCOUT; пусто=1653)"
         required: false
         type: string
+      text_worker:
+        description: "Текстовый воркер: kimi (дефолт) | openrouter | auto (проверка фолбэка)"
+        required: false
+        type: string
   schedule:
     - cron: "0 9 * * 1"   # пн 09:00 UTC — автономный проход
 
@@ -124,7 +128,7 @@ jobs:
           SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
           SCOUT_THREAD:        ${{ inputs.thread }}
-          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'kimi' }}
+          ANALYST_TEXT_WORKER: ${{ inputs.text_worker || vars.ANALYST_TEXT_WORKER || 'kimi' }}
           KIMI_SESSION_FILE:   ${{ github.workspace }}/kimi/kimi_session.json
           OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODELS:   ${{ vars.OPENROUTER_MODELS || 'openrouter/free' }}
