@@ -65,11 +65,13 @@ jobs:
           echo "version rc=$?"
           set -e
 
-      - name: Что скачалось
+      - name: Что скачалось + флаги CLI
         run: |
           du -sh ~/.freebuff ~/.config/freebuff ~/.codebuff 2>/dev/null || true
           ls -la ~/.freebuff/bin 2>/dev/null || true
           df -h / | tail -1
+          echo "=== --help ==="
+          freebuff --help 2>&1 | head -60
 
       - name: Не-интерактивный пробный запрос
         if: ${{ inputs.prompt != '' }}
