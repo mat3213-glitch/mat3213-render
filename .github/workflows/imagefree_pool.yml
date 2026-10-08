@@ -17,9 +17,19 @@ on:
         default: ''
         type: string
       bank:
-        description: 'Встроенный банк сюжетов: mystery | audio_dnb | noir | silence | nature (если prompts пуст)'
+        description: 'Банк сюжетов: elsewhere | mystery | audio_dnb | noir | silence | nature (если prompts пуст)'
         required: false
         default: ''
+        type: string
+      elsewhere_location:
+        description: 'Для bank=elsewhere: одна локация (underwater, moon, orbit, city, forest, cabin, palace, glacier, desert, mine, rooftop, cinema). Пусто = все по кругу.'
+        required: false
+        default: ''
+        type: string
+      elsewhere_count:
+        description: 'Для bank=elsewhere: сколько пар локация×неожиданное за прогон'
+        required: false
+        default: '8'
         type: string
       mystery_subject:
         description: 'Для bank=mystery: загадка по имени (lighthouse, greenhouse, laundromat, funeral, ferry, nursery, bathhouse, switchboard) или индексу 0-7. Пусто = смена по дате.'
@@ -74,6 +84,8 @@ jobs:
           PROMPTS:   ${{ inputs.prompts }}
           BANK:      ${{ inputs.bank }}
           MYSTERY_SUBJECT: ${{ inputs.mystery_subject }}
+          ELSEWHERE_LOCATION: ${{ inputs.elsewhere_location }}
+          ELSEWHERE_COUNT: ${{ inputs.elsewhere_count }}
           ASPECT:    ${{ inputs.aspect }}
           MAX_TASKS: ${{ inputs.max_tasks }}
           JUDGE:     ${{ inputs.judge }}
