@@ -1,11 +1,56 @@
-# Repo Scout — 2026-10-07T17:18:25.286217
-Всего в шортлисте: 1
-- **brightsign/cerberus-anomoly-detection-extension** ⭐0 [vision]
-  - https://github.com/brightsign/cerberus-anomoly-detection-extension
+# Repo Scout — 2026-10-08T17:14:23.047581
+Всего в шортлисте: 6
+- **juliecardinalli/video-editing-workbench** ⭐0 [video]
+  - https://github.com/juliecardinalli/video-editing-workbench
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: freeze detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Этот репозиторий позволяет обнаруживать фризы, заикания и сбои воспроизведения в видео, что напрямую закрывает потребность в детерминированном контроле качества непрерывности движения и фризов в сгенерированном контенте yaromat. Несмотря на высокую вероятность дублирования функционала другими инструментами, его способность проверять органичность моторики видео оправдывает среднюю стоимость интеграции.
-  - 📄 NPU-accelerated video wall monitoring on BrightSign device using camera-based ROI extraction and MobileNetV3 embedding reference matching to detect black screen
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Это локальный видеоредактор, который позволяет редактировать видео на основе его текстовой расшифровки, просматривать паузы и интерактивно менять сценарий. Он предоставляет компактное представление таймлайна и транскрипта, что удобно для быстрого ревью монтажа без необходимости загружать видео в LLM. Интеграция недорога, но риск дублирования функций высок, так как уже есть WhisperX и EDL; ценность в основном в удобном интерфейсе для ревью.
+  - 📄 Local transcript-based video editor: review dead-air cuts, edit an interactive script, and render with FFmpeg. Python + JavaScript, synthetic demo, and tests.
+- **rbrown101010/Open-Script-Editor** ⭐0 [video]
+  - https://github.com/rbrown101010/Open-Script-Editor
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот открытый локальный редактор позволяет монтировать видео, работая с его текстовой расшифровкой, включая удаление пауз и создание глав. Он предлагает компактный интерфейс для просмотра и редактирования таймлайна через текст, что удешевляет ревью режиссуры без использования LLM. Интеграция проста, но есть риск дублирования с существующими инструментами; его основная ценность — в компактном представлении для ревью.
+  - 📄 Open-source, local, text-based video editor. Edit video by editing the transcript: local Whisper, strikethrough cuts, filler removal, chapters, media layers, an
+- **revfactory/showreel** ⭐4 [video]
+  - https://github.com/revfactory/showreel
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Проект генерирует моушн-графические видео от брифа до финального рендера, используя детерминированный HTML-рендеринг. Его детерминированный подход к рендерингу видео способствует повышению воспроизводимости результатов на CPU и GitHub Actions. Интеграция недорога, но риск дублирования высок, так как часть функций уже реализована; требуется более конкретный незакрытый аспект воспроизводимости.
+  - 📄 Claude Code skill that produces Korean motion-graphics videos end to end: brief, research, script, ElevenLabs narration, music, images, deterministic HTML rende
+- **fish2lab/touhou-code-video-template** ⭐3 [video]
+  - https://github.com/fish2lab/touhou-code-video-template
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это шаблон для создания видео на JavaScript и Canvas 2D, где всё генерируется кодом, включая персонажей и детерминированный MP4-рендер. Его полностью кодовый и детерминированный подход к рендерингу видео может улучшить воспроизводимость на CPU и GitHub Actions. Интеграция проста, но риск дублирования высок, так как часть задач по воспроизводимости уже решена; нужна чёткая, нереализованная функция.
+  - 📄 Touhou, drawn in code · 纯代码做一集东方 Project 科普视频 · コードで描く東方。Template for a voiced Touhou fan explainer video in pure JavaScript + Canvas 2D: 14 procedural paper-cu
+- **LK-Design-System/lk-design-system-motion** ⭐0 [video]
+  - https://github.com/LK-Design-System/lk-design-system-motion
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Проект предоставляет детерминированный слой для анимации, который рендерит макеты дизайн-системы в видео с помощью Remotion. Его детерминированный рендеринг видео с Remotion способствует повышению воспроизводимости результатов на CPU и GitHub Actions. Интеграция недорога, но риск дублирования высок, так как часть функций уже внедрена; требуется конкретный, ещё не закрытый аспект воспроизводимости.
+  - 📄 Deterministic motion layer for LDS - renders design-system slide layouts to video with Remotion
+- **menonpg/motionstudio** ⭐0 [video]
+  - https://github.com/menonpg/motionstudio
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это студия для создания объясняющих видео, которая принимает тему и выдает готовый MP4 с помощью детерминированного HTML->MP4 конвейера. Его детерминированный конвейер рендеринга HTML в MP4 может усилить воспроизводимость видео на CPU и GitHub Actions. Интеграция проста, но риск дублирования высок, так как часть функций уже реализована; нужна чёткая, нереализованная функция для воспроизводимости.
+  - 📄 Explainer-video studio for Claude Code & Codex — topic in, rendered MP4 with sound & captions out, via a deterministic HTML->MP4 pipeline
