@@ -22,7 +22,8 @@ imagefree_pool_job.py — пул стиллов через бесплатный 
     ├─ manifest.json                 (что, чем, почём; всё для «video receipt»)
     └─ status.txt
 
-Ручки (env): PROMPTS (построчно) · ASPECT (1:1|3:4|4:3|9:16|16:9, default 9:16) ·
+Ручки (env): PROMPTS (построчно) · ASPECT (1:1|2:3|3:4|4:3|9:16|16:9, default 9:16;
+2:3 = родной формат пина Pinterest) ·
 MAX_TASKS (8) · MIN_DELAY/MAX_DELAY (6/15) · JUDGE (on/off, default on) ·
 JUDGE_MODELS (панель как у arts_pool) · TG_TOKEN/TG_SECRET (опц. TG-пинг).
 
@@ -53,7 +54,7 @@ TTL_STOP = 40                            # задержка молчания п�
 POLL_MS = [6000, 4000, 10000, 15000, 20000, 30000, 30000, 30000, 30000, 30000,
            30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000]
 
-ASPECTS = {"1:1", "3:4", "4:3", "9:16", "16:9"}
+ASPECTS = {"1:1", "2:3", "3:4", "4:3", "9:16", "16:9"}
 
 # ── канон-обогащение промптов (директива yaromat 09.09) ────────────────────
 # 1. ВСЁ снято «на мыльницу 2000-х»: жёсткая встроенная вспышка, шум, jpeg-артефакты,
@@ -166,12 +167,127 @@ STORY_BANK = {
     ],
 }
 
+# ── «mystery»: не банк кадров, а генератор загадок ──────────────────────────────
+# Что закрывает (вердикт yaromat 26.09 на пул 8/8): прежние банки дают «один
+# предмет в пустом пространстве» — настроение вместо сюжета, и доска листается
+# как альбом. Здесь один прогон = ОДНА загадка из 8 тактов, а следующий прогон
+# берёт другую (смена по дате). Доска становится детективом, который листают подряд.
+#
+# Правило кадра: он обязан задать вопрос, на который нельзя ответить взглядом.
+# Три приёма — аНОМАЛИЯ (предмет нарушает порядок сцены), СЛЕД (доказательство
+# отсутствующего), ПРОТИВОРЕЧИЕ (два факта несовместимы). Без лиц и без текста в кадре.
+MYSTERY_SUBJECTS = [
+    {"key": "lighthouse",
+     "place": "an abandoned lighthouse keeper's corridor at night",
+     "prop": "a row of brass keys hung on numbered hooks, one hook empty",
+     "mark": "a still-wet handprint pressed into the dust on the wall",
+     "wrong": "the wall emergency lamp is burning although the tower has no power",
+     "light": "one cold beam from a single bare bulb, everything else black"},
+    {"key": "greenhouse",
+     "place": "a shuttered municipal greenhouse after closing",
+     "prop": "a watering can left standing in the middle of an empty aisle",
+     "mark": "one pane of glass fogged from inside, the rest clear",
+     "wrong": "the soil in one bed is freshly turned while every other bed is dead",
+     "light": "moonlight through broken panes, hard bars across the floor"},
+    {"key": "laundromat",
+     "place": "a 24-hour laundromat at 4 AM, empty",
+     "prop": "one dryer still turning with clothes inside, the door standing open",
+     "mark": "a plastic bag left on top of a folding table, still full",
+     "wrong": "the coin slot of that machine is empty but the drum keeps turning",
+     "light": "the fluorescent tube over that machine only, humming, green-white"},
+    {"key": "funeral",
+     "place": "a municipal archive basement, rows of steel shelves",
+     "prop": "one drawer pulled out and left open, folders squared beside it",
+     "mark": "a chair placed facing the open drawer, pushed back as if stood up",
+     "wrong": "every other drawer is shut and dusted, this one is clean inside",
+     "light": "a work lamp left on, its cord trailing into the dark between shelves"},
+    {"key": "ferry",
+     "place": "a closed ferry terminal at night, turnstile gates",
+     "prop": "one turnstile arm left raised while the others are locked down",
+     "mark": "a paper ticket on the floor, dated tomorrow",
+     "wrong": "the departures board is dark, yet the gate is open for someone",
+     "light": "sodium light through the glass wall, wet platform reflecting it"},
+    {"key": "nursery",
+     "place": "a closed day nursery room after hours",
+     "prop": "a small chair set on a table instead of the floor",
+     "mark": "a coat hook with one coat missing, its shadow empty",
+     "wrong": "every blind is down, yet one cot has a moving shadow across it",
+     "light": "a strip light over the door, off, and daylight leaking under the blinds"},
+    {"key": "bathhouse",
+     "place": "an old bathhouse changing room, long wooden benches",
+     "prop": "one locker standing open with its padlock hanging unlatched",
+     "mark": "wet footprints leading to it, none leading away",
+     "wrong": "the floor is bone dry around those footprints",
+     "light": "a single high window, hard rectangle of light on wet tiles"},
+    {"key": "switchboard",
+     "place": "a decommissioned telephone exchange hall",
+     "prop": "a row of plug cords, one jack still seated, its lamp faintly lit",
+     "mark": "a headset dropped on the desk, earpiece still hanging",
+     "wrong": "the power is cut everywhere, the cable light cannot burn",
+     "light": "one shaft of daylight from a high window, dust turning in it"},
+]
+
+# 8 тактов: beat → что именно показываем. Порядок важен, это драматургия.
+MYSTERY_ARC = [
+    ("clue", "the first sign, small in the frame and easy to walk past"),
+    ("trace", "the same sign seen close, unmistakably left by a person"),
+    ("ordinary", "the plain everyday scene the sign sits in, so it reads as wrong here"),
+    ("contradiction", "a physical impossibility: two facts that cannot both be true"),
+    ("scale", "the same wrongness repeated somewhere much larger, whole-room scale"),
+    ("witness", "the light itself gives someone away, cast from where nobody stands"),
+    ("moved", "the thing has shifted since the earlier view, a difference you can measure"),
+    ("open", "the closest thing to a reveal, and it still answers nothing"),
+]
+
+
+def mystery_prompts(subject: dict) -> list[str]:
+    """Одна загадка = 8 тактов по одному кадру. Слоты: место, предмет, след,
+    противоречие, свет — общие для всей арки, поэтому кадры читаются как одна
+    история, а не как восемь атмосфер."""
+    out = []
+    for beat, note in MYSTERY_ARC:
+        body = {
+            "clue": f"{subject['place']}, {subject['prop']}, {subject['light']}, {note}",
+            "trace": f"close view, {subject['mark']}, same {subject['light']}, {note}",
+            "ordinary": f"{subject['place']} in a wider view, {subject['prop']} in place among "
+                        f"ordinary clutter, {subject['light']}, {note}",
+            "contradiction": f"{subject['place']}, {subject['wrong']}, {subject['light']}, {note}",
+            "scale": f"the same wrongness at building scale, {subject['place']} seen from far "
+                     f"enough that {subject['prop']} reads as a detail, {subject['light']}, {note}",
+            "witness": f"{subject['place']}, {subject['mark']} raking across the floor through "
+                       f"{subject['light']}, its shadow falling where no lamp stands, {note}",
+            "moved": f"the same spot as before, {subject['prop']} now in a slightly different "
+                     f"position, {subject['light']}, {note}",
+            "open": f"{subject['place']}, {subject['prop']} half out of frame as if the frame "
+                    f"missed it, {subject['light']}, {note}",
+        }[beat]
+        out.append(f"{beat}: {body}, no people, no text, no lettering anywhere in frame")
+    return out
+
+
+def pick_mystery_subject(sel: str = "") -> dict:
+    """MYSTERY_SUBJECT — имя или индекс ключа; иначе смена по дате, чтобы
+    каждый прогон давал новую загадку, а не повтор одного и того же пула."""
+    named = (sel or os.environ.get("MYSTERY_SUBJECT") or "").strip()
+    if named:
+        for s in MYSTERY_SUBJECTS:
+            if named == s["key"] or named == str(MYSTERY_SUBJECTS.index(s)):
+                return s
+        print(f"неизвестный MYSTERY_SUBJECT '{named}': доступны "
+              f"{[s['key'] for s in MYSTERY_SUBJECTS]}", file=sys.stderr)
+    return MYSTERY_SUBJECTS[date.today().toordinal() % len(MYSTERY_SUBJECTS)]
+
+
 def resolve_prompts(sel: str) -> list[str]:
     """Источник промптов: PROMPTS env → BANK <имя> · иначе пусто (конфиг)."""
     raw = os.environ.get("PROMPTS", "").strip()
     if raw:
         return [p.strip() for p in raw.splitlines() if p.strip()]
     bank = (os.environ.get("BANK") or sel or "").strip()
+    if bank == "mystery":
+        s = pick_mystery_subject()
+        print(f"загадка дня: {s['key']} ({date.today().isoformat()})", file=sys.stderr)
+        return mystery_prompts(s)
     if bank in STORY_BANK:
         return list(STORY_BANK[bank])
     if bank:

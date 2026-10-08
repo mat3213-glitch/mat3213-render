@@ -17,12 +17,17 @@ on:
         default: ''
         type: string
       bank:
-        description: 'Встроенный банк сюжетов: audio_dnb | noir | silence | nature (если prompts пуст)'
+        description: 'Встроенный банк сюжетов: mystery | audio_dnb | noir | silence | nature (если prompts пуст)'
+        required: false
+        default: ''
+        type: string
+      mystery_subject:
+        description: 'Для bank=mystery: загадка по имени (lighthouse, greenhouse, laundromat, funeral, ferry, nursery, bathhouse, switchboard) или индексу 0-7. Пусто = смена по дате.'
         required: false
         default: ''
         type: string
       aspect:
-        description: 'Соотношение сторон: 1:1 | 3:4 | 4:3 | 9:16 | 16:9'
+        description: 'Соотношение сторон: 2:3 (родной пин Pinterest) | 1:1 | 3:4 | 4:3 | 9:16 | 16:9'
         required: false
         default: '9:16'
         type: string
@@ -68,6 +73,7 @@ jobs:
         env:
           PROMPTS:   ${{ inputs.prompts }}
           BANK:      ${{ inputs.bank }}
+          MYSTERY_SUBJECT: ${{ inputs.mystery_subject }}
           ASPECT:    ${{ inputs.aspect }}
           MAX_TASKS: ${{ inputs.max_tasks }}
           JUDGE:     ${{ inputs.judge }}
