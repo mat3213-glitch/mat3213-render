@@ -4,55 +4,57 @@
       "name": "scout_neutral_mid_muted",
       "keep": false,
       "score": 0.0,
-      "votes": "0/2",
+      "votes": "0/1",
       "status": "отклонён",
-      "reason": "Недостаточно холодный, тени не чёрно-зелёные, дымка не серая, световой акцент не"
+      "reason": "Недостаточно глубокий, чёрно-зелёный тон не чистый"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 0.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Недостаточно холодный, тени не чёрно-зелёные, дымка не серая, световой акцент не"
+      "keep": true,
+      "score": 8.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Совпадает с искомым deep teal"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
       "score": 0.0,
-      "votes": "0/2",
+      "votes": "0/1",
       "status": "отклонён",
-      "reason": "Недостаточно холодный, тени не чёрно-зелёные, дымка не серая, световой акцент не"
+      "reason": "Недостаточно мрачноватый"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 0.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Недостаточно холодный, тени не чёрно-зелёные, дымка не серая, световой акцент не"
+      "keep": true,
+      "score": 9.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Совпадает с искомым deep teal"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 0.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Недостаточно холодный, тени не чёрно-зелёные, дымка не серая, световой акцент не"
+      "keep": true,
+      "score": 9.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Совпадает с искомым deep teal"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 10.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Близок к deep teal, тени чёрно-зелёные, дымка серая, световой акцент мягкий не-б"
+      "score": 0.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Слишком зелёный, не чистый teal"
     }
   ],
-  "recommend_merge": [],
-  "disputed": [
-    "scout_green_mid_soft"
+  "recommend_merge": [
+    "scout_neutral_night_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2"
   ],
-  "_generated": "2026-10-07",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [],
+  "_generated": "2026-10-08",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
