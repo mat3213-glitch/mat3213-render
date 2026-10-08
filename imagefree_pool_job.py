@@ -22,8 +22,8 @@ imagefree_pool_job.py — пул стиллов через бесплатный 
     ├─ manifest.json                 (что, чем, почём; всё для «video receipt»)
     └─ status.txt
 
-Ручки (env): PROMPTS (построчно) · ASPECT (1:1|2:3|3:4|4:3|9:16|16:9, default 9:16;
-2:3 = родной формат пина Pinterest) ·
+Ручки (env): PROMPTS (построчно) · ASPECT (1:1|3:4|4:3|9:16|16:9, default 9:16;
+3:4 — под пины Pinterest, родной 2:3 сайт не знает) ·
 MAX_TASKS (8) · MIN_DELAY/MAX_DELAY (6/15) · JUDGE (on/off, default on) ·
 JUDGE_MODELS (панель как у arts_pool) · TG_TOKEN/TG_SECRET (опц. TG-пинг).
 
@@ -54,7 +54,10 @@ TTL_STOP = 40                            # задержка молчания п�
 POLL_MS = [6000, 4000, 10000, 15000, 20000, 30000, 30000, 30000, 30000, 30000,
            30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000, 30000]
 
-ASPECTS = {"1:1", "2:3", "3:4", "4:3", "9:16", "16:9"}
+# 2:3 проверить НЕЛЬЗЯ: сайт imagefree отвечает http_400 на неизвестный
+# aspect_ratio (прогон 37750228258 от 08.10 — 3 задачи подряд в 400).
+# Родной формат пина Pinterest 2:3 получаем локальным кропом из 3:4.
+ASPECTS = {"1:1", "3:4", "4:3", "9:16", "16:9"}
 
 # ── канон-обогащение промптов (директива yaromat 09.09) ────────────────────
 # 1. ВСЁ снято «на мыльницу 2000-х»: жёсткая встроенная вспышка, шум, jpeg-артефакты,
@@ -179,7 +182,7 @@ STORY_BANK = {
 MYSTERY_SUBJECTS = [
     {"key": "lighthouse",
      "place": "an abandoned lighthouse keeper's corridor at night",
-     "prop": "a row of brass keys hung on numbered hooks, one hook empty",
+     "prop": "a row of brass keys hung on plain hooks, one hook empty",
      "mark": "a still-wet handprint pressed into the dust on the wall",
      "wrong": "the wall emergency lamp is burning although the tower has no power",
      "light": "one cold beam from a single bare bulb, everything else black"},
@@ -204,7 +207,7 @@ MYSTERY_SUBJECTS = [
     {"key": "ferry",
      "place": "a closed ferry terminal at night, turnstile gates",
      "prop": "one turnstile arm left raised while the others are locked down",
-     "mark": "a paper ticket on the floor, dated tomorrow",
+     "mark": "a line of wet shoeprints crossing the dry platform and stopping at the lock",
      "wrong": "the departures board is dark, yet the gate is open for someone",
      "light": "sodium light through the glass wall, wet platform reflecting it"},
     {"key": "nursery",
@@ -229,8 +232,8 @@ MYSTERY_SUBJECTS = [
 
 # 8 тактов: beat → что именно показываем. Порядок важен, это драматургия.
 MYSTERY_ARC = [
-    ("clue", "the first sign, small in the frame and easy to walk past"),
-    ("trace", "the same sign seen close, unmistakably left by a person"),
+    ("clue", "the first trace, small in the frame and easy to walk past"),
+    ("trace", "the same trace seen close, unmistakably left by a person"),
     ("ordinary", "the plain everyday scene the sign sits in, so it reads as wrong here"),
     ("contradiction", "a physical impossibility: two facts that cannot both be true"),
     ("scale", "the same wrongness repeated somewhere much larger, whole-room scale"),
@@ -261,7 +264,12 @@ def mystery_prompts(subject: dict) -> list[str]:
             "open": f"{subject['place']}, {subject['prop']} half out of frame as if the frame "
                     f"missed it, {subject['light']}, {note}",
         }[beat]
-        out.append(f"{beat}: {body}, no people, no text, no lettering anywhere in frame")
+        # Канон жёсткий: НИКАКОГО текста в кадре (правило MEMORY_CORE). Проверено
+        # 08.10: формулировка «fogged pane» без этого запрета дала табличку «BLER»
+        # со стрелкой — прогон 37750600326, кадр set_02 в пул не годится.
+        out.append(f"{beat}: {body}, no people, no text, no lettering, no numbers, "
+                   f"no signs, no labels, no arrows, no stickers, no posters, "
+                   f"no graffiti, no logos, nothing written anywhere in frame")
     return out
 
 

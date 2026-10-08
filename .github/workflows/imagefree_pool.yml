@@ -27,7 +27,7 @@ on:
         default: ''
         type: string
       aspect:
-        description: 'Соотношение сторон: 2:3 (родной пин Pinterest) | 1:1 | 3:4 | 4:3 | 9:16 | 16:9'
+        description: 'Соотношение сторон: 3:4 (под пины Pinterest) | 1:1 | 4:3 | 9:16 | 16:9. 2:3 сайт не принимает (http_400)'
         required: false
         default: '9:16'
         type: string
