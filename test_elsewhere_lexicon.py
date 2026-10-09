@@ -354,6 +354,25 @@ def test_atmosphere_bank_is_not_marked_as_riddle():
     assert E.locations_for("elsewhere") is E.RIDDLE_LOCATIONS
 
 
+def test_no_replacement_chars_in_lexicon():
+    """Битые символы (U+FFFD) молча портят и словарь, и память.
+
+    Реальный случай: в запись в memory/NOW.md попало «локаций-з��гадок». Ни один
+    тест этого не ловил — U+FFFD не мешает парситься и не влияет на промпты,
+    но в тексте, который читают люди, это мусор без диагностики.
+    """
+    path = Path(__file__).resolve().parent / "elsewhere_lexicon.py"
+    text = path.read_text(encoding="utf-8")
+    bad = [i + 1 for i, line in enumerate(text.splitlines()) if "�" in line]
+    assert not bad, f"битые символы U+FFFD в elsewhere_lexicon.py на строках {bad}"
+
+
+def test_job_has_no_replacement_chars():
+    job = (Path(__file__).resolve().parent / "imagefree_pool_job.py").read_text(
+        encoding="utf-8")
+    assert "�" not in job, "битые символы U+FFFD в imagefree_pool_job.py"
+
+
 def test_lexicon_volume_is_usable():
     assert len(E.OBJECTS) >= 50
     assert len(E.RIDDLE_LOCATIONS) >= 12
