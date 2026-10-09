@@ -45,13 +45,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-# «elsewhere»: локация × предмет × действие. Словарь — в elsewhere_lexicon.py:
-# типизация (локация исключает ДОМА предметов), написанные вручную действия, тесты.
-# Здесь только сборка прогона. Предыдущая версия держала 12 локаций × 6 предметов
-# прямо в этом файле и без действий; на ране 37756755318 из 8 кадров точное
-# попадание было одно — «тележка супермаркета в лесу», потому что предмет нёс
-# с собой чужой мир. Словарь делает это правилом, а не везением.
-from elsewhere_lexicon import LOCATIONS, OBJECTS, all_pairs  # noqa: E402
+# «elsewhere»: локация × предмет × СОСТОЯНИЕ. Словарь — в elsewhere_lexicon.py:
+# типизация (локация исключает ДОМА предметов), написанные вручную acts и reads,
+# тесты. Здесь только сборка прогона.
+#
+# Два банка: elsewhere = ЗАГАДКИ (скучные локации, предмет без применения, объект
+# в простое), atmosphere = экзотика (Луна, дно, солончак) — как фоны, НЕ как
+# находки. Смешаны они были в одной куче 08–09.10, и 11 кадров из 12 оказались
+# атмосферой: там любому предмету выдаётся объяснение, и противоречия нет.
+from elsewhere_lexicon import OBJECTS, RIDDLE_LOCATIONS, all_pairs  # noqa: E402
+from elsewhere_lexicon import ATMOSPHERE_LOCATIONS, locations_for  # noqa: E402
 from elsewhere_lexicon import prompts as _lexicon_prompts  # noqa: E402
 
 # ── сеть ────────────────────────────────────────────────────────────────────
@@ -296,8 +299,8 @@ def pick_mystery_subject(sel: str = "") -> dict:
 
 
 def elsewhere_prompts(where: str = "", count: int = 8,
-                      seed: int | None = None) -> list[str]:
-    """Тройка «локация × предмет × действие». Объект первым и крупно — на живых
+                      seed: int | None = None, bank: str = "elsewhere") -> list[str]:
+    """Тройка «локация × предмет × состояние». Объект первым и крупно — на живых
     прогонах именно этот порядок выживает, а описание места в конце работает фоном.
 
     Вся выборка идёт из elsewhere_lexicon.prompts: там типизация (предмет сюда
@@ -308,19 +311,20 @@ def elsewhere_prompts(where: str = "", count: int = 8,
     работала со всеми): опечатка в ELSEWHERE_LOCATION тихо превращалась в
     прогон по всем локациям, и это выглядело как «локацию отфильтровали».
     """
+    locs = locations_for(bank)
     named = (where or os.environ.get("ELSEWHERE_LOCATION") or "").strip()
-    if named and named not in LOCATIONS:
+    if named and named not in locs:
         raise SystemExit(
-            f"неизвестная локация '{named}': доступны {sorted(LOCATIONS)}")
+            f"неизвестная локация '{named}': доступны {sorted(locs)}")
     raw_seed = os.environ.get("ELSEWHERE_SEED", "").strip()
     if seed is None and raw_seed.isdigit():
         seed = int(raw_seed)
-    prompts, meta = _lexicon_prompts(count=count, loc=named, seed=seed)
-    print(f"локаций доступно {len(LOCATIONS)}, предметов {len(OBJECTS)}, "
-          f"разрешённых пар {len(all_pairs())}, в прогоне {len(prompts)}",
+    prompts, meta = _lexicon_prompts(count=count, loc=named, seed=seed, bank=bank)
+    print(f"банк={bank} локаций доступно {len(locs)}, предметов {len(OBJECTS)}, "
+          f"разрешённых пар {len(all_pairs(bank))}, в прогоне {len(prompts)}",
           file=sys.stderr)
-    for lk, ok, _act, _ai in meta:
-        print(f"  · {lk} × {ok}", file=sys.stderr)
+    for m in meta:
+        print(f"  · {m['location']} × {m['object']}", file=sys.stderr)
     return prompts
 
 
@@ -335,11 +339,13 @@ def resolve_prompts(sel: str) -> list[str]:
         s = pick_mystery_subject()
         print(f"загадка дня: {s['key']} ({date.today().isoformat()})", file=sys.stderr)
         return mystery_prompts(s)
-    if bank == "elsewhere":
+    if bank in ("elsewhere", "atmosphere"):
         # Статистику печатает elsewhere_prompts — по pairs/тройкам нового словаря.
         # Дубль с остатком старой печати стоял после выноса словаря и падал
         # на КАЖДЫЙ прогон bank=elsewhere с KeyError 'surprises' (ран 37946396211).
-        return elsewhere_prompts(count=int(os.environ.get("ELSEWHERE_COUNT") or 8))
+        # atmosphere — экзотика отдельным банком: как фоны годятся, как находки нет.
+        return elsewhere_prompts(count=int(os.environ.get("ELSEWHERE_COUNT") or 8),
+                                 bank=bank)
     if bank in STORY_BANK:
         return list(STORY_BANK[bank])
     if bank:
