@@ -245,6 +245,79 @@ def test_no_phrase_contradicts_its_act():
                     f"    phrase={phrase}\n"
                     f"    act={act}")
 
+def test_resolve_prompts_elsewhere_runs_end_to_end(monkeypatch):
+    """Полный путь боя: env → resolve_prompts("elsewhere") → промпты.
+
+    Живой баг (ран 37946396211): после выноса словаря в elsewhere_lexicon.py в
+    `resolve_prompts` осталась старая строка печати статистики, которая
+    обращалась к LOCATIONS[k]["surprises"]. Локальные проверки шли через
+    elsewhere_prompts() напрямую и были зелёными, а боевой путь через
+    resolve_prompts падал на КАЖДЫЙ прогон с KeyError: 'surprises'.
+
+    Тест идёт ровно тем путём, каким идёт воркфлоу, поэтому такой остаток
+    ловится до рана, а не на нём.
+    """
+    import imagefree_pool_job as J
+
+    monkeypatch.setenv("PROMPTS", "")
+    monkeypatch.setenv("BANK", "elsewhere")
+    monkeypatch.setenv("ELSEWHERE_LOCATION", "")
+    monkeypatch.setenv("ELSEWHERE_COUNT", "6")
+    monkeypatch.setenv("ELSEWHERE_SEED", "910")
+
+    prompts = J.resolve_prompts("elsewhere")
+    assert len(prompts) == 6
+    for p in prompts:
+        assert p.startswith("close on ")
+        assert "the object large in frame" in p
+
+
+def test_resolve_prompts_elsewhere_single_location(monkeypatch):
+    """Тот же путь с фильтром локации — иначе опечатка в переменной не видна."""
+    import imagefree_pool_job as J
+
+    monkeypatch.setenv("PROMPTS", "")
+    monkeypatch.setenv("BANK", "elsewhere")
+    monkeypatch.setenv("ELSEWHERE_LOCATION", "forest")
+    monkeypatch.setenv("ELSEWHERE_COUNT", "4")
+
+    prompts = J.resolve_prompts("elsewhere")
+    assert len(prompts) == 4
+    for p in prompts:
+        assert "dark coniferous forest" in p
+
+
+def test_resolve_prompts_rejects_bad_location(monkeypatch):
+    """Опечатка в ELSEWHERE_LOCATION обязана падать, а не молча брать все локации."""
+    import imagefree_pool_job as J
+
+    monkeypatch.setenv("PROMPTS", "")
+    monkeypatch.setenv("BANK", "elsewhere")
+    monkeypatch.setenv("ELSEWHERE_LOCATION", "atlantis")
+    monkeypatch.setenv("ELSEWHERE_COUNT", "4")
+
+    try:
+        J.resolve_prompts("elsewhere")
+    except SystemExit as exc:
+        assert "atlantis" in str(exc)
+    else:
+        raise AssertionError("неизвестная локация должна останавливать прогон")
+
+
+def test_no_stale_surprises_key_access(monkeypatch):
+    """Ключа 'surprises' в новой схеме нет — любая ссылка на него в job-скрипте
+    означает остаток старого кода, который упадёт в бою, а не в тестах."""
+    job = (Path(__file__).resolve().parent / "imagefree_pool_job.py").read_text(
+        encoding="utf-8")
+    # Комментарии пропускаем: в докстринге над этим тестом ключ упоминается
+    # намеренно, чтобы зафиксировать, что именно его и ловим.
+    code = "\n".join(l.split("#", 1)[0] for l in job.splitlines())
+    assert '"surprises"' not in code, (
+        "imagefree_pool_job.py всё ещё обращается к LOCATIONS[k]['surprises'] — "
+        "ключ удалён вместе со старым словарём")
+    assert "'surprises'" not in code
+
+
 def test_lexicon_volume_is_usable():
     """Объём словаря: прогон должен упираться в MAX_TASKS, а не в словарь."""
     assert len(E.OBJECTS) >= 60

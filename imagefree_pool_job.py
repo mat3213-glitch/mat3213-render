@@ -336,10 +336,10 @@ def resolve_prompts(sel: str) -> list[str]:
         print(f"загадка дня: {s['key']} ({date.today().isoformat()})", file=sys.stderr)
         return mystery_prompts(s)
     if bank == "elsewhere":
-        ps = elsewhere_prompts(count=int(os.environ.get("ELSEWHERE_COUNT") or 8))
-        print(f"локаций доступно {len(LOCATIONS)}, пар {sum(len(v['surprises']) for v in LOCATIONS.values())}",
-              file=sys.stderr)
-        return ps
+        # Статистику печатает elsewhere_prompts — по pairs/тройкам нового словаря.
+        # Дубль с остатком старой печати стоял после выноса словаря и падал
+        # на КАЖДЫЙ прогон bank=elsewhere с KeyError 'surprises' (ран 37946396211).
+        return elsewhere_prompts(count=int(os.environ.get("ELSEWHERE_COUNT") or 8))
     if bank in STORY_BANK:
         return list(STORY_BANK[bank])
     if bank:
