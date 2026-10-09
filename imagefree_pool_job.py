@@ -45,6 +45,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
+# «elsewhere»: локация × предмет × действие. Словарь — в elsewhere_lexicon.py:
+# типизация (локация исключает ДОМА предметов), написанные вручную действия, тесты.
+# Здесь только сборка прогона. Предыдущая версия держала 12 локаций × 6 предметов
+# прямо в этом файле и без действий; на ране 37756755318 из 8 кадров точное
+# попадание было одно — «тележка супермаркета в лесу», потому что предмет нёс
+# с собой чужой мир. Словарь делает это правилом, а не везением.
+from elsewhere_lexicon import LOCATIONS, OBJECTS, all_pairs  # noqa: E402
+from elsewhere_lexicon import prompts as _lexicon_prompts  # noqa: E402
+
 # ── сеть ────────────────────────────────────────────────────────────────────
 API = "https://imagefree.net"
 UA  = "curl/8.5.0"                      # проверен живым вызовом (RU-бук, без токена)
@@ -286,195 +295,34 @@ def pick_mystery_subject(sel: str = "") -> dict:
     return MYSTERY_SUBJECTS[date.today().toordinal() % len(MYSTERY_SUBJECTS)]
 
 
-# ── «elsewhere»: локация × то, чего там меньше всего ждёшь ─────────────────────
-# Принцип (yaromat 08.10): сначала расширить локации, потом положить в локацию
-# самое неожиданное. Не «сцена + аномалия» — та схема провалилась вживую (ран
-# 37751856587: модель рисует место и молча выбрасывает аномалию, 3 отказа из 8
-# за text_in_frame на транспортных объектах). Работает только «камера на одну
-# улику, крупно», поэтому здесь объект стоит ПЕРВЫМ и держит кадр.
-#
-# Пары «локация → неожиданное» написаны руками: случайный кросс-продукт даёт
-# и неожиданное, и нелепое, а нужна именно нелепость с смыслом. Без лиц, без
-# текста в кадре (канон), свет — только честный, никакого неона.
-LOCATIONS = {
-    "underwater": {
-        "where": "on the sea floor, several metres down, in blue-green murk",
-        "light": "a single shaft of sunlight from far above, everything else dark",
-        "surprises": [
-            "a wooden dining table set for six, chairs pushed in",
-            "a black grand piano on the sand, seaweed growing over the lid",
-            "a street lamp still lit, casting a real pool of light on the seabed",
-            "a bathtub, taps running, full of seawater",
-            "a birdcage with a canary sitting inside it",
-            "an open refrigerator with food floating past it",
-        ],
-    },
-    "moon": {
-        "where": "on the surface of the Moon, in grey regolith, with black sky",
-        "light": "one sun at a low angle, hard black shadows, no atmosphere to soften them",
-        "surprises": [
-            "an upright wooden piano on its legs, dusted with grey",
-            "a corner of a wallpapered room with a skirting board, cut off at the edges",
-            "a bathtub full of water, surface perfectly still",
-            "a swing set, rusted, standing alone",
-            "a grandfather clock, glass intact, hands stopped",
-            "a garden shed with a bicycle leaning on it",
-        ],
-    },
-    "orbit": {
-        "where": "inside an orbital station corridor, equipment and handrails around",
-        "light": "cold instrument light mixed with the sun through a round window",
-        "surprises": [
-            "a wooden cabin with a pitched roof and a porch lamp, blocking the corridor",
-            "a campfire burning steadily inside a floor socket",
-            "tall grass growing in a bed of grey substrate, moving slightly",
-            "a bathtub with water in it and a shower head above",
-            "a beehive mounted on the wall, bees leaving and returning",
-            "a shop counter with a mechanical cash register on it",
-        ],
-    },
-    "city": {
-        "where": "on a city pavement at night between tall buildings",
-        "light": "sodium streetlight from above and cold window light from the facades",
-        "surprises": [
-            "a wooden rowing boat sitting on the pavement",
-            "a plain door standing upright on the pavement on its own",
-            "a strip of tall wheat growing out of a crack in the asphalt",
-            "a campfire burning in a fire pit in the middle of the junction",
-            "an old tree trunk growing straight up through the road surface",
-            "a grand piano parked at the kerb, lid open",
-        ],
-    },
-    "forest": {
-        "where": "deep in a dark coniferous forest, trunks packed close, ground fog",
-        "light": "thin shafts of daylight through the canopy, dim everywhere else",
-        "surprises": [
-            "a lift door standing upright between two trunks, still working light above it",
-            "a tiled bathroom floor with a drain, laid flat on the forest floor",
-            "a shopping trolley, rusted, sinking into needles",
-            "a bathtub full of pine needles, taps still attached",
-            "a jukebox glowing softly in the fog",
-            "a billiard table with green cloth, covered in moss",
-        ],
-    },
-    "cabin": {
-        "where": "inside a wooden cabin in the woods, stove and small windows",
-        "light": "warm lamp light and daylight through one small window",
-        "surprises": [
-            "a row of steel lockers standing against the log wall",
-            "a hospital bed with a frame and a folded blanket",
-            "an indoor swimming pool filling half the room, water still",
-            "a bank vault door bolted through the cabin wall",
-            "a traffic light hanging from the ceiling on a cable",
-            "a passenger airplane seat bolted to the floor by the stove",
-        ],
-    },
-    "palace": {
-        "where": "in a palace hall, marble floor, tall windows, a chandelier above",
-        "light": "cold daylight through tall windows, chandelier unlit",
-        "surprises": [
-            "a garage tool wall with wrenches hung in neat order",
-            "a supermarket shelf standing in the middle of the hall",
-            "a wheelbarrow of wet gravel leaving tracks across the marble",
-            "a folding garden chair, slightly rusted, alone on the marble",
-            "a parking barrier, red and white, blocking the doorway",
-            "a bathtub installed where the fountain should be",
-        ],
-    },
-    "glacier": {
-        "where": "inside an ice cave, blue translucent walls all around",
-        "light": "light diffusing through the ice, no hard shadows anywhere",
-        "surprises": [
-            "a garden shed, wooden and dry, standing in the ice",
-            "a swimming pool ladder fixed into the ice wall",
-            "a wooden fence line running through the cave",
-            "a bunk bed with a wool blanket, frost on the frame",
-            "a chandelier hanging from the ice ceiling, still hanging",
-            "a row of glass bottles standing in a line on the ice",
-        ],
-    },
-    "desert": {
-        "where": "on sand dunes at night, nothing else for kilometres",
-        "light": "moonlight, very low contrast, sand holding the light softly",
-        "surprises": [
-            "a rowing boat resting on the sand, keel up",
-            "a tiled shower stall installed in the open sand",
-            "a fireplace with a real chimney, smoke rising",
-            "a clipped hedge, square and green, in the middle of nothing",
-            "a shopping trolley full of sand",
-            "a refrigerator standing upright, door ajar, humming",
-        ],
-    },
-    "mine": {
-        "where": "deep in a mine shaft, timber supports, rails running away",
-        "light": "one lamp on a wire, swinging, everything else black",
-        "surprises": [
-            "a kitchen counter with a sink and tiles behind it",
-            "a bathtub wedged between two timber supports",
-            "a black grand piano standing on the rails",
-            "a bed with a headboard and a folded duvet",
-            "a sofa with its cushions, in a working mine",
-            "a row of beehives against the rock face",
-        ],
-    },
-    "rooftop": {
-        "where": "on the flat roof of a high tower, city far below",
-        "light": "sky light and city glow from below, wind visible in things",
-        "surprises": [
-            "a beehive on the roof edge, bees working in the wind",
-            "a greenhouse with fogged glass, warm inside",
-            "a bathtub with water sloshing on the roof",
-            "a strip of wheat growing in timber troughs",
-            "a wooden picket fence around a roof corner",
-            "a swing hanging from a roof mast",
-        ],
-    },
-    "cinema": {
-        "where": "inside an old cinema hall, rows of seats, boarded screen",
-        "light": "one work light at the back, dust in the air",
-        "surprises": [
-            "a washing machine standing between two seat rows",
-            "a kitchen counter with a sink at the back of the hall",
-            "a bunk bed installed across three rows",
-            "a library shelf filling the aisle",
-            "a refrigerator standing in the aisle, door open",
-            "a bathtub installed where the projector booth was",
-        ],
-    },
-}
+def elsewhere_prompts(where: str = "", count: int = 8,
+                      seed: int | None = None) -> list[str]:
+    """Тройка «локация × предмет × действие». Объект первым и крупно — на живых
+    прогонах именно этот порядок выживает, а описание места в конце работает фоном.
 
+    Вся выборка идёт из elsewhere_lexicon.prompts: там типизация (предмет сюда
+    допущен, только если его дом не в excludes локации), без повторов в прогоне
+    и круг по локациям — иначе 8 задач съедают одну локацию целиком.
 
-def elsewhere_prompts(where: str = "", count: int = 8) -> list[str]:
-    """Пара «локация × неожиданное». Объект первым и крупно — на живых прогонах
-    именно этот порядок выживает, а описание места в конце работает фоном.
-    Без повторов: каждый прогон берёт следующие пары по кругу."""
-    keys = list(LOCATIONS)
+    Неизвестная локация здесь НЕ молчит (старая версия печатала в stderr и
+    работала со всеми): опечатка в ELSEWHERE_LOCATION тихо превращалась в
+    прогон по всем локациям, и это выглядело как «локацию отфильтровали».
+    """
     named = (where or os.environ.get("ELSEWHERE_LOCATION") or "").strip()
-    if named and named in LOCATIONS:
-        keys = [named]
-    elif named:
-        print(f"неизвестная локация '{named}': доступны {keys}", file=sys.stderr)
-    # дневной сдвиг по локациям, но внутри прогона идём КРУГ ПО ЛОКАЦИЯМ, иначе
-    # 8 задач съедают одну локацию целиком и разнообразие локаций не видно
-    offset = date.today().toordinal() % len(keys)
-    keys = keys[offset:] + keys[:offset]
-    cursors = {k: (date.today().toordinal() // len(keys)) % len(LOCATIONS[k]["surprises"])
-               for k in keys}
-    out = []
-    while len(out) < count:
-        for k in keys:
-            if len(out) >= count:
-                break
-            surprises = LOCATIONS[k]["surprises"]
-            surprise = surprises[cursors[k] % len(surprises)]
-            cursors[k] += 1
-            d = LOCATIONS[k]
-            out.append(
-                f"close on {surprise}, {d['where']}, {d['light']}, the object large "
-                f"in frame and plainly out of place here, no people, no text, no "
-                f"lettering, no numbers, no signs, no labels, no arrows, no stickers, "
-                f"no posters, no graffiti, no logos, nothing written anywhere in frame")
-    return out
+    if named and named not in LOCATIONS:
+        raise SystemExit(
+            f"неизвестная локация '{named}': доступны {sorted(LOCATIONS)}")
+    raw_seed = os.environ.get("ELSEWHERE_SEED", "").strip()
+    if seed is None and raw_seed.isdigit():
+        seed = int(raw_seed)
+    prompts, meta = _lexicon_prompts(count=count, loc=named, seed=seed)
+    print(f"локаций доступно {len(LOCATIONS)}, предметов {len(OBJECTS)}, "
+          f"разрешённых пар {len(all_pairs())}, в прогоне {len(prompts)}",
+          file=sys.stderr)
+    for lk, ok, _act, _ai in meta:
+        print(f"  · {lk} × {ok}", file=sys.stderr)
+    return prompts
+
 
 
 def resolve_prompts(sel: str) -> list[str]:
