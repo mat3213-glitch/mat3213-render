@@ -2,11 +2,11 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 7.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Cool muted tones, close to deep teal"
     },
     {
       "name": "scout_neutral_night_muted",
@@ -14,48 +14,49 @@
       "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Холодный ночной тон, близок к deep teal, muted"
+      "reason": "Dark cool shadows, strong teal presence"
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Ярко, но muted, холодный оттенок, подходит"
+      "keep": false,
+      "score": 4.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Too bright, lacks deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 7.0,
+      "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Мягкий ночной свет, холодный, соответствует бренду"
+      "reason": "Soft night, deep teal shadows"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
-      "score": 7.0,
+      "score": 8.0,
       "votes": "1/1",
       "status": "принят",
-      "reason": "Аналогичен предыдущему, холодный, мягкий"
+      "reason": "Similar to previous, deep teal"
     },
     {
       "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 7.0,
+      "votes": "1/1",
+      "status": "принят",
+      "reason": "Greenish teal, acceptable depth"
     }
   ],
   "recommend_merge": [
+    "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
-    "scout_neutral_bright_muted",
     "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
   "disputed": [],
-  "_generated": "2026-10-09",
+  "_generated": "2026-10-10",
   "_judge": "gh-vision-ensemble(1/5)"
 }
