@@ -1,38 +1,20 @@
-# Repo Scout — 2026-10-11T16:10:07.221683
-Всего в шортлисте: 4
-- **svenkatreddy/universal-video-skills** ⭐2 [craft]
-  - https://github.com/svenkatreddy/universal-video-skills
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предлагает навыки для AI-видео, включая работу с промптами для кинематографии. Он может предоставить новые проверяемые формулировки для операторских промптов, улучшая управляемость i2v-генерацией. Интеграция недорогая, но оправдана лишь для получения уникальных и проверенных формулировок, так как есть риск дублирования.
-  - 📄 Vendor-neutral AI video production skills for Muse, Claude, Grok, Gemini and other Agent Skills clients: prompt craft, cinematic direction, storyboarding, chara
-- **anton-abyzov/postiz-marketing-pipeline** ⭐0 [source]
-  - https://github.com/anton-abyzov/postiz-marketing-pipeline
+# Repo Scout — 2026-10-12T19:38:55.707987
+Всего в шортлисте: 2
+- **azianmike/monthly-winner-research** ⭐0 [source]
+  - https://github.com/azianmike/monthly-winner-research
   - ⚠️ fallback: query-grounded
   - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
   - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Данный репозиторий содержит пайплайн для создания коротких маркетинговых видео, включая поиск бесплатных стоковых материалов. Он может предложить новые адаптеры для легального стокового видео, расширяя текущие источники. Интеграция недорогая, но ценность будет только в новом источнике или улучшенных метаданных происхождения из-за высокого риска дублирования.
-  - 📄 Reusable Claude Code skill: end-to-end short-form marketing pipeline for self-hosted Postiz (API automation, Remotion video composition, free stock sourcing, AI
-- **chenhz01/render-diff-harness** ⭐0 [video]
-  - https://github.com/chenhz01/render-diff-harness
+  - 💡 Репозиторий описывает бэктест для выявления ежемесячных победителей на фондовом рынке, включая интерактивный отчёт. Несмотря на это, он был отмечен как потенциальный источник для адаптеров стокового видео, что могло бы закрыть потребность в надёжных headless-адаптерах. Однако, риск дублирования высок, и его ценность сомнительна без явного подтверждения нового источника или метаданных происхождения.
+  - 📄 An audited monthly stock-winner backtest: interactive report, data, reproducible Python, Agents API workflow, and 30-second video.
+- **Prithpal-Sooriya/tiny-video-renderer** ⭐0 [video]
+  - https://github.com/Prithpal-Sooriya/tiny-video-renderer
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий предоставляет инструмент для детерминированного регрессионного тестирования рендеров видео через сравнение хешей кадров. Он может помочь усилить воспроизводимость рендера, предоставляя механизм проверки на основе хешей. Интеграция недорогая, но оправдана только для закрытия конкретного, ещё не решённого аспекта воспроизводимости из-за высокого риска дублирования.
-  - 📄 Deterministic regression gate for HTML video renders - frame-hash diff with fail-closed baselines
-- **AnupDangi/whiteboard-explainer-videogen** ⭐0 [video]
-  - https://github.com/AnupDangi/whiteboard-explainer-videogen
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий представляет собой пайплайн для детерминированного рендера видео. Он может способствовать усилению воспроизводимости рендера, предлагая детерминированный подход к процессу. Интеграция недорогая, но ценность будет только в закрытии конкретного, ещё не решённого аспекта воспроизводимости из-за высокого риска дублирования.
-  - 📄 Deterministic Video Renderer pipeline
+  - 💡 Репозиторий предлагает компактный рендерер видео на TypeScript, который генерирует детерминированный MP4-файл из сцен. Это напрямую способствует усилению воспроизводимости рендера на CPU/GitHub Actions, что соответствует указанному gap. Однако, несмотря на низкую стоимость интеграции, риск дублирования высок, так как часть функционала уже внедрена, и нужен конкретный незакрытый guardrail.
+  - 📄 A one-file, zero-dependency video renderer small enough to embed in an agent skill: TypeScript scenes in, deterministic MP4 out.
