@@ -2,62 +2,62 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Cool muted teal, cinematic, matches deep teal palette"
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "близок к deep teal, холодный, но не слишком насыщенный, подходящий для даунтемпо"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Dark muted teal, cinematic, fits brand"
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "близок к deep teal, холодный, но не слишком насыщенный, подходящий для даунтемпо"
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Bright muted teal, still cool, acceptable"
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "близок к deep teal, холодный, но не слишком насыщенный, подходящий для даунтемпо"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
       "score": 8.0,
-      "votes": "1/1",
+      "votes": "2/2",
       "status": "принят",
-      "reason": "Night soft teal, cinematic, fits"
+      "reason": "близок к deep teal, но не слишком насыщенный, подходящий для даунтемпо"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Night soft teal, consistent, brand‑aligned"
+      "keep": false,
+      "score": 5.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "близок к deep teal, холодный, но не слишком насыщенный, подходящий для даунтемпо"
     },
     {
       "name": "scout_green_mid_soft",
-      "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "Greenish teal, cool, fits brand"
+      "keep": false,
+      "score": 3.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "слишком насыщенный, не подходящий для даунтемпо"
     }
   ],
   "recommend_merge": [
+    "scout_neutral_night_soft"
+  ],
+  "disputed": [
     "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
     "scout_neutral_bright_muted",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
+    "scout_neutral_night_soft_2"
   ],
-  "disputed": [],
-  "_generated": "2026-10-11",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "_generated": "2026-10-13",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
