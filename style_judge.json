@@ -3,57 +3,61 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 8.0,
+      "score": 5.0,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "близок к deep teal, но тёплее"
+      "reason": "Недостаточно холодный, тени не уходят в холодный чёрно-зелёный"
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": false,
-      "score": 0,
-      "votes": "0/2",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Недостаточно холодный, тени не уходят в холодный чёрно-зелёный"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 0,
-      "votes": "0/2",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "score": 5.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Недостаточно холодный, тени не уходят в холодный чёрно-зелёный"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
-      "score": 0,
-      "votes": "0/2",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "score": 6.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Недостаточно холодный, тени не уходят в холодный чёрно-зелёный"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": false,
-      "score": 8.0,
+      "score": 7.0,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "Холодный глубокий teal, мягкий свет, мрачная атмосфера"
+      "reason": "Недостаточно холодный, тени не уходят в холодный чёрно-зелёный"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 0,
-      "votes": "0/2",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "score": 8.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "Холодный сине-зелёный, тени уходят в холодный чёрно-зелёный, дымка — холодный се"
     }
   ],
   "recommend_merge": [],
   "disputed": [
     "scout_neutral_mid_muted",
-    "scout_neutral_night_soft_2"
+    "scout_neutral_night_muted",
+    "scout_neutral_bright_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
-  "_generated": "2026-10-14",
+  "_generated": "2026-10-16",
   "_judge": "gh-vision-ensemble(2/5)"
 }
