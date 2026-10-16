@@ -17,9 +17,35 @@ import numpy as np
 from PIL import Image
 
 
-TARGET_WIDTH = 480
-TARGET_HEIGHT = 704
+def _int_env(name: str, default: int) -> int:
+    """Размер кадра и negative_prompt стали переопределяемыми 16.10.
+
+    Причина: калибровка 23-24.08 показала, что у LTX результат определяется
+    не «глубиной», а тем, ЧТО мы просим двигать (см. memory/NOW). Чтобы это
+    проверить одной переменной за прогон, ширина/высота и negative_prompt
+    вынесены в env — иначе каждый эксперимент требует правки кода и коммита.
+    """
+    raw = os.environ.get(name, "")
+    if not raw.strip():
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        fail(f"{name} must be an integer; got {raw!r}.")
+
+
+TARGET_WIDTH = _int_env("LTX_WIDTH", 480)
+TARGET_HEIGHT = _int_env("LTX_HEIGHT", 704)
 TARGET_LUMA = 120.0
+# Дефолт отрицательного промпта заморожен дословно: он отработал на всей истории
+# движка (07-08.08). Меняется только через NEGATIVE_PROMPT, и это НЕ безобидная
+# правка — в нём стоят «static, still image, motionless», то есть мы запрещаем
+# ровно то, ради чего запускаем i2v. Матрица 16.10 проверяет, что именно из
+# этого вредит; дефолт не меняется молча.
+DEFAULT_NEGATIVE = (
+    "static, still image, frozen frame, motionless, flickering, bright, overexposed, blurred, "
+    "worst quality, jpeg artifacts, watermark, text, people, face, deformed"
+)
 POLL_SECONDS = 60
 # 100 минут. Ручные прогоны укладывались в 11 мин, но там GPU был свободен сразу;
 # смоук 2026-07-28 крутился 57+ мин (очередь Kaggle + установка torch внутри ядра).
@@ -144,7 +170,7 @@ def code_cell(source: str) -> dict[str, object]:
     return {"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": source.splitlines(keepends=True)}
 
 
-def make_notebook(image_b64: str, prompt: str, seed: int) -> dict[str, object]:
+def make_notebook(image_b64: str, prompt: str, seed: int, negative_prompt: str) -> dict[str, object]:
     """Return the upload notebook. Keep installation and generation cells separate."""
     install = """!pip install torch==2.4.1 torchvision==0.19.1 --index-url https://download.pytorch.org/whl/cu121
 !pip uninstall -y flash-attn flash_attn
@@ -177,17 +203,14 @@ pipe.vae.enable_slicing()
     # ВАЖНО: seed вшивается в текст ноутбука. Читать его через os.environ БЕСПОЛЕЗНО —
     # ноутбук исполняется на Kaggle, наших переменных окружения там нет (было в первой версии).
     generate = """prompt = %s
-negative_prompt = (
-    "static, still image, frozen frame, motionless, flickering, bright, overexposed, blurred, "
-    "worst quality, jpeg artifacts, watermark, text, people, face, deformed"
-)
+negative_prompt = %s
 generator = torch.Generator(device="cuda").manual_seed(%d)
 frames = pipe(
     image=image,
     prompt=prompt,
     negative_prompt=negative_prompt,
-    width=480,
-    height=704,
+    width=%d,
+    height=%d,
     num_frames=73,   # РЕШЕНИЕ yaromat 2026-07-28: 73, НЕ меньше. Замерен размен на одном
                      # и том же стилле: 73 кадра -> структура 0.375 (реальный проезд), но цвет
                      # ползёт в зелень (красный 110->69); 49 кадров -> цвет держится намертво
@@ -201,7 +224,7 @@ frames = pipe(
     generator=generator,
 ).frames[0]
 export_to_video(frames, "out.mp4", fps=24)
-""" % (json.dumps(prompt), seed)
+""" % (json.dumps(prompt), json.dumps(negative_prompt), seed, TARGET_WIDTH, TARGET_HEIGHT)
     metric = """import numpy as np
 
 def normalised_gray(frame):
@@ -418,8 +441,12 @@ def main() -> None:
             seed = int(os.environ.get("SEED", "42"))
         except ValueError:
             fail(f"SEED must be an integer; got {os.environ.get('SEED')!r}.")
+        negative_prompt = os.environ.get("NEGATIVE_PROMPT") or DEFAULT_NEGATIVE
         notebook_path = workdir / "ltx_i2v.ipynb"
-        notebook_path.write_text(json.dumps(make_notebook(image_b64, prompt, seed), ensure_ascii=False), encoding="utf-8")
+        notebook_path.write_text(
+            json.dumps(make_notebook(image_b64, prompt, seed, negative_prompt), ensure_ascii=False),
+            encoding="utf-8",
+        )
         metadata = {
             "id": slug,
             # title ОБЯЗАТЕЛЕН для нового ядра. Без него `kaggle kernels push` возвращает

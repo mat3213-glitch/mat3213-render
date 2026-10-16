@@ -47,19 +47,30 @@ on:
         description: 'ГОТОВЫЙ стилл на ЯД (путь внутри "Content factory/", напр. cloud_io/preview/2026-08-04/conv_inside_pool/ok/wide__pexels_2224890.jpg). Задан — Openverse не опрашивается: кадр уже прошёл гейты пула.'
       seed:
         default: '42'
+      negative_prompt:
+        required: false
+        default: ''
+        description: 'Переопределение отрицательного промпта. ПУСТО = исторический дефолт движка (со словами "static, still image, motionless"). Матрица 16.10 проверяет, вредит ли он.'
+      width:
+        required: false
+        default: '480'
+        description: 'Ширина кадра LTX. Должна делиться на 32.'
+      height:
+        required: false
+        default: '704'
+        description: 'Высота кадра LTX. Должна делиться на 32.'
 
 permissions:
   contents: read
 
 jobs:
-  blocked:
-    runs-on: ubuntu-latest
-    steps:
-      - run: |
-          echo "BLOCKED: LTX generation is paused by owner decision (2026-08-06)."
-          exit 1
+  # Пауза владельца от 2026-08-06 снята 2026-10-16 не «насовсем», а ПОД МАТРИЦУ:
+  # джоб blocked удалён, gen разрешён ТОЛЬКО на ручном workflow_dispatch.
+  # Смысл: пул-воркфлоу (sp_pool_ltx) по-прежнему зовёт этот файл через
+  # workflow_call и не должен молча начать жечь квоту Kaggle, пока гипотеза
+  # не проверена глазами. Вернуть общую генерацию — снять эту строку.
   gen:
-    if: ${{ false }}
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     # Kaggle: ~4 мин загрузка модели + ~5 мин генерация, плюс очередь на свободный GPU
     timeout-minutes: 120
@@ -116,6 +127,9 @@ jobs:
           IMG_LOCAL: still.jpg
           PROMPT: ${{ inputs.prompt }}
           SEED: ${{ inputs.seed }}
+          LTX_WIDTH: ${{ inputs.width }}
+          LTX_HEIGHT: ${{ inputs.height }}
+          NEGATIVE_PROMPT: ${{ inputs.negative_prompt }}
           DEST_FOLDER: Content factory/cloud_io/render_jobs/${{ inputs.job_id }}/generated
           OUT_NAME: scene_${{ inputs.scene_idx }}.mp4
           KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
