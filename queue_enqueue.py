@@ -181,9 +181,18 @@ def sha256_file(path: Path) -> str:
 
 
 def rclone(argv: list[str], *, check: bool = True) -> subprocess.CompletedProcess:
-    result = subprocess.run(["rclone", *argv], capture_output=True, text=True, timeout=RCLONE_TIMEOUT)
+    head = " ".join(argv[:3])
+    try:
+        result = subprocess.run(["rclone", *argv], capture_output=True, text=True,
+                                timeout=RCLONE_TIMEOUT)
+    except subprocess.TimeoutExpired as exc:
+        # Яндекс.Диск умеет отдавать вечный 500 на битом объекте: rclone честно
+        # повторяет 10 раз и упирается в таймаут. Сообщение должно называть
+        # таймаут, иначе в логе видно только голый TimeoutExpired из subprocess.
+        raise RuntimeError(f"rclone {head} timed out after {RCLONE_TIMEOUT}s "
+                           f"(remote unreachable or object unreadable)") from exc
     if check and result.returncode != 0:
-        raise RuntimeError(f"rclone {' '.join(argv[:3])} failed ({result.returncode}): "
+        raise RuntimeError(f"rclone {head} failed ({result.returncode}): "
                            f"{result.stderr.strip()[:300]}")
     return result
 

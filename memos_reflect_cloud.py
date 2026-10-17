@@ -43,7 +43,18 @@ def log(m): print(f"[{time.strftime('%H:%M:%S')}] {m}", flush=True)
 
 
 def rclone(*a, timeout=120):
-    return subprocess.run(["rclone"] + list(a), capture_output=True, text=True, timeout=timeout)
+    """rclone, который НИКОГДА не бросает: таймаут — это returncode 124.
+
+    Все вызывающие проверяют returncode (пропустить битый файл, не читать
+    чекпоинт). TimeoutException из subprocess здесь ломал ровно этот контракт:
+    один нечитаемый объект на Яндекс.Диске ронял весь reflect, хотя код выше
+    уже умеет такой файл пропускать.
+    """
+    try:
+        return subprocess.run(["rclone"] + list(a), capture_output=True, text=True,
+                              timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return subprocess.CompletedProcess(["rclone", *a], 124, "", f"timeout {timeout}s")
 
 
 def _tg_one(text: str):

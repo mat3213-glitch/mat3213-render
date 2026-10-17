@@ -344,6 +344,19 @@ class QueueEnqueueTests(unittest.TestCase):
             reconcile(QUEUE_DST, work=self.work)
         self.assertEqual(remote.store[QUEUE_DST], sample())
 
+    def test_rclone_timeout_is_named_error_not_bare_subprocess(self):
+        # ЯД отдаёт вечный 500 на битом объекте: subprocess таймаутится. Имя таймаута
+        # в сообщении — иначе по логу не понять, что читать.
+        import subprocess
+        import queue_enqueue as mod
+
+        with patch.object(mod.subprocess, "run",
+                          side_effect=subprocess.TimeoutExpired("rclone", mod.RCLONE_TIMEOUT)):
+            with self.assertRaises(RuntimeError) as ctx:
+                mod.rclone(["cat", "ydrive:queue.json"])
+        self.assertIn("timed out", str(ctx.exception))
+        self.assertIn("queue.json", str(ctx.exception))
+
     def test_workflow_has_one_serialized_writer_and_recovery_triggers(self):
         import yaml
         folder = Path(__file__).parent / ".github/workflows"
