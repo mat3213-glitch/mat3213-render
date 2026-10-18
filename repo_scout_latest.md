@@ -1,29 +1,11 @@
-# Repo Scout — 2026-10-17T13:28:57.218247
-Всего в шортлисте: 3
-- **slienceecheo/lyric-video-studio** ⭐0 [video]
-  - https://github.com/slienceecheo/lyric-video-studio
+# Repo Scout — 2026-10-18T13:47:06.390271
+Всего в шортлисте: 1
+- **tecnomanu/motion-video-styles** ⭐2 [video]
+  - https://github.com/tecnomanu/motion-video-styles
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
   - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий генерирует лирик-видео с кинетической типографикой из кода, используя Python и ffmpeg, с акцентом на детерминированный рендер. Его детерминированный подход к рендеру видео напрямую способствует усилению воспроизводимости на CPU/GitHub Actions, что важно для manifests и hashes. Интеграция недорогая, но риск дублирования высок, так как это скорее запасной вариант при уже частичном внедрении аналогичных функций.
-  - 📄 Render a whole song as a kinetic-typography lyric video from code - Python (Pillow) + ffmpeg, no video-generation model. Deterministic, diffable, locally repair
-- **gmrdad82/prec** ⭐0 [video]
-  - https://github.com/gmrdad82/prec
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Данный репозиторий создает точные, детерминированные записи терминальных приложений с покадровой точностью и байт-идентичным перерендером. Его способность к байт-идентичному перерендеру напрямую поддерживает усиление воспроизводимости рендера на CPU/GitHub Actions, что критично для manifests и hashes. Интеграция дешева, но риск дублирования высок, так как функционал может пересекаться с уже существующими решениями, делая его запасным вариантом.
-  - 📄 Exact, deterministic recordings of terminal apps: every frame at 30, 60 or 120 fps up to 4K (1,197 frames for a 10 s clip at 120 fps), byte-identical re-renders
-- **maxbuildog/adanvil** ⭐0 [video]
-  - https://github.com/maxbuildog/adanvil
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий позволяет ИИ-агенту редактировать вертикальные видеорекламы, используя детерминированный рендер ffmpeg и контроль качества. Его детерминированный рендер ffmpeg напрямую способствует усилению воспроизводимости рендера на CPU/GitHub Actions, что соответствует цели по manifests, hashes и resumable chunks. Интеграция недорогая, но риск дублирования высок, так как уже есть частичные решения, и это скорее запасной вариант.
-  - 📄 MCP server that lets an AI agent (Claude Code, Codex, Cursor, any MCP client) edit vertical 9:16 video ads from your footage, a reference ad or an idea: referen
+  - 💡 Репозиторий генерирует анимированные видео с детерминированным рендером, что напрямую способствует усилению воспроизводимости рендера на CPU/GitHub Actions. Хотя он частично внедряет кэширование и квитанции, риск дублирования высок, поскольку решение не полностью покрывает все аспекты требуемых манифестов и хешей, несмотря на низкую стоимость интеграции.
+  - 📄 Agent skill: animated vertical/horizontal videos (reels, shorts) in 6 styles for any brand — HTML+GSAP scenes synced to voice, karaoke captions, deterministic r
