@@ -1,10 +1,65 @@
-# Repo Scout — 2026-10-19T16:49:18.878134
-Всего в шортлисте: 1
-- **AiLaoHuYu/webrtc-recovery** ⭐0 [vision]
-  - https://github.com/AiLaoHuYu/webrtc-recovery
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: freeze detection
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Этот репозиторий обнаруживает зависания в видеопотоках, что критично для детерминированного CPU-контроля качества фризов и непрерывности движения. Несмотря на среднюю стоимость интеграции и риск дублирования, его ценность оправдана, так как он специфически проверяет органичность моторики, что не делают другие QC-инструменты.
-  - 📄 Recovery ladder for WebRTC viewers: ICE restart, full rejoin, freeze detection and a plain-English diagnosis. Zero dependencies.
+# Repo Scout — 2026-10-20T14:42:37.754348
+Всего в шортлисте: 7
+- **weeeha/Look-Tokens** ⭐5 [craft]
+  - https://github.com/weeeha/Look-Tokens
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает систему токенов для кинематографии, формирующую промпты для каждого кадра. Он может помочь в создании проверяемых операторских словарей и схем промптов для управляемой генерации видео. Интеграция недорогая, но риск дублирования высок, так как уже есть аналогичные решения; ценность будет только в новых, строго проверяемых формулировках.
+  - 📄 Cinematography as a design token system: a film's look lives in one token table, and each shot's prompt is composed from it per tool.
+- **ke11/longbridge-remotion-charts** ⭐1 [source]
+  - https://github.com/ke11/longbridge-remotion-charts
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот проект преобразует данные о портфеле акций в анимированные видео с графиками, используя данные Longbridge. Он может предоставить новый источник данных для создания легального стокового видео. Интеграция недорогая, но риск дублирования высок, поскольку уже используются Coverr, Pexels и Wikimedia; ценность будет только в новом источнике или подтверждении происхождения данных.
+  - 📄 Turn your HK & US stock portfolio into animated chart videos. Remotion templates powered by Longbridge market data. No API key needed.
+- **wx4766/html-to-video** ⭐3 [video]
+  - https://github.com/wx4766/html-to-video
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий позволяет создавать видео из HTML/Canvas анимаций покадрово, обеспечивая детерминированный рендеринг без GPU. Его детерминированный подход может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для манифестов и проверяемых квитанций. Интеграция недорогая, но риск дублирования высок, так как часть функций уже внедрена; нужен конкретный незакрытый механизм защиты.
+  - 📄 用代码逐帧做视频：HTML / Canvas 动画 → MP4 / GIF / 透明层 · Deterministic HTML-to-MP4 renderer: seek to t, screenshot, encode. No framework, no build step, no GPU.
+- **adisriv07/Image-and-Video-Exploration-Using-Web-APIs** ⭐0 [source]
+  - https://github.com/adisriv07/Image-and-Video-Exploration-Using-Web-APIs
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот проект представляет собой React-приложение для поиска и сохранения стоковых фото и видео через API Unsplash и Pexels. Он может служить адаптером для получения легального стокового видео с метаданными происхождения и механизмами повторных попыток. Интеграция недорогая, но риск дублирования высок, так как уже используются Coverr, Pexels и Wikimedia; ценность будет только в новом источнике или подтверждении происхождения данных.
+  - 📄 A React-based stock media search app for discovering and saving photos and videos using the Unsplash and Pexels APIs.
+- **savvops/Htmltomp4** ⭐1 [video]
+  - https://github.com/savvops/Htmltomp4
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает детерминированный рендерер, который преобразует HTML, CSS, Canvas, SVG и WebGL анимации в видеоформаты MP4/WebM/ProRes. Его детерминированный подход может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для манифестов и проверяемых квитанций. Интеграция недорогая, но риск дублирования высок, так как часть функций уже внедрена; нужен конкретный незакрытый механизм защиты.
+  - 📄 Deterministic HTML, CSS, Canvas, SVG, and WebGL animation to MP4/WebM/ProRes video renderer powered by Chromium and FFmpeg.
+- **TerryG907/html2mp4** ⭐1 [video]
+  - https://github.com/TerryG907/html2mp4
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот проект позволяет покадрово и детерминированно рендерить любые HTML-анимации в MP4, разработан для AI-агентов. Его детерминированный подход может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для манифестов и проверяемых квитанций. Интеграция недорогая, но риск дублирования высок, так как часть функций уже внедрена; нужен конкретный незакрытый механизм защиты.
+  - 📄 Render any HTML animation (CSS, GSAP, Canvas, Three.js) to MP4, deterministically, frame by frame. Built for AI coding agents.
+- **hieuspaceos/demoreel** ⭐0 [video]
+  - https://github.com/hieuspaceos/demoreel
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий представляет собой безголовый рендерер демо-видео для приложений macOS, создающий скриптованные, детерминированные демо-ролики. Его детерминированный подход может усилить воспроизводимость рендера на CPU/GitHub Actions, что важно для манифестов и проверяемых квитанций. Интеграция недорогая, но риск дублирования высок, так как часть функций уже внедрена; нужен конкретный незакрытый механизм защиты.
+  - 📄 Vendorable headless demo-video renderer for macOS apps — scripted, deterministic AppKit-rendered demos
