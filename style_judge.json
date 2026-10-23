@@ -3,61 +3,54 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 8.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Холодный сине-зелёный сдвиг, тени подходят под deep teal, световой акцент не бел"
+      "score": 0.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "видимый текст"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": true,
-      "score": 8.5,
-      "votes": "2/2",
-      "status": "принят",
-      "reason": "Один источник света, холодный контровой свет, дымка холодный серый."
+      "keep": false,
+      "score": 0.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "видимый текст"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 7.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Световой акцент не белый, но не совсем deep teal."
+      "score": 0.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "видимый текст"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": false,
-      "score": 6.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёплый свет, не холодный контровой."
+      "score": 0.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "видимый текст"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": false,
-      "score": 7.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Слишком тёплый свет, не холодный контровой."
+      "score": 0.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "видимый текст"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 2.0,
-      "votes": "0/2",
+      "score": 0.0,
+      "votes": "0/1",
       "status": "отклонён",
-      "reason": "Слишком тёплый свет, не холодный контровой, зеленоватый сдвиг."
+      "reason": "видимый текст"
     }
   ],
-  "recommend_merge": [
-    "scout_neutral_night_muted"
-  ],
-  "disputed": [
-    "scout_neutral_mid_muted",
-    "scout_neutral_bright_muted",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
-  ],
-  "_generated": "2026-10-19",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "recommend_merge": [],
+  "disputed": [],
+  "_generated": "2026-10-23",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
