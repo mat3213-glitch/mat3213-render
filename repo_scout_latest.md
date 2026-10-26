@@ -1,20 +1,74 @@
-# Repo Scout — 2026-10-25T14:07:45.052580
-Всего в шортлисте: 2
-- **waseemnasir2k26/skynet-vlog-edit** ⭐0 [video]
-  - https://github.com/waseemnasir2k26/skynet-vlog-edit
+# Repo Scout — 2026-10-26T16:32:13.211817
+Всего в шортлисте: 8
+- **nielsnot/obs-video-analyser** ⭐0 [video]
+  - https://github.com/nielsnot/obs-video-analyser
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
-  - 🔎 evidence: query matched: ffmpeg xfade transition
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: video timeline waveform
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
-  - 💡 Этот репозиторий использует FFmpeg для обработки видео, включая xfade переходы. Он может предоставить новые органичные стыки для нашего проекта, улучшая существующие xfade без дешёвого цифрового визуала. Интеграция оправдана низкой стоимостью, несмотря на средний риск дублирования, поскольку мы ищем именно новые "органические примитивы".
-  - 📄 Shell and ffmpeg pipeline that turns raw vertical clips into one captioned 1080x1920 vlog: grade, burned captions, xfade transitions, synthesised music bed, out
-- **minhawork123-afk/guide-to-best-ai-filmmaking** ⭐9 [craft]
-  - https://github.com/minhawork123-afk/guide-to-best-ai-filmmaking
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий предоставляет инструменты для анализа видео, включая осциллограммы временной шкалы (waveform) и другие видеоскопы для OBS Studio. Он может помочь создать компактное представление временной шкалы видео, что позволит дешево просматривать режиссуру без полной передачи видео в LLM. Интеграция имеет низкую стоимость, но её оправданность под вопросом из-за высокого риска дублирования с существующими решениями, ценность представляет лишь компактный интерфейс для ревью.
+  - 📄 Broadcast-style video scopes for OBS Studio: waveform, vectorscope, histogram, CIE, false color, QC timeline, HDR HLG/PQ, 3D LUTs, EBU R128 loudness and face an
+- **MountainandSeaTech/ai-anime-production-kb** ⭐2 [craft]
+  - https://github.com/MountainandSeaTech/ai-anime-production-kb
   - ⚠️ fallback: query-grounded
   - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
   - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предлагает руководства и промпты для создания реалистичного AI-видео с кинематографическими элементами. Он поможет нам получить новые проверяемые операторские словари и prompt-схемы для управляемой моторики i2v-генераторов. Интеграция оправдана низкой стоимостью, но имеет высокий риск дублирования, поэтому мы возьмём только новые, уникальные формулировки.
-  - 📄 A complete production workflow for realistic AI video. Cinematic films & AI personas using Seedance 2.5, Nano Banana Pro, and Claude. Full prompts, templates, a
+  - 💡 Данный репозиторий содержит базу знаний по производству AI-аниме, включая инженерию промптов и кинематографию. Он предлагает проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через облачные генераторы. Интеграция имеет низкую стоимость, но риск дублирования высок, так как уже есть похожие решения; стоит брать только новые проверяемые формулировки.
+  - 📄 AI anime short-drama production knowledge base: prompt engineering, character performance, tension building, cinematography, action choreography, storyboard con
+- **kajisho5/motion-graphics-skill** ⭐9 [video]
+  - https://github.com/kajisho5/motion-graphics-skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает агентский навык для детерминированного рендеринга моушн-графики на видео с использованием ffmpeg. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, предоставляя детерминированный подход к созданию видео. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как частичные решения уже есть; требуется найти конкретный незакрытый аспект воспроизводимости.
+  - 📄 Agent skill that deterministically renders motion graphics onto video via ffmpeg-skill.
+- **minhawork123-afk/ai-filmmaker-skill** ⭐1 [craft]
+  - https://github.com/minhawork123-afk/ai-filmmaker-skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий представляет собой агентский навык, который превращает любую LLM в профессионального AI-кинематографиста, мыслящего как режиссер, оператор и монтажер. Он предлагает проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через облачные генераторы. Интеграция имеет низкую стоимость, но риск дублирования высок, так как уже есть похожие решения; стоит брать только новые проверяемые формулировки.
+  - 📄 Turn any LLM into a professional AI filmmaker. One Agent Skill for Claude, ChatGPT & Gemini that thinks like a director, DP, editor and prompt engineer, from br
+- **pebaryan/raymotion** ⭐6 [video]
+  - https://github.com/pebaryan/raymotion
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Данный репозиторий содержит движок для моушн-графики, написанный на C++, который детерминированно рендерит композиции кадр за кадром в MP4. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, предоставляя детерминированный подход к созданию видео. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как частичные решения уже есть; требуется найти конкретный незакрытый аспект воспроизводимости.
+  - 📄 Motion graphics written in C++: a Remotion-style video engine on raylib, OpenGL and ffmpeg. Compositions are code, rendered deterministically frame by frame to 
+- **Pardesco/algorithmic-art-skill** ⭐4 [video]
+  - https://github.com/Pardesco/algorithmic-art-skill
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает навык для Claude Agent, позволяющий создавать алгоритмическое/генеративное искусство с детерминированными результатами. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, предоставляя детерминированный подход к созданию видео. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как частичные решения уже есть; требуется найти конкретный незакрытый аспект воспроизводимости.
+  - 📄 A Claude Agent Skill for algorithmic/generative art: deterministic seeded pieces, render-critique loop, print/SVG/laser/video export, audio-reactive + Blender e
+- **jomi-se/explainer-studio** ⭐0 [video]
+  - https://github.com/jomi-se/explainer-studio
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий позволяет создавать объясняющие видео, рендеримые кодом, с HTML/SVG сценами, захватываемыми Playwright и кодируемыми ffmpeg. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, предоставляя детерминированный подход к созданию видео. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как частичные решения уже есть; требуется найти конкретный незакрытый аспект воспроизводимости.
+  - 📄 Code-rendered explainer videos: HTML/SVG scenes with a deterministic seek(t), captured by Playwright, encoded by ffmpeg.
+- **jonsoku-dev/frameforge** ⭐0 [video]
+  - https://github.com/jonsoku-dev/frameforge
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий представляет собой независимый React видеодвижок, который обеспечивает детерминированные кадры, локальный рендеринг и генерацию музыки. Он способствует усилению воспроизводимости рендера на CPU/GitHub Actions, предоставляя детерминированный подход к созданию видео. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как частичные решения уже есть; требуется найти конкретный незакрытый аспект воспроизводимости.
+  - 📄 Independent MIT React video engine: deterministic frames, local studio and renderer, generated music, motion-derived sound, asset kit, and an agent plugin for C
