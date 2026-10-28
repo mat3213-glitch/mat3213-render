@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-10-26",
+  "_generated": "2026-10-28",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
@@ -12,7 +12,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "39353879.jpg"
+      "_src": "82293889.jpg"
     },
     {
       "name": "scout_neutral_night_muted",
@@ -24,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "89429403.jpg"
+      "_src": "44526907.jpg"
     },
     {
       "name": "scout_neutral_bright_muted",
@@ -36,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "17658126.jpg"
+      "_src": "53786690.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "59155728.jpg"
+      "_src": "85094153.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,19 +60,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "92495673.jpg"
-    },
-    {
-      "name": "scout_green_mid_soft",
-      "note": "scout: green mid soft",
-      "eq": "contrast=1.03:saturation=1.1:brightness=-0.02:gamma=1.021",
-      "balance": "gs=0.051:bs=-0.065:rm=0.1:gm=0.037:bm=-0.1:rh=0.1:gh=0.076:bh=-0.1",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "66630653.jpg"
+      "_src": "53211702.jpg"
     }
   ]
 }
