@@ -1,11 +1,56 @@
-# Repo Scout — 2026-10-28T16:27:18.782661
-Всего в шортлисте: 1
-- **uGmTEAM/video-cli** ⭐0 [video]
-  - https://github.com/uGmTEAM/video-cli
+# Repo Scout — 2026-10-29T16:38:16.914480
+Всего в шортлисте: 6
+- **techiesreviews/video-review** ⭐0 [video]
+  - https://github.com/techiesreviews/video-review
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `organic_transitions` (priority 10): Органичные стыки поверх уже работающего FFmpeg xfade без дешёвого цифрового glitch-визуала.
-  - 🔎 evidence: query matched: ffmpeg xfade transition
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — базовые xfade и transition-router уже есть; нужен только новый органичный primitive
-  - 💡 uGmTEAM/video-cli — это Docker-инструмент для синтеза видео на базе FFmpeg и Python, предлагающий 46 xfade переходов. Он потенциально закрывает потребность в органичных стыках, расширяя текущие возможности FFmpeg xfade за счёт большего выбора. Низкая стоимость интеграции оправдана для поиска нужных органичных примитивов, несмотря на средний риск дублирования базовых функций.
-  - 📄 Docker CLI video synthesis tool — ffmpeg 5.1.9 + Python 3.12, 46 xfade transitions, multi-format output, resume recovery
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий предлагает локальный, основанный на транскриптах инструмент для ревью видео с комментариями по таймстампам. Он закрывает потребность в компактном представлении для дешёвого ревью режиссуры без полной передачи видео в LLM. Низкая стоимость интеграции оправдана, так как ценность заключается именно в компактном интерфейсе ревью, несмотря на частичное дублирование функционала WhisperX и EDL.
+  - 📄 Local-first, transcript-based video review with timestamped comments and an MCP connection for editing agents.
+- **misbahudin98/desain-grafis** ⭐0 [craft]
+  - https://github.com/misbahudin98/desain-grafis
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий представляет систему автономного креативного дизайна с детерминированным визуальным промптингом и голливудской кинематографией. Он может предоставить проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Интеграция оправдана только для получения новых, уникальных формулировок, поскольку большая часть функционала уже реализована.
+  - 📄 Autonomous Creative & Multimedia Design System: Deterministic Visual Prompting, Hollywood Cinematography, Swiss Modular Grids, and Zero AI Slop.
+- **codetesla51/kyfram** ⭐0 [video]
+  - https://github.com/codetesla51/kyfram
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий — движок моушн-графики на Go, который рендерит детерминированные MP4/PNG из скриптов. Он может усилить воспроизводимость рендера на CPU/GitHub Actions за счёт манифестов, хешей и возобновляемых чанков. Низкая стоимость интеграции оправдана, если он предоставляет конкретный незакрытый механизм контроля воспроизводимости, несмотря на уже существующий кэш чанков.
+  - 📄 Keyframe-driven motion graphics engine for Go — write .lgv scripts, import SVG, render deterministic MP4/PNG with ffmpeg.
+- **niuyupeng/role2reel-public** ⭐0 [craft]
+  - https://github.com/niuyupeng/role2reel-public
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает Codex Skill для создания историй, целенаправленных кадров и промптов видео, учитывающих камеру. Он может предоставить проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Интеграция оправдана только для получения новых, уникальных формулировок, поскольку большая часть функционала уже реализована.
+  - 📄 Codex Skill for character-driven stories, purposeful shots and camera-aware video prompts | 人物、分镜与完整视频提示词
+- **DanielFidalgo/kineto** ⭐0 [video]
+  - https://github.com/DanielFidalgo/kineto
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий — детерминированный видеокомпилятор на Rust, который преобразует декларативные JSON-сцены в MP4. Он может усилить воспроизводимость рендера на CPU/GitHub Actions за счёт манифестов, хешей и возобновляемых чанков. Низкая стоимость интеграции оправдана, если он предоставляет конкретный незакрытый механизм контроля воспроизводимости, несмотря на уже существующий кэш чанков.
+  - 📄 Video as a build artifact. A deterministic video compiler: declarative JSON scenes in, MP4 out. One Rust engine, browser (wasm) and headless native, with an MCP
+- **cervicalcanalleadacidbattery744/cervicalcanalleadacidbattery744.github.io** ⭐0 [video]
+  - https://github.com/cervicalcanalleadacidbattery744/cervicalcanalleadacidbattery744.github.io
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий генерирует детерминированное, кодово-рендеренное музыкальное видео с визуализаторами, синхронизированными со временем песни. Он может усилить воспроизводимость рендера на CPU/GitHub Actions за счёт манифестов, хешей и возобновляемых чанков. Низкая стоимость интеграции оправдана, если он предоставляет конкретный незакрытый механизм контроля воспроизводимости, несмотря на уже существующий кэш чанков.
+  - 📄 Generate a deterministic, code-rendered music video styled as NERV’s command terminal, with 16 real-time sound visualizers synced to song time.
