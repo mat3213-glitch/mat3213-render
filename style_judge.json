@@ -4,41 +4,49 @@
       "name": "scout_neutral_mid_muted",
       "keep": true,
       "score": 8.0,
-      "votes": "1/1",
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Cool teal, muted, cinematic, matches deep teal palette"
+      "reason": "Чистый холодный тон, глубокие тени, отличная кинематографичность"
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
+      "score": 7.5,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Night mood, cool teal, muted, fits brand"
+      "reason": "Хороший глубокий teal, умеренная дымка, попадает в вайб"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "score": 5.0,
+      "votes": "0/3",
+      "status": "отклонён",
+      "reason": "Слишком светло, теряется глубина и нуарная атмосфера"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
+      "score": 8.5,
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Soft night, deep teal, cinematic, matches brand"
+      "reason": "Идеальный баланс холодного света и глубоких сине-зеленых теней"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
       "score": 8.0,
-      "votes": "1/1",
+      "votes": "2/3",
       "status": "принят",
-      "reason": "Soft night, deep teal, cinematic, fits brand"
+      "reason": "Глубокий холодный тон, соответствует целевой палитре"
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "keep": false,
+      "score": 2.0,
+      "votes": "0/3",
+      "status": "отклонён",
+      "reason": "Грязный желто-зеленый каст, уходит в болотный цвет"
     }
   ],
   "recommend_merge": [
@@ -48,6 +56,6 @@
     "scout_neutral_night_soft_2"
   ],
   "disputed": [],
-  "_generated": "2026-10-28",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "_generated": "2026-10-31",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
