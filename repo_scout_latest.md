@@ -1,2 +1,38 @@
-# Repo Scout — 2026-10-31T15:37:32.241332
-Всего в шортлисте: 0
+# Repo Scout — 2026-11-01T16:36:27.992145
+Всего в шортлисте: 4
+- **127czl/fpga** ⭐0 [vision]
+  - https://github.com/127czl/fpga
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
+  - 🔎 evidence: query matched: freeze detection video
+  - 🧩 integration cost: medium
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
+  - 💡 Этот репозиторий обнаруживает зависания кадров в видео, что помогает в детерминированном CPU-контроле качества для выявления фризов и дубликатов. Он закрывает часть указанного пробела, обеспечивая проверку непрерывности движения. Интеграция имеет среднюю стоимость, но риск дублирования высокий, так как это запасной вариант и существующие решения частично покрывают функционал.
+  - 📄 FPGA real-time vision system based on SC210 MIPI camera. It implements RAW demosaicing, color correction, grayscale processing, Sobel and Canny edge detection, 
+- **earthwalker17/AI-videos** ⭐1 [video]
+  - https://github.com/earthwalker17/AI-videos
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: render manifest ffmpeg
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предоставляет рабочие процессы для детерминированного рендеринга AI-видео с использованием манифестов. Он усиливает воспроизводимость рендера на CPU/GitHub Actions, закрывая потребность в проверяемых результатах. Стоимость интеграции низкая, но риск дублирования высокий, поскольку часть функционала уже реализована.
+  - 📄 Source, workflows and knowledge base of an AI video series: one repo for many videos, with shared engines (web/three.js, Remotion), deterministic renders, QA an
+- **ai-native-workshop/ai-native-music-video** ⭐0 [video]
+  - https://github.com/ai-native-workshop/ai-native-music-video
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предлагает детерминированный браузерный рендерер для музыкальных видео, где каждый кадр генерируется кодом. Он усиливает воспроизводимость рендера на CPU/GitHub Actions, закрывая потребность в предсказуемых и проверяемых результатах. Стоимость интеграции низкая, но риск дублирования высокий, поскольку часть функционала уже реализована.
+  - 📄 Claude Code skill for music videos whose every frame is drawn by code: song analysis, lyric timing, look tests, a deterministic browser renderer, parallel shot 
+- **kylemarvin884/openbot-assertmedia** ⭐0 [video]
+  - https://github.com/kylemarvin884/openbot-assertmedia
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий предоставляет детерминированные CI-ассерты для изображений, аудио и видео, выявляя чёрные кадры и тихие дорожки. Он усиливает воспроизводимость рендера на CPU/GitHub Actions, обеспечивая контроль качества и надёжность результатов. Стоимость интеграции низкая, но риск дублирования высокий, поскольку часть функционала уже реализована.
+  - 📄 Deterministic CI assertions for images, audio and video your agent generates. Catch black frames, silent tracks and 0.5s renders before they ship.
