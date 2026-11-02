@@ -1,38 +1,20 @@
-# Repo Scout — 2026-11-01T16:36:27.992145
-Всего в шортлисте: 4
-- **127czl/fpga** ⭐0 [vision]
-  - https://github.com/127czl/fpga
+# Repo Scout — 2026-11-02T19:59:33.064373
+Всего в шортлисте: 2
+- **APIStock/api-stock-mcp** ⭐0 [source]
+  - https://github.com/APIStock/api-stock-mcp
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `motion_continuity_qc` (priority 9): Детерминированный CPU-QC фризов, дубликатов кадров, оптических разрывов и непрерывности движения.
-  - 🔎 evidence: query matched: freeze detection video
-  - 🧩 integration cost: medium
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — scene-count QC существует, но не проверяет органичность моторики
-  - 💡 Этот репозиторий обнаруживает зависания кадров в видео, что помогает в детерминированном CPU-контроле качества для выявления фризов и дубликатов. Он закрывает часть указанного пробела, обеспечивая проверку непрерывности движения. Интеграция имеет среднюю стоимость, но риск дублирования высокий, так как это запасной вариант и существующие решения частично покрывают функционал.
-  - 📄 FPGA real-time vision system based on SC210 MIPI camera. It implements RAW demosaicing, color correction, grayscale processing, Sobel and Canny edge detection, 
-- **earthwalker17/AI-videos** ⭐1 [video]
-  - https://github.com/earthwalker17/AI-videos
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: render manifest ffmpeg
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий предоставляет рабочие процессы для детерминированного рендеринга AI-видео с использованием манифестов. Он усиливает воспроизводимость рендера на CPU/GitHub Actions, закрывая потребность в проверяемых результатах. Стоимость интеграции низкая, но риск дублирования высокий, поскольку часть функционала уже реализована.
-  - 📄 Source, workflows and knowledge base of an AI video series: one repo for many videos, with shared engines (web/three.js, Remotion), deterministic renders, QA an
-- **ai-native-workshop/ai-native-music-video** ⭐0 [video]
-  - https://github.com/ai-native-workshop/ai-native-music-video
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий предоставляет сервер для доступа к стоковым видео через API, что может служить headless-адаптером для легального контента. Он закрывает потребность в надёжных источниках видео с лицензией. Однако, при низкой стоимости интеграции, его ценность под вопросом из-за высокого риска дублирования с уже работающими сервисами и отсутствия уникальных метаданных.
+  - 📄 Hosted MCP server for AI video, image and music generation — API Stock
+- **APIStock/api-stock-openclaw** ⭐0 [source]
+  - https://github.com/APIStock/api-stock-openclaw
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий предлагает детерминированный браузерный рендерер для музыкальных видео, где каждый кадр генерируется кодом. Он усиливает воспроизводимость рендера на CPU/GitHub Actions, закрывая потребность в предсказуемых и проверяемых результатах. Стоимость интеграции низкая, но риск дублирования высокий, поскольку часть функционала уже реализована.
-  - 📄 Claude Code skill for music videos whose every frame is drawn by code: song analysis, lyric timing, look tests, a deterministic browser renderer, parallel shot 
-- **kylemarvin884/openbot-assertmedia** ⭐0 [video]
-  - https://github.com/kylemarvin884/openbot-assertmedia
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Этот репозиторий предоставляет детерминированные CI-ассерты для изображений, аудио и видео, выявляя чёрные кадры и тихие дорожки. Он усиливает воспроизводимость рендера на CPU/GitHub Actions, обеспечивая контроль качества и надёжность результатов. Стоимость интеграции низкая, но риск дублирования высокий, поскольку часть функционала уже реализована.
-  - 📄 Deterministic CI assertions for images, audio and video your agent generates. Catch black frames, silent tracks and 0.5s renders before they ship.
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий предоставляет 'скилл' OpenClaw для доступа к стоковым видео, изображениям и музыке через единый API, что может служить headless-адаптером. Он закрывает потребность в надёжных источниках легального видео с лицензией. Однако, при низкой стоимости интеграции, его ценность под вопросом из-за высокого риска дублирования с уже работающими сервисами и отсутствия уникальных метаданных.
+  - 📄 OpenClaw skill for AI image, video and music generation through one API key — API Stock
