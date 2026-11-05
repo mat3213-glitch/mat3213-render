@@ -4,49 +4,49 @@
       "name": "scout_neutral_mid_muted",
       "keep": true,
       "score": 8.0,
-      "votes": "2/2",
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хорошая глубина и холодный тон, близкий к deep teal."
+      "reason": "Холодные muted тона, соответствуют deep teal"
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": true,
-      "score": 9.0,
-      "votes": "2/2",
+      "score": 8.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Дорогой, цельный и глубокий."
+      "reason": "Тёмный muted пейзаж, deep teal в тенях"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
       "score": 5.0,
-      "votes": "0/2",
+      "votes": "0/1",
       "status": "отклонён",
-      "reason": "Слишком светлый, не соответствует холодному нуару."
+      "reason": "Слишком ярко, теряется глубина, не deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
       "keep": true,
-      "score": 7.5,
-      "votes": "2/2",
+      "score": 9.0,
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Хорошая глубина, но немного тёплый тон."
+      "reason": "Глубокий ночной свет, soft, deep teal оттенок"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": true,
       "score": 8.0,
-      "votes": "2/2",
+      "votes": "1/1",
       "status": "принят",
-      "reason": "Дорогой и глубокий, близкий к deep teal."
+      "reason": "Ночной soft, cool teal, хорошая контрастность"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 6.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Хорошая зелёная гамма, но немного тёплый тон."
+      "score": 4.0,
+      "votes": "0/1",
+      "status": "отклонён",
+      "reason": "Зелёный каст, не deep teal, слишком насыщен"
     }
   ],
   "recommend_merge": [
@@ -55,9 +55,7 @@
     "scout_neutral_night_soft",
     "scout_neutral_night_soft_2"
   ],
-  "disputed": [
-    "scout_green_mid_soft"
-  ],
-  "_generated": "2026-11-04",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [],
+  "_generated": "2026-11-05",
+  "_judge": "gh-vision-ensemble(1/5)"
 }
