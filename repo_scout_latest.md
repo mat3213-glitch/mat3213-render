@@ -1,2 +1,47 @@
-# Repo Scout — 2026-11-06T17:12:30.646364
-Всего в шортлисте: 0
+# Repo Scout — 2026-11-07T16:07:32.518399
+Всего в шортлисте: 5
+- **sraanw/Video-Model-Prompting** ⭐0 [craft]
+  - https://github.com/sraanw/Video-Model-Prompting
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий исследует и предлагает многоразовые AI-промпты для видео и изображений, фокусируясь на описании движения камеры и композиции. Он может помочь в создании проверяемых операторских словарей для управляемой i2v-моторики. Однако, из-за высокого риска дублирования с уже существующими инструментами, интеграция оправдана только для получения новых, уникальных и проверяемых формулировок.
+  - 📄 Explore reusable AI video prompts and learn how to write your own for video and image generation.   Experiment with lighting, composition, and style to change h
+- **ItsTuki/VideoJuegoExample** ⭐0 [source]
+  - https://github.com/ItsTuki/VideoJuegoExample
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий представляет собой REST API для каталога видеоигр с функциями CRUD и фильтрации. Хотя он связан с "stock api", его описание не указывает на работу со стоковым видео или метаданными происхождения. Из-за высокого риска дублирования и несоответствия предметной области, интеграция не оправдана, если только он не предоставит уникальный источник или механизм происхождения.
+  - 📄 API REST con Spring Boot para un catálogo de videojuegos: CRUD, filtros por género y plataforma, y consultas de precio y stock
+- **wilsonwu-ai/apple-demo-video** ⭐0 [video]
+  - https://github.com/wilsonwu-ai/apple-demo-video
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Репозиторий исследует механизмы создания видео Apple и предлагает навык для детерминированного рендеринга результатов. Он может помочь в усилении воспроизводимости рендеринга на CPU/GitHub Actions, предоставляя подходы к детерминированному выводу видео. Однако, с учетом частичного внедрения chunk cache и Video Receipt, интеграция оправдана только если репозиторий предлагает конкретный, еще не закрытый механизм для повышения воспроизводимости.
+  - 📄 A viral post explained why Apple's videos look expensive. It was right about the mechanism and wrong about every number, so I measured them: three films, Apple'
+- **alycheaib/shorts-studio** ⭐0 [source]
+  - https://github.com/alycheaib/shorts-studio
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот проект генерирует короткие видео с наррацией и субтитрами, используя стоковый материал, нейронные голоса и ffmpeg. Он использует стоковый материал, что потенциально может быть источником адаптеров для легального стокового видео. Однако, учитывая высокий риск дублирования с уже используемыми источниками, интеграция оправдана только если репозиторий предлагает новый, надежный источник стокового видео или улучшенные метаданные происхождения и лицензирования.
+  - 📄 ?? Topic ? narrated, subtitled short video (YouTube Shorts / TikTok / Reels) inside Claude. MoneyPrinterTurbo-style MCP server + Claude Code plugin: free neural
+- **EmmadUsmani/demo-reel** ⭐0 [video]
+  - https://github.com/EmmadUsmani/demo-reel
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Репозиторий представляет собой детерминированный движок для создания демонстрационных видео из реальных записей работающего веб-приложения. Он напрямую способствует усилению воспроизводимости рендеринга на CPU/GitHub Actions, предлагая детерминированный подход к созданию видео. Тем не менее, учитывая частичное внедрение chunk cache и Video Receipt, интеграция оправдана только если репозиторий предлагает конкретный, еще не закрытый механизм для повышения воспроизводимости.
+  - 📄 Deterministic engine for code-rendered, narrated product demo videos made from real footage of a running web app
