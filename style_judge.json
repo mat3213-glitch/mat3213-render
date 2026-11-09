@@ -3,16 +3,16 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "score": 8.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "холодный, глубокий, teal"
     },
     {
       "name": "scout_neutral_night_muted",
       "keep": false,
       "score": 0,
-      "votes": "0/1",
+      "votes": "0/2",
       "status": "не виден на листе",
       "reason": "тайл не отрисован?"
     },
@@ -20,7 +20,7 @@
       "name": "scout_neutral_bright_muted",
       "keep": false,
       "score": 0,
-      "votes": "0/1",
+      "votes": "0/2",
       "status": "не виден на листе",
       "reason": "тайл не отрисован?"
     },
@@ -28,7 +28,7 @@
       "name": "scout_neutral_night_soft",
       "keep": false,
       "score": 0,
-      "votes": "0/1",
+      "votes": "0/2",
       "status": "не виден на листе",
       "reason": "тайл не отрисован?"
     },
@@ -36,21 +36,23 @@
       "name": "scout_neutral_night_soft_2",
       "keep": false,
       "score": 0,
-      "votes": "0/1",
+      "votes": "0/2",
       "status": "не виден на листе",
       "reason": "тайл не отрисован?"
     },
     {
-      "name": "scout_green_mid_soft",
+      "name": "scout_warm_night_soft",
       "keep": false,
       "score": 0,
-      "votes": "0/1",
+      "votes": "0/2",
       "status": "не виден на листе",
       "reason": "тайл не отрисован?"
     }
   ],
   "recommend_merge": [],
-  "disputed": [],
-  "_generated": "2026-11-08",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "disputed": [
+    "scout_neutral_mid_muted"
+  ],
+  "_generated": "2026-11-09",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
