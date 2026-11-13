@@ -1,2 +1,47 @@
-# Repo Scout — 2026-11-12T17:56:45.016417
-Всего в шортлисте: 0
+# Repo Scout — 2026-11-13T17:31:43.236851
+Всего в шортлисте: 5
+- **dmitriyermolenko81/ArtLapse** ⭐3 [video]
+  - https://github.com/dmitriyermolenko81/ArtLapse
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: video timeline waveform
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 ArtLapse — это локальный редактор видео, отображающий аудио-волны и синхронизирующий по битам. Он закрывает потребность в компактном представлении таймлайна для быстрого ревью режиссуры, избегая передачи полного видео в LLM. Интеграция имеет низкую стоимость, но высокий риск дублирования, так как ценность только в уникальном компактном интерфейсе для ревью.
+  - 📄 Local timelapse and Shorts editor for artists. Independent video/music timelines, audio waveforms, beat sync and cached analysis. Portable Windows app (EN/RU).
+- **Reyeon/camera-movement-atlas** ⭐0 [craft]
+  - https://github.com/Reyeon/camera-movement-atlas
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Reyeon/camera-movement-atlas содержит интерактивный 3D-атлас движений камеры и видео-промпты. Он предлагает проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Интеграция имеет низкую стоимость, но высокий риск дублирования, так как camera_moves.json и prompt_writer уже есть, поэтому брать стоит только новые проверяемые формулировки.
+  - 📄 Interactive 3D camera movement atlas and video prompts
+- **altitudezhang-commits/zero-cost-shorts-pipeline** ⭐0 [source]
+  - https://github.com/altitudezhang-commits/zero-cost-shorts-pipeline
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 altitudezhang-commits/zero-cost-shorts-pipeline — это "фабрика" коротких видео, использующая бесплатные API для TTS, стокового видео и автосборки. Он может предоставить новые headless-адаптеры для легального стокового видео. Интеграция имеет низкую стоимость, но высокий риск дублирования, так как Coverr/Pexels/Wikimedia уже работают, и ценен только новый источник или улучшенные метаданные происхождения.
+  - 📄 A short-video factory that costs $0 in APIs: free TTS, stock footage, Ken Burns motion and auto-assembly.
+- **xMagElonx/deterministic-demo-video** ⭐0 [video]
+  - https://github.com/xMagElonx/deterministic-demo-video
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 xMagElonx/deterministic-demo-video — это детерминированный рендерер демо-видео для headless-симуляций с покадровой синхронизацией аудио и верификатором. Он усилит воспроизводимость рендера на CPU/GitHub Actions за счёт детерминизма и проверяемых механизмов. Интеграция имеет низкую стоимость, но высокий риск дублирования, так как chunk cache и Video Receipt уже частично внедрены, и нужен конкретный незакрытый guardrail.
+  - 📄 Deterministic demo-video renderer for headless simulations: frame-accurate audio sync + an assertion-based verifier. npm: deterministic-demo-video
+- **AchLim/video-prompt-director** ⭐0 [craft]
+  - https://github.com/AchLim/video-prompt-director
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 AchLim/video-prompt-director — это навык для Claude Code, который превращает сценарии в промпты для AI-видео, включая движения камеры и тайминг. Он предлагает проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики. Интеграция имеет низкую стоимость, но высокий риск дублирования, так как camera_moves.json и prompt_writer уже есть, поэтому брать стоит только новые проверяемые формулировки.
+  - 📄 A Claude Code skill that turns scripts and approved storyboards into AI video generation prompts: camera, timed action, natural acting, exact dialogue, continui
