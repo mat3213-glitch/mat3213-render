@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODELS = ("openrouter/free", "nvidia/nemotron-3-super-120b-a12b:free")
+DEFAULT_MODELS = ("cohere/north-mini-code:free", "google/gemma-4-31b-it:free", "openrouter/free")
 
 
 def model_chain() -> list[str]:

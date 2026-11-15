@@ -127,7 +127,7 @@ jobs:
         id: run
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODELS:  ${{ vars.OPENROUTER_MODELS || 'cohere/north-mini-code:free,nvidia/nemotron-3-super-120b-a12b:free,minimax/minimax-m3:free,google/gemma-4-31b-it:free' }}
+          OPENROUTER_MODELS:  ${{ vars.OPENROUTER_MODELS || 'cohere/north-mini-code:free,google/gemma-4-31b-it:free,openrouter/free' }}
           OR_TIMEOUT:       "300"
           OR_WEB:           "1"
         run: |
