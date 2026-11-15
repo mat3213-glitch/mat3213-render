@@ -154,3 +154,28 @@ def test_run_engine_missing_key_is_error(tmp_path, monkeypatch):
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("нет OPENROUTER_API_KEY")))
     rc = orc.run_engine(str(prompt), str(tmp_path / "out"))
     assert rc == 1
+
+
+def test_run_engine_web_flag_from_env(tmp_path, monkeypatch):
+    # OR_WEB=1 → веб-флаг доходит до драйвера; иначе по умолчанию выкл
+    import text_openrouter as tor
+
+    prompt = tmp_path / "prompt.txt"
+    prompt.write_text("P", encoding="utf-8")
+
+    def probe(tag):
+        seen = {}
+        monkeypatch.setattr(tor, "generate",
+                            lambda *a, **k: (seen.update(k), ("т", "m"))[1])
+        assert orc.run_engine(str(prompt), str(tmp_path / tag)) == 0
+        return seen
+
+    monkeypatch.delenv("OR_WEB", raising=False)
+    assert probe("o1").get("web") is False
+    monkeypatch.setenv("OR_WEB", "1")
+    assert probe("o2").get("web") is True
+
+    monkeypatch.delenv("OR_WEB", raising=False)
+    assert probe("o1").get("web") is False
+    monkeypatch.setenv("OR_WEB", "1")
+    assert probe("o2").get("web") is True

@@ -128,7 +128,8 @@ jobs:
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODELS:  ${{ vars.OPENROUTER_MODELS || 'cohere/north-mini-code:free,nvidia/nemotron-3-super-120b-a12b:free,minimax/minimax-m3:free,google/gemma-4-31b-it:free' }}
-          OR_TIMEOUT: "300"
+          OR_TIMEOUT:       "300"
+          OR_WEB:           "1"
         run: |
           # set +e ОБЯЗАТЕЛЕН: ненулевой rc движка оборвал бы шаг ДО отправки ответа
           # в TG — пользователь получил бы тишину (болезнь старого mimo_chat.yml).

@@ -35,7 +35,7 @@ STRICT_SUFFIX = ("""
 
 def generate(prompt: str, model: str | None = None, timeout: int = 120,
              max_tokens: int = 4096, json_mode: bool = False,
-             strict: bool = False, report_model: bool = False):
+             strict: bool = False, report_model: bool = False, web: bool = False):
     """Один запрос (с цепочкой моделей). Бросает RuntimeError, если не ответил никто.
 
     json_mode/strict — для второго дубля: авто-роутер free-тира иногда отдаёт
@@ -43,6 +43,10 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
 
     report_model=True — вернуть (текст, модель), которая реально ответила;
     нужен чату в Telegram: видно, кто из цепочки отвечает (цепочка фолбэкится).
+
+    web=True — попросить платформенный веб-поиск у OpenRouter (флаг владельца
+    15.11). Модели без поддержки/квоты ответят ошибкой → цепочка фолбэкится.
+    Форма поля сверяется реальным ответом раннера (этот деплой — и есть проверка).
     """
     if strict:
         prompt = prompt + STRICT_SUFFIX
@@ -67,6 +71,8 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
         }
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        if web:
+            payload["plugins"] = [{"id": "web"}]
         body = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(URL, data=body, headers=headers, method="POST")
         try:
