@@ -118,3 +118,21 @@ def test_429_does_not_trigger_no_web_retry(monkeypatch):
     # 429 — не поле, а квота: у цепочки было ровно одно представление на модель
     assert len(captured["calls"]) == 1
     assert captured["calls"][0]["plugins"] == [{"id": "web"}]
+
+
+def test_402_metered_on_web_retries_same_model_without_web(monkeypatch):
+    captured = {"calls": []}
+
+    def fake_urlopen(req, timeout=None):
+        captured["calls"].append(json.loads(req.data.decode("utf-8")))
+        if len(captured["calls"]) == 1:
+            raise tor.urllib.error.HTTPError("u", 402, "Payment Required", None, None)
+        return FakeResp({"choices": [{"message": {"content": "ответ"}}]})
+
+    monkeypatch.setattr(tor.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setenv("OPENROUTER_API_KEY", "k")
+    result, cap = _capture(lambda: tor.generate("p", model="m:free", web=True, report_model=True), monkeypatch)
+    assert cap["calls"][0]["plugins"] == [{"id": "web"}]
+    assert "plugins" not in cap["calls"][1]
+    assert [c["model"] for c in cap["calls"]] == ["m:free", "m:free"]
+    assert result == ("ответ", "m:free")

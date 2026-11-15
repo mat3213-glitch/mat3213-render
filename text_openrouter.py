@@ -47,9 +47,10 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
     нужен чату в Telegram: видно, кто из цепочки отвечает (цепочка фолбэкится).
 
     web=True — попросить платформенный веб-поиск у OpenRouter (флаг владельца 15.11).
-    Модели без поддержки/квоты ответят ошибкой → цепочка фолбэкится; модель,
-    которая отказывает именно web-поле (400/422), перепрашивается без web, и
-    цепочка идёт дальше как обычно.
+    Запрос с web может отказать МОДЕЛЬ (400/422) или ВЕДЕТЬ К ТАРИФУ
+    (402 web-доступа при живой базе — наблюдение 15.11); в обоих случаях та же
+    модель перепрашивается без web, и цепочка идёт дальше как обычно. Квота и
+    5xx не трогаем — там фолбэк по цепочке должна быть.
     """
     if strict:
         prompt = prompt + STRICT_SUFFIX
@@ -83,13 +84,15 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
                     data = json.loads(resp.read().decode("utf-8", "replace"))
-            except urllib.error.HTTPError as exc:
-                if web_remaining and exc.code in (400, 422):
-                    # поле web не поддерживается этой моделью — та же модель без web
-                    web_remaining = False
-                    print("  [openrouter] web-поле отклонено моделью — повтор без web",
-                          file=sys.stderr)
-                    continue
+        except urllib.error.HTTPError as exc:
+            if web_remaining and exc.code in (400, 422, 402):
+                # web-поле не поддерживается моделью (400/422) или — наблюдение
+                # 15.11 — ведёт к тарифу (402) при живой базе; та же модель
+                # перепрашивается без web
+                web_remaining = False
+                print(f"  [openrouter] web-поле отклонено ({exc.code}) — повтор без web",
+                      file=sys.stderr)
+                continue
                 errors.append(f"{m}: HTTP {exc.code}")
                 break
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
