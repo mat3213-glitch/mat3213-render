@@ -139,23 +139,25 @@ def test_board_renders_analysis_error_without_zero_score() -> None:
     assert "ANALYSIS_ERROR" in rows[0]["route"]
 
 
-def test_text_worker_defaults_to_kimi_with_openrouter_fallback() -> None:
+def test_text_worker_defaults_to_openrouter_with_kimi_legacy() -> None:
     env = auto_analyst.os.environ
     saved = env.pop("ANALYST_TEXT_WORKER", None)
     try:
         with mock.patch.object(auto_analyst, "kimi_generate", return_value="kimi ok") as kimi, \
              mock.patch.object(auto_analyst, "openrouter_generate", return_value="or ok") as orf:
+            # дефолт — openrouter, 'кими' не троган
+            assert auto_analyst.text_generate("p") == "or ok"
+            orf.assert_called_once()
+            kimi.assert_not_called()
+
+            env["ANALYST_TEXT_WORKER"] = "kimi"
             assert auto_analyst.text_generate("p") == "kimi ok"
-            kimi.assert_called_once()
-            orf.assert_not_called()
 
             env["ANALYST_TEXT_WORKER"] = "auto"
             assert auto_analyst.text_generate("p") == "kimi ok"
-
-            env["ANALYST_TEXT_WORKER"] = "openrouter"
-            assert auto_analyst.text_generate("p") == "or ok"
-            # kimi был вызван в дефолтном прогоне и в auto; на явном openrouter — нет
+            # kimi: дефолтный прогон? нет — ким не зовётся в дефолте, один раз на kimi, один на auto
             assert kimi.call_count == 2
+            orf.assert_called_once()
     finally:
         env.pop("ANALYST_TEXT_WORKER", None)
         if saved is not None:

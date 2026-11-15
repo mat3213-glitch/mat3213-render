@@ -409,13 +409,14 @@ def openrouter_generate(prompt: str, timeout: int = 420, strict: bool = False) -
 
 
 def text_generate(prompt: str, timeout: int = 420) -> str:
-    """Единая точка генерации текста. ANALYST_TEXT_WORKER: kimi (default) | openrouter | auto.
+    """Единая точка генерации текста. ANALYST_TEXT_WORKER: openrouter (default) | kimi | auto.
 
-    Kimi — основной: драйвер на stdlib urllib, поэтому не ловит ни возрастной гейт
-    chat.qwen.ai, ни маркер вылогина, ни Aliyun WAF-капчу. Фолбэк — OpenRouter.
-    Qwen-чат выпилен 06.10 (токен отозван + WAF-капча на /completions).
+    OpenRouter — основной: обычный HTTPS с ключом, ни браузера, ни сессии, цепочка
+    моделей фолбэкится. Kimi — legacy stdlib-драйвер: остаётся явным выбором, а в
+    'auto' идёт первым (как исторически). Qwen-чат выпилен 06.10 (токен отозван +
+    WAF-капча на /completions).
     """
-    worker = os.environ.get("ANALYST_TEXT_WORKER", "kimi").strip().lower() or "kimi"
+    worker = os.environ.get("ANALYST_TEXT_WORKER", "openrouter").strip().lower() or "openrouter"
     order = ["kimi", "openrouter"] if worker == "auto" else [worker]
     errors = []
     for name in order:

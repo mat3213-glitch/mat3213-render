@@ -212,12 +212,20 @@ def run_engine(prompt_path: str = "/tmp/prompt.txt", out_dir: str = "/tmp/kimiru
     prompt = pathlib.Path(prompt_path).read_text(encoding="utf-8")
     out = pathlib.Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    (out / "model.txt").write_text("", encoding="utf-8")
     err = (out / "err.txt")
+    text, model = "", ""
     try:
         import text_openrouter
         timeout = int(os.environ.get("OR_TIMEOUT", "300"))
-        text = text_openrouter.generate(prompt, timeout=timeout)
+        res = text_openrouter.generate(prompt, timeout=timeout, report_model=True)
+        if isinstance(res, tuple):
+            text, model = (list(res) + [""])[:2]
+        else:   # чужой/старый ответ драйвера — безопасно хоть пусто
+            text = res or ""
+            model = ""
         (out / "clean.txt").write_text(text, encoding="utf-8")
+        (out / "model.txt").write_text(model, encoding="utf-8")
         return 0
     except Exception as exc:
         err.write_text(f"{type(exc).__name__}: {exc}", encoding="utf-8")

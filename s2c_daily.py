@@ -676,12 +676,13 @@ def kimi_generate(prompt: str, timeout: int = 300) -> str:
 
 
 def text_generate(prompt: str, model: str, timeout: int = 300) -> str:
-    """Единая точка генерации текста. S2C_TEXT_WORKER: kimi (default) | openrouter | auto.
+    """Единая точка генерации текста. S2C_TEXT_WORKER: openrouter (default) | kimi | auto.
 
-    Kimi — основной: драйвер на stdlib urllib, поэтому не зависит от SPA/профиля/
-    WAF. Фолбэк — OpenRouter (обычный HTTPS с ключом, ни браузера, ни сессии).
+    OpenRouter — основной: обычный HTTPS с ключом, ни браузера, ни сессии. Kimi —
+    legacy stdlib-драйвер (сессия на ЯД): остаётся явным выбором; в 'auto' идёт
+    первым, как исторически.
     """
-    worker = os.getenv("S2C_TEXT_WORKER", "kimi").strip().lower() or "kimi"
+    worker = os.getenv("S2C_TEXT_WORKER", "openrouter").strip().lower() or "openrouter"
     order = [worker]
     if worker == "auto":
         order = ["kimi", "openrouter"]

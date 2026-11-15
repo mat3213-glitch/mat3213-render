@@ -8,7 +8,8 @@ name: openrouter chat bot
 # воркфлоу → Instrument/CnChat/openrouter_chat.py собирает промпт (память проекта
 # + дерево репо + файлы, упомянутые путём в сообщении + история треда) и зовёт
 # text_openrouter.generate (боевой движок s2c, цепочка free-моделей) → ответ в TG
-# (текст + голос).
+# (текст + голос). Ответ начинается со строки «🤖 <модель>»: видно, какая конкретно
+# модель ответила из цепочки (при 429 и пустых ответах цепочка фолбэкится).
 #
 # Протокол тредов и памяти один-в-один с kimi_chat.yml:
 #   история треда: ydrive:Content factory/cloud_io/mimo_bot/threads/<safe_key>.json
@@ -197,6 +198,10 @@ jobs:
 
           if ok:
               resp = text
+              model = ""
+              mp = pathlib.Path("/tmp/kimirun/model.txt")
+              if mp.exists():
+                  model = mp.read_text(encoding="utf-8").strip()
               def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
               th_remote = f"ydrive:Content factory/cloud_io/mimo_bot/threads/{safe_key(key)}.json"
               th_local = f"/tmp/_th_{safe_key(key)}.json"
@@ -212,6 +217,11 @@ jobs:
           else:
               err_text = (err.read_text(errors="replace")[-300:] if err.exists() else "")
               resp = f"❌ or: rc={rc} {err_text}".strip()
+
+          # видимость модели: заголовок — какая конкретно модель ответила
+          # (цепочка фолбэкится, финалист не всегда предсказуем)
+          if ok and model:
+              resp = f"🤖 {model}\n\n{resp}"
 
           # Отправляем в TG (чанками по 3900 симв.)
           for i in range(0, max(len(resp), 1), 3900):
@@ -257,7 +267,8 @@ jobs:
                   short = s.split(mark, 1)[1].strip(" :—-")
                   break
           if not short:
-              src = re.sub(r"`+", " ", text)                 # убрать бэктики кода
+              lines = [l for l in text.splitlines() if not l.strip().startswith("🤖")]
+              src = re.sub(r"`+", " ", "\n".join(lines))     # убрать бэктики кода
               src = re.sub(r"[#|>*_]", " ", src)             # убрать markdown-символы (НЕ строки целиком)
               short = " ".join(src.split())[:220].strip()
           if not short:

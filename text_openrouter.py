@@ -35,11 +35,14 @@ STRICT_SUFFIX = ("""
 
 def generate(prompt: str, model: str | None = None, timeout: int = 120,
              max_tokens: int = 4096, json_mode: bool = False,
-             strict: bool = False) -> str:
+             strict: bool = False, report_model: bool = False):
     """Один запрос (с цепочкой моделей). Бросает RuntimeError, если не ответил никто.
 
     json_mode/strict — для второго дубля: авто-роутер free-тира иногда отдаёт
     reasoning-модель, которая печатает «Here's a thinking process:» вместо JSON.
+
+    report_model=True — вернуть (текст, модель), которая реально ответила;
+    нужен чату в Telegram: видно, кто из цепочки отвечает (цепочка фолбэкится).
     """
     if strict:
         prompt = prompt + STRICT_SUFFIX
@@ -84,6 +87,6 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
             errors.append(f"{m}: пустая структура ответа")
             continue
         if text:
-            return text
+            return (text, m) if report_model else text
         errors.append(f"{m}: пустой ответ")
     raise RuntimeError("OpenRouter не ответил — " + " | ".join(errors))

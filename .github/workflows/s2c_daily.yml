@@ -63,14 +63,16 @@ jobs:
 
       - name: Pull Kimi session + dedup state
         env:
-          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
+          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'openrouter' }}
         run: |
           mkdir -p kimi
           rclone copyto "ydrive:Content factory/cloud_io/cnchat_ci/kimi_session.json" \
-            kimi/kimi_session.json
-          SIZE=$(stat -c%s kimi/kimi_session.json)
-          if [ "$SIZE" -lt 5000 ]; then
-            echo "::error::сессия Kimi битая/пустая ($SIZE б) — s2c без текстового воркера"
+            kimi/kimi_session.json || true
+          SIZE=0
+          [ -f kimi/kimi_session.json ] && SIZE=$(stat -c%s kimi/kimi_session.json)
+          # сессия нужна только тому, кто её реально использует (kimi / 'auto' цепочка)
+          if [ "${S2C_TEXT_WORKER:-openrouter}" != "openrouter" ] && [ "$SIZE" -lt 5000 ]; then
+            echo "::error::сессия Kimi битая/пустая ($SIZE б) — kimi-воркер не готов"
             exit 1
           fi
           echo "Kimi-сессия: $SIZE б (текстовый воркер: $S2C_TEXT_WORKER)"
@@ -101,7 +103,7 @@ jobs:
           S2C_DRY_RUN: ${{ inputs.dry_run || 'false' }}
           S2C_IMAGE_TEST: ${{ inputs.image_test || 'false' }}
           S2C_IMAGE_TEST_STYLE: ${{ inputs.image_test_style || 'current' }}
-          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'kimi' }}
+          S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'openrouter' }}
           KIMI_SESSION_FILE: ${{ github.workspace }}/kimi/kimi_session.json
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS || 'openrouter/free' }}

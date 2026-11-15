@@ -110,7 +110,7 @@ jobs:
         # urllib: ни Chromium, ни профиль. Фолбэк — OpenRouter (обычный HTTPS с ключом),
         # поэтому Qwen-сессия/Playwright больше не тянутся.
         env:
-          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'kimi' }}
+          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'openrouter' }}
         run: |
           set -e
           mkdir -p kimi
@@ -128,7 +128,7 @@ jobs:
           SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
           SCOUT_THREAD:        ${{ inputs.thread }}
-          ANALYST_TEXT_WORKER: ${{ inputs.text_worker || vars.ANALYST_TEXT_WORKER || 'kimi' }}
+          ANALYST_TEXT_WORKER: ${{ inputs.text_worker || vars.ANALYST_TEXT_WORKER || 'openrouter' }}
           KIMI_SESSION_FILE:   ${{ github.workspace }}/kimi/kimi_session.json
           OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODELS:   ${{ vars.OPENROUTER_MODELS || 'nvidia/nemotron-3-super-120b-a12b:free,openrouter/free' }}

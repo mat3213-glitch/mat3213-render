@@ -103,10 +103,26 @@ def test_run_engine_ok(tmp_path, monkeypatch):
     prompt = tmp_path / "prompt.txt"
     prompt.write_text("P", encoding="utf-8")
     out = tmp_path / "out"
-    monkeypatch.setattr(tor, "generate", lambda *a, **k: "ОТВЕТ")
+    monkeypatch.setattr(tor, "generate",
+                        lambda *a, **k: ("ОТВЕТ-ТЕКСТ", "openrouter/nvidia/nemotron-3-super-120b-a12b:free"))
     rc = orc.run_engine(str(prompt), str(out))
     assert rc == 0
-    assert (out / "clean.txt").read_text(encoding="utf-8") == "ОТВЕТ"
+    assert (out / "clean.txt").read_text(encoding="utf-8") == "ОТВЕТ-ТЕКСТ"
+    assert (out / "model.txt").read_text(encoding="utf-8") == "openrouter/nvidia/nemotron-3-super-120b-a12b:free"
+
+
+def test_run_engine_old_driver_str_return(tmp_path, monkeypatch):
+    # Старые/чужие драйверы возвращают str — читаем без модели, без падения
+    import text_openrouter as tor
+
+    prompt = tmp_path / "prompt.txt"
+    prompt.write_text("P", encoding="utf-8")
+    out = tmp_path / "out"
+    monkeypatch.setattr(tor, "generate", lambda *a, **k: "ПРОСТОЙ")
+    rc = orc.run_engine(str(prompt), str(out))
+    assert rc == 0
+    assert (out / "clean.txt").read_text(encoding="utf-8") == "ПРОСТОЙ"
+    assert (out / "model.txt").read_text(encoding="utf-8") == ""
 
 
 def test_run_engine_failure_writes_err(tmp_path, monkeypatch):
@@ -124,6 +140,7 @@ def test_run_engine_failure_writes_err(tmp_path, monkeypatch):
     assert rc == 1
     assert (out / "clean.txt").read_text(encoding="utf-8") == ""
     assert "не ответил" in (out / "err.txt").read_text(encoding="utf-8")
+    assert (out / "model.txt").read_text(encoding="utf-8") == ""
 
 
 def test_run_engine_missing_key_is_error(tmp_path, monkeypatch):

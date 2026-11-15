@@ -146,9 +146,15 @@ class DailyTests(unittest.TestCase):
 class TextWorkerTests(unittest.TestCase):
     """Диспетчер текстового воркера: Kimi — дефолт, OpenRouter — фолбэк (06.10)."""
 
-    def test_kimi_is_the_default_worker(self):
-        with patch.dict(os.environ, {}, clear=False), patch.object(m,'kimi_generate',return_value='text') as kimi, patch.object(m,'openrouter_generate') as orf:
+    def test_openrouter_is_the_default_worker(self):
+        with patch.dict(os.environ, {}, clear=False), patch.object(m,'kimi_generate',return_value='text') as kimi, patch.object(m,'openrouter_generate',return_value='or') as orf:
             os.environ.pop('S2C_TEXT_WORKER',None)
+            self.assertEqual(m.text_generate('p','model'),'or')
+        orf.assert_called_once()
+        kimi.assert_not_called()
+
+    def test_explicit_kimi_worker_still_works(self):
+        with patch.dict(os.environ,{'S2C_TEXT_WORKER':'kimi'}), patch.object(m,'kimi_generate',return_value='text') as kimi, patch.object(m,'openrouter_generate') as orf:
             self.assertEqual(m.text_generate('p','model'),'text')
         kimi.assert_called_once()
         orf.assert_not_called()
