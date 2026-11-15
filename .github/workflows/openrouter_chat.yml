@@ -1,0 +1,288 @@
+name: openrouter chat bot
+
+# Облачный бот @ghmimo_bot БЕЗ БУКА. Движок — OpenRouter (замена Kimi, решение
+# yaromat 15.11: kimi-сессия cnchat_ci/kimi_session.json битая; OpenRouter
+# stateless — сессии не требует вовсе).
+#
+# Поток: CF Worker (mat3213-cloudbot /mimo) получает TG-вебхук → dispatch этого
+# воркфлоу → Instrument/CnChat/openrouter_chat.py собирает промпт (память проекта
+# + дерево репо + файлы, упомянутые путём в сообщении + история треда) и зовёт
+# text_openrouter.generate (боевой движок s2c, цепочка free-моделей) → ответ в TG
+# (текст + голос).
+#
+# Протокол тредов и памяти один-в-один с kimi_chat.yml:
+#   история треда: ydrive:Content factory/cloud_io/mimo_bot/threads/<safe_key>.json
+#   память:        ydrive:Content factory/mirror/memory (только чтение)
+# → переписка переживает переключение движка в обе стороны.
+#
+# Отличие от kimi_chat.yml: без сессии на ЯД (stateless API), история — через
+# общий файл треда; репо checked out и доступен модели через снапшот в промпте.
+# Секреты в render-репо: YDRIVE_*, CLOUDFLARE_WORKER, MIMO_BOT_TOKEN,
+# OPENROUTER_API_KEY (уже используется s2c_daily/auto_analyst).
+
+on:
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "TG chat_id"
+        required: true
+        type: string
+      thread_id:
+        description: "TG message_thread_id (пусто = нет)"
+        required: false
+        default: ""
+        type: string
+      message:
+        description: "Сообщение пользователя"
+        required: true
+        type: string
+      thread_key:
+        description: "Ключ треда для памяти (chat_id:thread_id)"
+        required: true
+        type: string
+      action:
+        description: "chat (default) | clear (сброс контекста треда)"
+        required: false
+        default: "chat"
+        type: string
+
+permissions:
+  contents: read      # чат без инструментов: ни gh, ни dispatch. Только чтение репо.
+
+concurrency:
+  # Модель stateless, но файл истории треда один: сериализуем в рамках треда,
+  # разные треды — параллельно (у Kimi был один общий group: kimi-shared-session).
+  group: or-chat-${{ inputs.thread_key }}
+  cancel-in-progress: false
+
+jobs:
+  chat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # was v4
+
+      - name: Install rclone + ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y --fix-missing rclone ffmpeg
+
+      - name: Configure rclone ydrive
+        env:
+          YDRIVE_CLIENT_ID:     ${{ secrets.YDRIVE_CLIENT_ID }}
+          YDRIVE_CLIENT_SECRET: ${{ secrets.YDRIVE_CLIENT_SECRET }}
+          YDRIVE_TOKEN:         ${{ secrets.YDRIVE_TOKEN }}
+        run: |
+          mkdir -p "$HOME/.config/rclone"
+          printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
+            "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
+            > "$HOME/.config/rclone/rclone.conf"
+
+      # ── ВЕТКА CLEAR: сбросить контекст треда (общая с kimi_chat.yml) ─────────
+      - name: Clear thread context
+        if: ${{ inputs.action == 'clear' }}
+        env:
+          CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
+          MIMO_BOT_TOKEN:    ${{ secrets.MIMO_BOT_TOKEN }}
+          CHAT_ID:           ${{ inputs.chat_id }}
+          THREAD_ID:         ${{ inputs.thread_id }}
+          THREAD_KEY:        ${{ inputs.thread_key }}
+        run: |
+          python3 - <<'PY'
+          import json, os, re, subprocess, urllib.request
+
+          key = os.environ["THREAD_KEY"]
+          # per-thread файл (фикс гонки): один тред = один файл, удаляем только его
+          def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
+          remote = f"ydrive:Content factory/cloud_io/mimo_bot/threads/{safe_key(key)}.json"
+          subprocess.run(["rclone", "delete", remote], capture_output=True)
+
+          cf = os.environ.get("CLOUDFLARE_WORKER", "").rstrip("/")
+          token = os.environ.get("MIMO_BOT_TOKEN", "")
+          body = {"chat_id": os.environ.get("CHAT_ID", ""), "text": "🆕 Контекст сброшен. Новая задача."}
+          thread_id = os.environ.get("THREAD_ID", "")
+          if thread_id:
+              body["message_thread_id"] = int(thread_id)
+          req = urllib.request.Request(
+              f"{cf}/bot{token}/sendMessage",
+              data=json.dumps(body).encode(),
+              headers={"Content-Type": "application/json", "User-Agent": "curl/7.88.1"}
+          )
+          try:
+              urllib.request.urlopen(req, timeout=30)
+              print("TG: контекст сброшен, ответ отправлен")
+          except Exception as e:
+              print(f"TG sendMessage err: {e}")
+          PY
+
+      # ── ВЕТКА CHAT ────────────────────────────────────────────────────────────
+      - name: Build prompt (memory + repo + thread history)
+        if: ${{ inputs.action != 'clear' }}
+        env:
+          THREAD_KEY: ${{ inputs.thread_key }}
+          MESSAGE:    ${{ inputs.message }}
+        run: python3 Instrument/CnChat/openrouter_chat.py build
+
+      - name: Run OpenRouter
+        if: ${{ inputs.action != 'clear' }}
+        id: run
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODELS:  ${{ vars.OPENROUTER_MODELS || 'cohere/north-mini-code:free,nvidia/nemotron-3-super-120b-a12b:free,minimax/minimax-m3:free,google/gemma-4-31b-it:free' }}
+          OR_TIMEOUT: "300"
+        run: |
+          # set +e ОБЯЗАТЕЛЕН: ненулевой rc движка оборвал бы шаг ДО отправки ответа
+          # в TG — пользователь получил бы тишину (болезнь старого mimo_chat.yml).
+          set +e
+          START=$(date +%s)
+          timeout 1740 python3 Instrument/CnChat/openrouter_chat.py run
+          RC=$?
+          END=$(date +%s)
+          echo "RC=$RC ELAPSED=$((END-START))"
+          echo "rc=$RC"                 >> "$GITHUB_OUTPUT"
+          echo "elapsed=$((END-START))" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      # Детерминированный /close: рефлексию в память пишем САМИ, не полагаясь на free-LLM
+      - name: Persist /close reflection
+        if: ${{ inputs.action != 'clear' && contains(inputs.message, '/close') }}
+        run: |
+          python3 - <<'PY'
+          import subprocess, datetime, pathlib
+          clean = ""
+          p = pathlib.Path("/tmp/kimirun/clean.txt")
+          if p.exists():
+              clean = p.read_text(encoding="utf-8", errors="replace").strip()
+          rnotes = "ydrive:Content factory/cloud_io/mimo_sandbox/MEMORY/notes.md"
+          lnotes = "/tmp/_notes_close.md"
+          subprocess.run(["rclone", "copyto", rnotes, lnotes], capture_output=True)
+          utc = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+          entry = f"- [{utc}] /close: " + " ".join(clean[:200].split())
+          lines = pathlib.Path(lnotes).read_text(encoding="utf-8").splitlines() if pathlib.Path(lnotes).exists() else []
+          ins = 0
+          for i, l in enumerate(lines):
+              if l.lstrip().startswith(">"):   # после строки-подсказки (свежее сверху)
+                  ins = i + 1
+                  break
+          lines.insert(ins, entry)
+          pathlib.Path(lnotes).write_text("\n".join(lines) + "\n", encoding="utf-8")
+          subprocess.run(["rclone", "copyto", lnotes, rnotes], capture_output=True)
+          print(f"/close reflection persisted: {entry[:80]}")
+          PY
+
+      - name: Save context + send result to TG
+        if: ${{ inputs.action != 'clear' }}
+        env:
+          CLOUDFLARE_WORKER: ${{ secrets.CLOUDFLARE_WORKER }}
+          MIMO_BOT_TOKEN:    ${{ secrets.MIMO_BOT_TOKEN }}
+          CHAT_ID:           ${{ inputs.chat_id }}
+          THREAD_ID:         ${{ inputs.thread_id }}
+          THREAD_KEY:        ${{ inputs.thread_key }}
+          MESSAGE:           ${{ inputs.message }}
+          RC:                ${{ steps.run.outputs.rc }}
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, re, subprocess, urllib.request
+
+          key = os.environ["THREAD_KEY"]
+          message = os.environ["MESSAGE"]
+          rc = os.environ.get("RC") or "1"
+          cf = os.environ.get("CLOUDFLARE_WORKER", "").rstrip("/")
+          token = os.environ.get("MIMO_BOT_TOKEN", "")
+          chat_id = os.environ.get("CHAT_ID", "")
+          thread_id = os.environ.get("THREAD_ID", "")
+
+          clean = pathlib.Path("/tmp/kimirun/clean.txt")
+          err   = pathlib.Path("/tmp/kimirun/err.txt")
+          text = clean.read_text(encoding="utf-8", errors="replace").strip() if clean.exists() else ""
+          ok = (rc == "0") and bool(text)
+
+          if ok:
+              resp = text
+              def safe_key(k): return re.sub(r'[:/ ]+', '_', k).strip('_')
+              th_remote = f"ydrive:Content factory/cloud_io/mimo_bot/threads/{safe_key(key)}.json"
+              th_local = f"/tmp/_th_{safe_key(key)}.json"
+              subprocess.run(["rclone", "copyto", th_remote, th_local], capture_output=True)
+              hist = []
+              if pathlib.Path(th_local).exists():
+                  try: hist = json.loads(pathlib.Path(th_local).read_text())
+                  except Exception: pass
+              hist.append({"q": message, "a": resp[:1200]})
+              hist = hist[-6:]
+              pathlib.Path(th_local).write_text(json.dumps(hist, ensure_ascii=False))
+              subprocess.run(["rclone", "copyto", th_local, th_remote], capture_output=True)
+          else:
+              err_text = (err.read_text(errors="replace")[-300:] if err.exists() else "")
+              resp = f"❌ or: rc={rc} {err_text}".strip()
+
+          # Отправляем в TG (чанками по 3900 симв.)
+          for i in range(0, max(len(resp), 1), 3900):
+              chunk = resp[i:i + 3900] or "(пусто)"
+              body = {"chat_id": chat_id, "text": chunk}
+              if thread_id:
+                  body["message_thread_id"] = int(thread_id)
+              req = urllib.request.Request(
+                  f"{cf}/bot{token}/sendMessage",
+                  data=json.dumps(body).encode(),
+                  headers={"Content-Type": "application/json", "User-Agent": "curl/7.88.1"}
+              )
+              try:
+                  urllib.request.urlopen(req, timeout=30)
+                  print(f"TG ok (chunk {i // 3900 + 1})")
+              except Exception as e:
+                  print(f"TG err: {e}")
+          PY
+
+      # Краткая версия ответа голосом (edge-tts ru → ogg → sendVoice). Не критично: на ошибке молчим.
+      - name: Send voice reply
+        if: ${{ inputs.action != 'clear' && steps.run.outputs.rc == '0' }}
+        env:
+          MIMO_BOT_TOKEN: ${{ secrets.MIMO_BOT_TOKEN }}
+          CHAT_ID:        ${{ inputs.chat_id }}
+          THREAD_ID:      ${{ inputs.thread_id }}
+        run: |
+          pip install -q edge-tts requests || { echo "pip fail — пропуск голоса"; exit 0; }
+          python3 - <<'PY'
+          import os, re, asyncio, subprocess
+          try:
+              text = open("/tmp/kimirun/clean.txt", encoding="utf-8").read().strip()
+          except Exception:
+              text = ""
+          if not text:
+              print("нет текста для голоса"); raise SystemExit(0)
+          # берём строку '\U0001F50A ...' если модель её дала, иначе весь текст без markdown-символов
+          mark = "\U0001F50A"
+          short = ""
+          for line in text.splitlines():
+              s = line.strip()
+              if mark in s:
+                  short = s.split(mark, 1)[1].strip(" :—-")
+                  break
+          if not short:
+              src = re.sub(r"`+", " ", text)                 # убрать бэктики кода
+              src = re.sub(r"[#|>*_]", " ", src)             # убрать markdown-символы (НЕ строки целиком)
+              short = " ".join(src.split())[:220].strip()
+          if not short:
+              print("нет текста для озвучки"); raise SystemExit(0)
+          print("VOICE short:", short[:80])
+          try:
+              import edge_tts
+              asyncio.run(edge_tts.Communicate(short, "ru-RU-SvetlanaNeural").save("/tmp/reply.mp3"))
+              subprocess.run(["ffmpeg", "-y", "-i", "/tmp/reply.mp3", "-c:a", "libopus",
+                              "-b:a", "32k", "/tmp/reply.ogg"], check=True, capture_output=True)
+          except Exception as e:
+              print(f"TTS/ffmpeg err: {e}"); raise SystemExit(0)
+          try:
+              import requests
+              # GH-раннер в США → api.telegram.org НЕ заблокирован, шлём multipart НАПРЯМУЮ
+              # (CF Worker нужен только с RU-IP бука; здесь он лишний и давал 403 на multipart)
+              data = {"chat_id": os.environ["CHAT_ID"]}
+              tid = os.environ.get("THREAD_ID", "").strip()
+              if tid:
+                  data["message_thread_id"] = int(tid)
+              with open("/tmp/reply.ogg", "rb") as fh:
+                  r = requests.post(
+                      f"https://api.telegram.org/bot{os.environ['MIMO_BOT_TOKEN']}/sendVoice",
+                      data=data, files={"voice": ("reply.ogg", fh, "audio/ogg")}, timeout=60)
+              print(f"sendVoice: {r.status_code} {r.text[:150]}")
+          except Exception as e:
+              print(f"sendVoice err: {e}")
+          PY
