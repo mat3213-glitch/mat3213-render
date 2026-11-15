@@ -1,0 +1,42 @@
+name: _probe-web (one-off, удалить после прогона)
+
+# 15.11: зачем web-флаг реально доходит до платформы для текущей цепочки.
+# Без auth внутрь: секрет зеркаutosil; вывод — таблица status per модель/режим.
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: ping each model, web on/off
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.error, urllib.request
+          models = ["cohere/north-mini-code:free", "google/gemma-4-31b-it:free", "openrouter/free"]
+          def ping(model, web):
+              payload = {"model": model, "messages": [{"role": "user", "content": "ping"}],
+                         "max_tokens": 5, "temperature": 0.2}
+              if web:
+                  payload["plugins"] = [{"id": "web"}]
+              req = urllib.request.Request(
+                  "https://openrouter.ai/api/v1/chat/completions", data=json.dumps(payload).encode(),
+                  headers={"Authorization": "Bearer " + os.environ["OPENROUTER_API_KEY"],
+                           "Content-Type": "application/json",
+                           "HTTP-Referer": "https://github.com/mat3213-glitch",
+                           "X-Title": "content-factory"}, method="POST")
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      json.loads(r.read().decode())
+                  return 200
+              except urllib.error.HTTPError as e:
+                  return e.code
+              except Exception as e:
+                  return type(e).__name__
+          for m in models:
+              for web in (0, 1):
+                  print(f"{ping(m, bool(web))} web={web} {m}", flush=True)
+          PY
