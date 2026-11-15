@@ -221,6 +221,8 @@ def run_engine(prompt_path: str = "/tmp/prompt.txt", out_dir: str = "/tmp/kimiru
         import text_openrouter
         timeout = int(os.environ.get("OR_TIMEOUT", "300"))
         web = os.environ.get("OR_WEB", "0").strip().lower() in ("1", "true", "yes", "on")
+        chain = text_openrouter.model_chain()
+        print(f"[openrouter_chat] web={int(web)} models={','.join(chain)}")
         res = text_openrouter.generate(prompt, timeout=timeout, report_model=True, web=web)
         if isinstance(res, tuple):
             text, model = (list(res) + [""])[:2]

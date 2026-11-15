@@ -7,10 +7,12 @@ Aliyun WAF-капча на /completions), а OpenRouter — обычный HTTPS
 
 При 429/5xx перебирает цепочку моделей (OPENROUTER_MODELS через запятую).
 """
+
 from __future__ import annotations
 
 import json
 import os
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -44,9 +46,10 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
     report_model=True — вернуть (текст, модель), которая реально ответила;
     нужен чату в Telegram: видно, кто из цепочки отвечает (цепочка фолбэкится).
 
-    web=True — попросить платформенный веб-поиск у OpenRouter (флаг владельца
-    15.11). Модели без поддержки/квоты ответят ошибкой → цепочка фолбэкится.
-    Форма поля сверяется реальным ответом раннера (этот деплой — и есть проверка).
+    web=True — попросить платформенный веб-поиск у OpenRouter (флаг владельца 15.11).
+    Модели без поддержки/квоты ответят ошибкой → цепочка фолбэкится; модель,
+    которая отказывает именно web-поле (400/422), перепрашивается без web, и
+    цепочка идёт дальше как обычно.
     """
     if strict:
         prompt = prompt + STRICT_SUFFIX
@@ -63,36 +66,45 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
     chain = [model] if model else model_chain()
     errors = []
     for m in chain:
-        payload = {
-            "model": m,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": max_tokens,
-            "temperature": 0.2,
-        }
-        if json_mode:
-            payload["response_format"] = {"type": "json_object"}
-        if web:
-            payload["plugins"] = [{"id": "web"}]
-        body = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(URL, data=body, headers=headers, method="POST")
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8", "replace"))
-        except urllib.error.HTTPError as exc:
-            errors.append(f"{m}: HTTP {exc.code}")
-            continue
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            errors.append(f"{m}: {type(exc).__name__}")
-            continue
-        except json.JSONDecodeError:
-            errors.append(f"{m}: не-JSON ответ")
-            continue
-        try:
-            text = (data["choices"][0]["message"].get("content") or "").strip()
-        except (KeyError, IndexError, TypeError):
-            errors.append(f"{m}: пустая структура ответа")
-            continue
-        if text:
-            return (text, m) if report_model else text
-        errors.append(f"{m}: пустой ответ")
+        web_remaining = web
+        while True:
+            payload = {
+                "model": m,
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": max_tokens,
+                "temperature": 0.2,
+            }
+            if json_mode:
+                payload["response_format"] = {"type": "json_object"}
+            if web_remaining:
+                payload["plugins"] = [{"id": "web"}]
+            body = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(URL, data=body, headers=headers, method="POST")
+            try:
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    data = json.loads(resp.read().decode("utf-8", "replace"))
+            except urllib.error.HTTPError as exc:
+                if web_remaining and exc.code in (400, 422):
+                    # поле web не поддерживается этой моделью — та же модель без web
+                    web_remaining = False
+                    print("  [openrouter] web-поле отклонено моделью — повтор без web",
+                          file=sys.stderr)
+                    continue
+                errors.append(f"{m}: HTTP {exc.code}")
+                break
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                errors.append(f"{m}: {type(exc).__name__}")
+                break
+            except json.JSONDecodeError:
+                errors.append(f"{m}: не-JSON ответ")
+                break
+            try:
+                text = (data["choices"][0]["message"].get("content") or "").strip()
+            except (KeyError, IndexError, TypeError):
+                errors.append(f"{m}: пустая структура ответа")
+                break
+            if text:
+                return (text, m) if report_model else text
+            errors.append(f"{m}: пустой ответ")
+            break
     raise RuntimeError("OpenRouter не ответил — " + " | ".join(errors))
