@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-11-14",
+  "_generated": "2026-11-15",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
@@ -12,7 +12,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "40274460.jpg"
+      "_src": "11969340.jpg"
     },
     {
       "name": "scout_neutral_night_muted",
@@ -24,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "88847566.jpg"
+      "_src": "82280059.jpg"
     },
     {
       "name": "scout_neutral_bright_muted",
@@ -36,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "87845845.jpg"
+      "_src": "40079612.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "41013342.jpg"
+      "_src": "26101671.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,19 +60,19 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "48668742.jpg"
+      "_src": "24433926.jpg"
     },
     {
-      "name": "scout_warm_night_soft",
-      "note": "scout: warm night soft",
-      "eq": "contrast=0.91:saturation=0.71:brightness=-0.075:gamma=1.08",
-      "balance": "rs=0.019:bs=-0.015:rm=0.061:bm=-0.055:rh=0.05:bh=-0.042",
+      "name": "scout_green_mid_soft",
+      "note": "scout: green mid soft",
+      "eq": "contrast=1.03:saturation=1.1:brightness=-0.02:gamma=1.021",
+      "balance": "gs=0.051:bs=-0.065:rm=0.1:gm=0.037:bm=-0.1:rh=0.1:gh=0.076:bh=-0.1",
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "80399335.jpg"
+      "_src": "22083429.jpg"
     }
   ]
 }

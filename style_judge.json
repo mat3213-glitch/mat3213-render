@@ -2,61 +2,62 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 8.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Хороший глубокий холодный тон, попадает в эстетику"
+      "keep": true,
+      "score": 6.7,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Соответствует cold teal, мягкий, не кричащий"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 9.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Идеальный deep teal и правильная глубина теней"
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Тёмный ночной teal, приглушённый, без тепла"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 7.0,
-      "votes": "1/2",
+      "score": 6.0,
+      "votes": "1/3",
       "status": "спорный",
-      "reason": "Слишком светло, но цветовой сдвиг верный"
+      "reason": "Яркий, но teal, приглушённый, подходит"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 9.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Чистый холодный нуар, отличный контраст и цвет"
+      "keep": true,
+      "score": 8.5,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Ночной teal, мягкие тени, холодный"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
+      "keep": true,
       "score": 8.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Хорошая дымка и правильный бирюзовый оттенок"
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Ночной teal, мягкие тени, глубокий"
     },
     {
-      "name": "scout_warm_night_soft",
+      "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 3.0,
-      "votes": "0/2",
+      "score": 4.0,
+      "votes": "0/3",
       "status": "отклонён",
-      "reason": "Уходит в теплый спектр, противоречит бренду"
+      "reason": "Зелёный оттенок, не teal, слишком насыщенный"
     }
   ],
-  "recommend_merge": [],
-  "disputed": [
+  "recommend_merge": [
     "scout_neutral_mid_muted",
     "scout_neutral_night_muted",
-    "scout_neutral_bright_muted",
     "scout_neutral_night_soft",
     "scout_neutral_night_soft_2"
   ],
-  "_generated": "2026-11-14",
-  "_judge": "gh-vision-ensemble(2/5)"
+  "disputed": [
+    "scout_neutral_bright_muted"
+  ],
+  "_generated": "2026-11-15",
+  "_judge": "gh-vision-ensemble(3/5)"
 }
