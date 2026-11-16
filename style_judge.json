@@ -2,62 +2,60 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 6.7,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Соответствует cold teal, мягкий, не кричащий"
+      "keep": false,
+      "score": 4.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "слишком тёплый, не deep teal"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": true,
-      "score": 7.5,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Тёмный ночной teal, приглушённый, без тепла"
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "мутный, не глубокий"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 6.0,
-      "votes": "1/3",
-      "status": "спорный",
-      "reason": "Яркий, но teal, приглушённый, подходит"
+      "score": 4.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "слишком тёплый, не deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": true,
-      "score": 8.5,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Ночной teal, мягкие тени, холодный"
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "слишком тёплый, не deep teal"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "2/3",
-      "status": "принят",
-      "reason": "Ночной teal, мягкие тени, глубокий"
+      "keep": false,
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "слишком тёплый, не deep teal"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 4.0,
-      "votes": "0/3",
-      "status": "отклонён",
-      "reason": "Зелёный оттенок, не teal, слишком насыщенный"
+      "score": 8.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "очень близок к deep teal, хорошая глубина"
     }
   ],
-  "recommend_merge": [
-    "scout_neutral_mid_muted",
+  "recommend_merge": [],
+  "disputed": [
     "scout_neutral_night_muted",
     "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2"
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
-  "disputed": [
-    "scout_neutral_bright_muted"
-  ],
-  "_generated": "2026-11-15",
-  "_judge": "gh-vision-ensemble(3/5)"
+  "_generated": "2026-11-16",
+  "_judge": "gh-vision-ensemble(2/5)"
 }
