@@ -3,61 +3,61 @@
     {
       "name": "scout_neutral_mid_muted",
       "keep": false,
-      "score": 7.0,
+      "score": 6.5,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "подходит под холодный сине-зелёный тон, тени уходят в холодный чёрно-зелёный, ды"
+      "reason": "хорошо подходит под искомую цветовую гамму, но слегка тёплее чем хотелось бы"
+    },
+    {
+      "name": "scout_neutral_night_muted",
+      "keep": false,
+      "score": 5.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "слишком тёмно, тёпло и грязно"
+    },
+    {
+      "name": "scout_neutral_bright_muted",
+      "keep": false,
+      "score": 3.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "слишком светло и тёпло"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 4.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "световой акцент не мягкий не-белый"
-    },
-    {
-      "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 4.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "световой акцент не мягкий не-белый"
-    },
-    {
-      "name": "scout_green_mid_soft",
-      "keep": false,
-      "score": 7.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "подходит под холодный сине-зелёный тон, тени уходят в холодный чёрно-зелёный, ды"
-    },
-    {
-      "name": "scout_green_mid_soft_2",
-      "keep": false,
-      "score": 2.5,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "световой акцент не мягкий не-белый"
-    },
-    {
-      "name": "scout_cool_night_soft",
       "keep": true,
       "score": 9.0,
       "votes": "2/2",
       "status": "принят",
-      "reason": "подходит под холодный сине-зелёный тон, тени уходят в холодный чёрно-зелёный, ды"
+      "reason": "идеально подходит под искомую цветовую гамму"
+    },
+    {
+      "name": "scout_neutral_night_soft_2",
+      "keep": true,
+      "score": 8.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "подходит под искомую цветовую гамму, но слегка тёплее чем хотелось бы"
+    },
+    {
+      "name": "scout_green_mid_soft",
+      "keep": false,
+      "score": 5.0,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "хорошо подходит под искомую цветовую гамму, но слегка тёплее чем хотелось бы"
     }
   ],
   "recommend_merge": [
-    "scout_cool_night_soft"
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2"
   ],
   "disputed": [
     "scout_neutral_mid_muted",
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
+    "scout_neutral_night_muted",
     "scout_green_mid_soft"
   ],
-  "_generated": "2026-11-19",
+  "_generated": "2026-11-20",
   "_judge": "gh-vision-ensemble(2/5)"
 }
