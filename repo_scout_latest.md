@@ -1,11 +1,74 @@
-# Repo Scout — 2026-11-21T17:08:05.677988
-Всего в шортлисте: 1
-- **K9i-0/kasaneru** ⭐0 [video]
-  - https://github.com/K9i-0/kasaneru
+# Repo Scout — 2026-11-22T17:38:35.571856
+Всего в шортлисте: 8
+- **stevens-katherine04/descript-win** ⭐317 [video]
+  - https://github.com/stevens-katherine04/descript-win
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий предлагает AI-редактирование видео на основе транскриптов. Он может помочь в создании компактного представления для ревью режиссуры, используя текстовую основу вместо полного видео. Несмотря на высокий риск дублирования с существующими инструментами, его ценность в создании удобного интерфейса для быстрого просмотра оправдывает низкую стоимость интеграции.
+  - 📄 Descript - AI-powered audio and video editing software for transcript-based editing, automatic transcription and screen recording on Windows 10/11
+- **edming091092/robot-arm** ⭐0 [craft]
+  - https://github.com/edming091092/robot-arm
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий описывает управление движением робота-камеры по текстовым подсказкам. Он может предоставить новые проверяемые формулировки для операторских словарей и prompt-схем, что важно для управляемой i2v-моторики. Хотя риск дублирования высок из-за уже имеющихся решений, низкая стоимость интеграции оправдана для получения новых, конкретных формулировок.
+  - 📄 SAM3 text-prompt detection, calibrated camera-to-robot X mapping and MG400 movement with manual Z.
+- **xuyinzhang123/StrategyToVideo-OSS** ⭐1 [source]
+  - https://github.com/xuyinzhang123/StrategyToVideo-OSS
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
+  - 🔎 evidence: query matched: stock video api
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
+  - 💡 Этот репозиторий генерирует видео из данных CSV локально, без облачных API. Он может предложить новый источник или механизм для получения стокового видео, что поможет расширить базу легального контента. Несмотря на высокий риск дублирования с уже используемыми сервисами, низкая стоимость интеграции оправдана, если он предоставляет уникальные метаданные или происхождение.
+  - 📄 Local-first data visualization video generator: bring your own CSV (time series · cross-section · stock daily OHLC), get an animated MP4. Windows, no cloud, no 
+- **BANU-09/editmind-ai** ⭐0 [video]
+  - https://github.com/BANU-09/editmind-ai
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Эта платформа предлагает AI-редактирование видео с генерацией транскриптов и редактированием по текстовым инструкциям. Она может предоставить компактное представление для ревью режиссуры, используя транскрипты, что снижает потребность в полной передаче видео в LLM. Несмотря на существующие аналоги, низкая стоимость интеграции оправдана, если она предлагает уникальный и удобный интерфейс для быстрого просмотра.
+  - 📄 EDITMIND AI is an intelligent, prompt-based video editing platform that uses AI to analyze videos, generate accurate multilingual transcripts with word-level ti
+- **ishandutta2007/Awesome-AI-Cinematography-Video-Prompting** ⭐0 [craft]
+  - https://github.com/ishandutta2007/Awesome-AI-Cinematography-Video-Prompting
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий содержит подборку AI-подсказок для кинематографии. Он может обогатить существующие операторские словари и prompt-схемы новыми, проверяемыми формулировками для управляемой i2v-моторики. Несмотря на высокий риск дублирования с уже имеющимися инструментами, низкая стоимость интеграции оправдана для получения свежих идей и формулировок.
+  - 📄 Top AI Cinematography Video Prompting (Opensource)  Star if you like it! 
+- **Descript-for-windows/.github** ⭐0 [video]
+  - https://github.com/Descript-for-windows/.github
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
+  - 🔎 evidence: query matched: transcript based video editing
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
+  - 💡 Этот репозиторий относится к Descript для Windows, предлагая редактирование видео на основе транскриптов. Он может помочь в создании компактного представления для ревью режиссуры, используя текстовую основу вместо полного видео. Несмотря на высокий риск дублирования с существующими инструментами, его ценность в создании удобного интерфейса для быстрого просмотра оправдывает низкую стоимость интеграции.
+  - 📄 Descript for Windows — video editing, recording and post-production. Explore Transcript-based editing, Multitrack audio, Screen recording, professional controls
+- **DaBaoAgent/Auto-Video** ⭐2 [video]
+  - https://github.com/DaBaoAgent/Auto-Video
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: render manifest ffmpeg
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Репозиторий K9i-0/kasaneru рендерит видео из JSON-манифестов с использованием ffmpeg. Это помогает усилить воспроизводимость рендера на CPU/GitHub Actions, закрывая потребность в использовании манифестов. Хотя стоимость интеграции низка, есть высокий риск дублирования, и он рассматривается как запасной вариант, так как некоторые функции (кеш чанков, квитанции) уже частично внедрены.
-  - 📄 Render video from a JSON manifest with ffmpeg and a browser or Flutter rendering backend
+  - 💡 Этот репозиторий предлагает 165 детерминированных пайплайнов для рендеринга видео без облачных API. Он может помочь усилить воспроизводимость рендера на CPU/GitHub Actions, предоставляя конкретные механизмы для гарантированной идентичности кадров. Несмотря на частичное внедрение похожих решений, низкая стоимость интеграции оправдана для закрытия конкретных пробелов в воспроизводимости.
+  - 📄 165 条 AI 视频画法管线 + 1 个配音前端：皮影、水墨、彩铅、赛璐璐、像素、三维推演、地图、蓝图…代码逐帧确定性渲染，不调云端生图/生视频 API，同稿同版同像素。 | 165 deterministic AI-video pipelines — paper-cut, ink, cel, pencil, pix
+- **aboringnetizen-ai/historical-cartography-platform** ⭐1 [video]
+  - https://github.com/aboringnetizen-ai/historical-cartography-platform
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот репозиторий включает детерминированный видео-рендерер в рамках платформы исторической картографии. Он может усилить воспроизводимость рендера на CPU/GitHub Actions, предлагая механизмы для обеспечения идентичности результатов. Несмотря на частичное внедрение похожих решений, низкая стоимость интеграции оправдана для закрытия конкретных пробелов в воспроизводимости и создании проверяемых receipts.
+  - 📄 AI-powered historical cartography platform: shared schema, topology engine, scholar agent, deterministic video renderer and carto-studio-web
