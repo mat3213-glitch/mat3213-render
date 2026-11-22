@@ -1,7 +1,43 @@
 {
-  "_generated": "2026-11-21",
+  "_generated": "2026-11-22",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
+    {
+      "name": "scout_neutral_mid_muted",
+      "note": "scout: neutral mid muted",
+      "eq": "contrast=0.9:saturation=0.53:brightness=0.023:gamma=0.975",
+      "balance": null,
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "70106619.jpg"
+    },
+    {
+      "name": "scout_neutral_night_muted",
+      "note": "scout: neutral night muted",
+      "eq": "contrast=0.9:saturation=0.69:brightness=-0.052:gamma=1.056",
+      "balance": "rm=0.061:bm=-0.068:rh=0.058:bh=-0.072",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "48556185.jpg"
+    },
+    {
+      "name": "scout_neutral_bright_muted",
+      "note": "scout: neutral bright muted",
+      "eq": "contrast=0.9:saturation=0.64:brightness=0.06:gamma=0.9",
+      "balance": "rm=0.088:bm=-0.087:rh=0.042:bh=-0.052",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "37669334.jpg"
+    },
     {
       "name": "scout_neutral_night_soft",
       "note": "scout: neutral night soft",
@@ -12,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "21695616.jpg"
+      "_src": "37438175.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -24,7 +60,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "55896459.jpg"
+      "_src": "14371040.jpg"
     },
     {
       "name": "scout_green_mid_soft",
@@ -36,43 +72,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "35805695.jpg"
-    },
-    {
-      "name": "scout_green_mid_soft_2",
-      "note": "scout: green mid soft",
-      "eq": "contrast=1.06:saturation=1.0:brightness=0.013:gamma=0.986",
-      "balance": "gs=0.049:bs=-0.042:gm=0.1:bm=-0.1:rh=0.069:gh=0.097:bh=-0.1",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "43252166.jpg"
-    },
-    {
-      "name": "scout_cool_night_soft",
-      "note": "scout: cool night soft",
-      "eq": "contrast=1.03:saturation=0.83:brightness=-0.059:gamma=1.062",
-      "balance": "bs=0.019:rm=-0.037:gm=0.027:rh=-0.036:gh=0.046",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "45104.jpg"
-    },
-    {
-      "name": "scout_warm_night_soft",
-      "note": "scout: warm night soft",
-      "eq": "contrast=0.91:saturation=0.71:brightness=-0.075:gamma=1.08",
-      "balance": "rs=0.019:bs=-0.015:rm=0.061:bm=-0.055:rh=0.05:bh=-0.042",
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "88298606.jpg"
+      "_src": "84885287.jpg"
     }
   ]
 }
