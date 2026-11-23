@@ -1,60 +1,62 @@
 {
   "verdicts": [
     {
-      "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 1.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Слишком тёплый, не холодный teal"
-    },
-    {
       "name": "scout_neutral_night_muted",
       "keep": false,
-      "score": 1.5,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "Слишком тёплый, не холодный teal"
+      "score": 6.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "мутоватый грейд, не наш cold teal"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 1.0,
+      "score": 3.0,
       "votes": "0/2",
       "status": "отклонён",
-      "reason": "Слишком тёплый, не холодный teal"
+      "reason": "светлый, не наш cold teal, много света"
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 3.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "Холодный teal, но слишком яркий"
+      "keep": true,
+      "score": 8.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "очень близок к cold teal, дымка, тени, свет холодный, нуар, неон нет"
     },
     {
       "name": "scout_neutral_night_soft_2",
       "keep": false,
-      "score": 4.0,
+      "score": 6.5,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "Холодный teal, но слишком яркий"
+      "reason": "светлее scout_neutral_night_soft, не наш cold teal, тени не чёрно-зелёные, дымка"
     },
     {
-      "name": "scout_green_mid_soft",
+      "name": "scout_warm_night_soft",
       "keep": false,
-      "score": 4.5,
+      "score": 2.0,
+      "votes": "0/2",
+      "status": "отклонён",
+      "reason": "тёплый, не наш cold teal, оранжево-янтарный сдвиг, много света, неон нет, грязны"
+    },
+    {
+      "name": "scout_neutral_mid_soft",
+      "keep": false,
+      "score": 5.0,
       "votes": "1/2",
       "status": "спорный",
-      "reason": "Холодный teal, но слишком яркий"
+      "reason": "не наш cold teal, тени не чёрно-зелёные, дымка не холодная, свет не холодный, ну"
     }
   ],
-  "recommend_merge": [],
-  "disputed": [
-    "scout_neutral_night_soft",
-    "scout_neutral_night_soft_2",
-    "scout_green_mid_soft"
+  "recommend_merge": [
+    "scout_neutral_night_soft"
   ],
-  "_generated": "2026-11-22",
+  "disputed": [
+    "scout_neutral_night_muted",
+    "scout_neutral_night_soft_2",
+    "scout_neutral_mid_soft"
+  ],
+  "_generated": "2026-11-23",
   "_judge": "gh-vision-ensemble(2/5)"
 }

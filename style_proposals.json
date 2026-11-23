@@ -1,19 +1,7 @@
 {
-  "_generated": "2026-11-22",
+  "_generated": "2026-11-23",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
-    {
-      "name": "scout_neutral_mid_muted",
-      "note": "scout: neutral mid muted",
-      "eq": "contrast=0.9:saturation=0.53:brightness=0.023:gamma=0.975",
-      "balance": null,
-      "grain": [
-        12,
-        17
-      ],
-      "vignette": "angle=PI/4.5",
-      "_src": "70106619.jpg"
-    },
     {
       "name": "scout_neutral_night_muted",
       "note": "scout: neutral night muted",
@@ -24,7 +12,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "48556185.jpg"
+      "_src": "16899364.jpg"
     },
     {
       "name": "scout_neutral_bright_muted",
@@ -36,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "37669334.jpg"
+      "_src": "13783045.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "37438175.jpg"
+      "_src": "11897666.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,19 +48,31 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "14371040.jpg"
+      "_src": "35289955.jpg"
     },
     {
-      "name": "scout_green_mid_soft",
-      "note": "scout: green mid soft",
-      "eq": "contrast=1.03:saturation=1.1:brightness=-0.02:gamma=1.021",
-      "balance": "gs=0.051:bs=-0.065:rm=0.1:gm=0.037:bm=-0.1:rh=0.1:gh=0.076:bh=-0.1",
+      "name": "scout_warm_night_soft",
+      "note": "scout: warm night soft",
+      "eq": "contrast=0.91:saturation=0.71:brightness=-0.075:gamma=1.08",
+      "balance": "rs=0.019:bs=-0.015:rm=0.061:bm=-0.055:rh=0.05:bh=-0.042",
       "grain": [
         12,
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "84885287.jpg"
+      "_src": "77444470.jpg"
+    },
+    {
+      "name": "scout_neutral_mid_soft",
+      "note": "scout: neutral mid soft",
+      "eq": "contrast=1.03:saturation=0.72:brightness=0.002:gamma=0.997",
+      "balance": "rm=0.057:bm=-0.049:rh=0.083:gh=-0.027:bh=-0.056",
+      "grain": [
+        12,
+        17
+      ],
+      "vignette": "angle=PI/4.5",
+      "_src": "17585161.jpg"
     }
   ]
 }
