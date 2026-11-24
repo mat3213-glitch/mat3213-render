@@ -2,19 +2,19 @@
   "verdicts": [
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 6.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "мутоватый грейд, не наш cold teal"
+      "keep": true,
+      "score": 8.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "холодный, глубокий, но не мрачный, близок к deep teal"
     },
     {
       "name": "scout_neutral_bright_muted",
       "keep": false,
-      "score": 3.0,
-      "votes": "0/2",
-      "status": "отклонён",
-      "reason": "светлый, не наш cold teal, много света"
+      "score": 5.5,
+      "votes": "1/2",
+      "status": "спорный",
+      "reason": "слишком светлый, не холодный, не deep teal"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -22,41 +22,42 @@
       "score": 8.5,
       "votes": "2/2",
       "status": "принят",
-      "reason": "очень близок к cold teal, дымка, тени, свет холодный, нуар, неон нет"
+      "reason": "холодный, глубокий, но не мрачный, близок к deep teal"
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 6.5,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "светлее scout_neutral_night_soft, не наш cold teal, тени не чёрно-зелёные, дымка"
+      "keep": true,
+      "score": 7.5,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "холодный, глубокий, но не мрачный, близок к deep teal"
     },
     {
-      "name": "scout_warm_night_soft",
+      "name": "scout_green_mid_soft",
+      "keep": true,
+      "score": 6.0,
+      "votes": "2/2",
+      "status": "принят",
+      "reason": "зеленоватый, не холодный, не deep teal"
+    },
+    {
+      "name": "scout_warm_mid_soft",
       "keep": false,
-      "score": 2.0,
+      "score": 1.5,
       "votes": "0/2",
       "status": "отклонён",
-      "reason": "тёплый, не наш cold teal, оранжево-янтарный сдвиг, много света, неон нет, грязны"
-    },
-    {
-      "name": "scout_neutral_mid_soft",
-      "keep": false,
-      "score": 5.0,
-      "votes": "1/2",
-      "status": "спорный",
-      "reason": "не наш cold teal, тени не чёрно-зелёные, дымка не холодная, свет не холодный, ну"
+      "reason": "теплый, не холодный, не deep teal"
     }
   ],
   "recommend_merge": [
-    "scout_neutral_night_soft"
+    "scout_neutral_night_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2",
+    "scout_green_mid_soft"
   ],
   "disputed": [
-    "scout_neutral_night_muted",
-    "scout_neutral_night_soft_2",
-    "scout_neutral_mid_soft"
+    "scout_neutral_bright_muted"
   ],
-  "_generated": "2026-11-23",
+  "_generated": "2026-11-24",
   "_judge": "gh-vision-ensemble(2/5)"
 }
