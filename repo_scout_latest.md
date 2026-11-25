@@ -1,29 +1,47 @@
-# Repo Scout — 2026-11-24T20:30:48.424168
-Всего в шортлисте: 3
-- **frankShan001/CutVoke** ⭐44 [video]
-  - https://github.com/frankShan001/CutVoke
+# Repo Scout — 2026-11-25T19:47:24.458184
+Всего в шортлисте: 5
+- **Dvanielx03/higgsfield-photorealistic-filmmaking** ⭐1 [craft]
+  - https://github.com/Dvanielx03/higgsfield-photorealistic-filmmaking
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: transcript based video editing
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 CutVoke — это AI-видеоредактор, позволяющий редактировать видео на основе транскриптов и управлять многодорожечной временной шкалой. Он предоставляет компактное представление для ревью режиссуры, что помогает дёшево проверять монтаж без передачи видео в LLM. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как WhisperX и EDL уже есть, и его главная ценность — только в компактном интерфейсе ревью.
-  - 📄 Open-source AI video editor with a built-in MCP server: Claude Code, Codex, Cursor or any MCP client edits the same multi-track timeline you do. Local-first des
-- **CaullenOmdahl/pexels-mcp-server** ⭐11 [source]
-  - https://github.com/CaullenOmdahl/pexels-mcp-server
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает инструменты для создания фотореалистичного видео с ИИ, включая официальные промпты и контроль качества. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. Интеграция имеет низкую стоимость, но из-за высокого риска дублирования стоит брать только новые, уникальные формулировки.
+  - 📄 Director audiovisual para Claude Code especializado en Higgsfield: video fotorrealista con continuidad, router de modelos, prompts oficiales por modelo, control
+- **halilugur/screenwords** ⭐1 [video]
+  - https://github.com/halilugur/screenwords
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `stock_source_adapters` (priority 7): Надёжные headless-адаптеры легального stock-видео с лицензией, retry и метаданными происхождения.
-  - 🔎 evidence: query matched: stock video api
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — Coverr/Pexels/Wikimedia уже работают; ценен только новый источник или provenance
-  - 💡 Pexels-mcp-server — это MCP-сервер для API Pexels, который позволяет искать и получать детали стоковых фото и видео. Он может служить headless-адаптером для легального сток-видео с метаданными происхождения. Несмотря на низкую стоимость интеграции, риск дублирования высок, так как Pexels и другие источники уже интегрированы, и ценность только в новом источнике или происхождении.
-  - 📄 MCP server for Pexels stock photo and video API — search, browse collections, and get media details
-- **kernelmoonowl/pluraleyes** ⭐22 [video]
-  - https://github.com/kernelmoonowl/pluraleyes
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Проект screenwords на Rust — это движок для видеоисторий с детерминированным конвейером MP4, обеспечивающий точность и воспроизводимость рендера. Он может усилить воспроизводимость рендера на GitHub Actions за счет манифестов и возобновляемых чанков. Несмотря на низкую стоимость интеграции, высокий риск дублирования требует проверки на наличие конкретных незакрытых механизмов.
+  - 📄 A from-zero video-story engine in pure Rust: a lossless document model, an atomic edit engine, an MCP-native tool surface, a web editor, an animated HTML render
+- **Jack-chen-cyber/ai-video-director-prompts** ⭐0 [craft]
+  - https://github.com/Jack-chen-cyber/ai-video-director-prompts
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `timeline_review` (priority 9): Компактное timeline/transcript-представление для дешёвого ревью режиссуры без передачи видео целиком в LLM.
-  - 🔎 evidence: query matched: video timeline waveform
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; medium — WhisperX и EDL уже есть; ценен только компактный review surface
-  - 💡 Pluraleyes синхронизирует аудио и видео клипы, анализируя их волновые формы и выравнивая на временной шкале. Это может способствовать созданию компактного timeline-представления для дешёвого ревью режиссуры без передачи видео в LLM. Интеграция недорогая, но риск дублирования средний, так как WhisperX и EDL уже есть, и ценность только в компактном интерфейсе ревью.
-  - 📄 Pluraleyes for Windows 10/11. Syncs audio and video clips recorded on separate cameras and microphones by analyzing waveforms, aligning takes automatically in y
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий содержит проверенные промпты для ИИ-видео, включая словарь движений камеры и рабочие процессы для согласованности кадров. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. При низкой стоимости интеграции, высокий риск дублирования означает, что стоит брать только новые, уникальные формулировки.
+  - 📄 Production-tested multi-shot AI video prompts, camera movement vocabulary, and 3-node consistency workflows for Seedance, Kling, Veo, Runway & multi-model canva
+- **kandritskiy-jpg/higgsfield-realism-prompt-engine** ⭐0 [craft]
+  - https://github.com/kandritskiy-jpg/higgsfield-realism-prompt-engine
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий — база знаний по промпт-инжинирингу для Higgsfield, с фокусом на реализм, кинематографию и предотвращение артефактов. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. Несмотря на низкую стоимость интеграции, высокий риск дублирования требует брать только новые, уникальные проверяемые формулировки.
+  - 📄 Realism-first prompt engineering knowledge base for Higgsfield. Curated AI skills, model-specific techniques, cinematography, reference analysis, artifact preve
+- **klakix-ai/ai-video-skills** ⭐0 [craft]
+  - https://github.com/klakix-ai/ai-video-skills
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Репозиторий содержит «навыки» для ИИ-видео, охватывающие ракурсы камеры, согласованность персонажей и реализм для различных моделей. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. При низкой стоимости интеграции, высокий риск дублирования означает, что стоит брать только новые, уникальные формулировки.
+  - 📄 Agent Skills for AI video: camera angles, character consistency, Seedance & Kling prompts, realism, lip sync, pacing, viral formats. For Claude Code, Codex, Cur
