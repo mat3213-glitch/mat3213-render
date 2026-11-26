@@ -1,47 +1,11 @@
-# Repo Scout — 2026-11-25T19:47:24.458184
-Всего в шортлисте: 5
-- **Dvanielx03/higgsfield-photorealistic-filmmaking** ⭐1 [craft]
-  - https://github.com/Dvanielx03/higgsfield-photorealistic-filmmaking
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий предлагает инструменты для создания фотореалистичного видео с ИИ, включая официальные промпты и контроль качества. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. Интеграция имеет низкую стоимость, но из-за высокого риска дублирования стоит брать только новые, уникальные формулировки.
-  - 📄 Director audiovisual para Claude Code especializado en Higgsfield: video fotorrealista con continuidad, router de modelos, prompts oficiales por modelo, control
-- **halilugur/screenwords** ⭐1 [video]
-  - https://github.com/halilugur/screenwords
+# Repo Scout — 2026-11-26T19:26:00.821414
+Всего в шортлисте: 1
+- **voyager67/cliprally** ⭐1 [video]
+  - https://github.com/voyager67/cliprally
   - ⚠️ fallback: query-grounded
   - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: deterministic video render
+  - 🔎 evidence: query matched: render manifest ffmpeg
   - 🧩 integration cost: low
   - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 Проект screenwords на Rust — это движок для видеоисторий с детерминированным конвейером MP4, обеспечивающий точность и воспроизводимость рендера. Он может усилить воспроизводимость рендера на GitHub Actions за счет манифестов и возобновляемых чанков. Несмотря на низкую стоимость интеграции, высокий риск дублирования требует проверки на наличие конкретных незакрытых механизмов.
-  - 📄 A from-zero video-story engine in pure Rust: a lossless document model, an atomic edit engine, an MCP-native tool surface, a web editor, an animated HTML render
-- **Jack-chen-cyber/ai-video-director-prompts** ⭐0 [craft]
-  - https://github.com/Jack-chen-cyber/ai-video-director-prompts
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: camera movement prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Репозиторий содержит проверенные промпты для ИИ-видео, включая словарь движений камеры и рабочие процессы для согласованности кадров. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. При низкой стоимости интеграции, высокий риск дублирования означает, что стоит брать только новые, уникальные формулировки.
-  - 📄 Production-tested multi-shot AI video prompts, camera movement vocabulary, and 3-node consistency workflows for Seedance, Kling, Veo, Runway & multi-model canva
-- **kandritskiy-jpg/higgsfield-realism-prompt-engine** ⭐0 [craft]
-  - https://github.com/kandritskiy-jpg/higgsfield-realism-prompt-engine
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Этот репозиторий — база знаний по промпт-инжинирингу для Higgsfield, с фокусом на реализм, кинематографию и предотвращение артефактов. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. Несмотря на низкую стоимость интеграции, высокий риск дублирования требует брать только новые, уникальные проверяемые формулировки.
-  - 📄 Realism-first prompt engineering knowledge base for Higgsfield. Curated AI skills, model-specific techniques, cinematography, reference analysis, artifact preve
-- **klakix-ai/ai-video-skills** ⭐0 [craft]
-  - https://github.com/klakix-ai/ai-video-skills
-  - ⚠️ fallback: query-grounded
-  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
-  - 🔎 evidence: query matched: cinematography prompt
-  - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
-  - 💡 Репозиторий содержит «навыки» для ИИ-видео, охватывающие ракурсы камеры, согласованность персонажей и реализм для различных моделей. Он поможет yaromat получить проверяемые операторские словари для управляемой генерации видео через облачные сервисы. При низкой стоимости интеграции, высокий риск дублирования означает, что стоит брать только новые, уникальные формулировки.
-  - 📄 Agent Skills for AI video: camera angles, character consistency, Seedance & Kling prompts, realism, lip sync, pacing, viral formats. For Claude Code, Codex, Cur
+  - 💡 ClipRally нарезает длинные видео на вертикальные клипы с субтитрами, используя FFmpeg для рендеринга. Он усиливает воспроизводимость рендера на CPU/GitHub Actions благодаря работе с манифестами и FFmpeg. Несмотря на низкую стоимость интеграции, риск дублирования функционала высок, так как схожие решения уже частично внедрены.
+  - 📄 Turn long videos into captioned vertical clips. ClipRally is a local-first AI video clipper for streams, gameplay, podcasts and recordings—with speech transcrip
