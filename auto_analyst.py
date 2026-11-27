@@ -408,21 +408,37 @@ def openrouter_generate(prompt: str, timeout: int = 420, strict: bool = False) -
                                     json_mode=strict, strict=strict).strip()
 
 
-def text_generate(prompt: str, timeout: int = 420) -> str:
-    """Единая точка генерации текста. ANALYST_TEXT_WORKER: openrouter (default) | kimi | auto.
+def gemini_generate(prompt: str, timeout: int = 420, strict: bool = False) -> str:
+    """Gemini (text) + РОТАЦИЯ КЛЮЧЕЙ GEMINI_API_KEY/_2/_3 при 429/403/5xx. kimi не используется."""
+    import gemini_client
+    body_prompt = prompt
+    if strict:
+        body_prompt = prompt + "\n\nВАЖНО: ответь ТОЛЬКО одним JSON-объектом, без текста до/после."
+    web = os.environ.get("ANALYST_WEB", "0").strip().lower() in ("1", "true", "yes", "on")
+    out = gemini_client.generate_rotating(body_prompt, timeout=timeout, max_tokens=8192,
+                                          web=web, max_retries_per_key=1)
+    return (out.get("text") or "").strip()
 
-    OpenRouter — основной: обычный HTTPS с ключом, ни браузера, ни сессии, цепочка
-    моделей фолбэкится. Kimi — legacy stdlib-драйвер: остаётся явным выбором, а в
-    'auto' идёт первым (как исторически). Qwen-чат выпилен 06.10 (токен отозван +
-    WAF-капча на /completions).
+
+def text_generate(prompt: str, timeout: int = 420) -> str:
+    """Единая точка генерации текста. ANALYST_TEXT_WORKER: gemini | openrouter (default) | auto. kimi исключён.
+
+    Gemini — `GEMINI_API_KEY/_2/_3` + ротация при лимите. OpenRouter — `text_openrouter` free-chain.
+    'auto' = gemini -> openrouter. Падение текстового воркера = fail-closed (см. вызывающий).
     """
     worker = os.environ.get("ANALYST_TEXT_WORKER", "openrouter").strip().lower() or "openrouter"
-    order = ["kimi", "openrouter"] if worker == "auto" else [worker]
+    if worker == "kimi":
+        log("  [text-worker] kimi исключён -> openrouter")
+        worker = "openrouter"
+    order = {"gemini": ["gemini"], "openrouter": ["openrouter"],
+             "auto": ["gemini", "openrouter"]}.get(worker, [worker])
     errors = []
     for name in order:
         try:
-            text = kimi_generate(prompt, timeout) if name == "kimi" \
-                else openrouter_generate(prompt, timeout)
+            if name == "gemini":
+                text = gemini_generate(prompt, timeout, strict=len(order) > 1)
+            else:
+                text = openrouter_generate(prompt, timeout)
         except Exception as exc:
             errors.append(f"{name}: {str(exc)[:160]}")
             log(f"  [text-worker] {name} не ответил — {str(exc)[:160]}")
@@ -504,7 +520,7 @@ def analyze(ctx: dict, rubric: dict) -> dict:
     except Exception as exc:
         return {"_error": str(exc)[:500]}
     data = _extract_json(out)
-    if not data and os.environ.get("ANALYST_TEXT_WORKER", "kimi").lower() != "kimi":
+    if not data and os.environ.get("ANALYST_TEXT_WORKER", "gemini").lower() != "kimi":
         # Второй дубль только на не-Kimi пути: дешёвая страховка от reasoning-моделей
         # и обрезанных по max_tokens ответов.
         log("  [analyze] JSON не распознан — повтор с json_object и строгим форматом")

@@ -4,7 +4,7 @@ name: auto analyst (repo/site)
 # Полностью в облаке (GH Actions), исполнитель — Kimi-чат на раннере (K2.5 через
 # stdlib urllib). [2026-07-27] переехал с mimo (снят free-тариф) на Qwen; [2026-10-06]
 # Qwen-текст заблокирован (токен отозван + WAF-капча) → Kimi, фолбэк OpenRouter
-# (ANALYST_TEXT_WORKER=kimi|openrouter|auto). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
+# (ANALYST_TEXT_WORKER=gemini|openrouter|auto; kimi исключён). FAN-OUT через matrix, ПОСЛЕДОВАТЕЛЬНО (max-parallel 1:
 # один аккаунт воркера). Каждая цель → verified_tools/<slug>/ на ЯД + отчёт в TG-тред.
 # Финал «внедряем/нет» — за yaromat. Решения хранятся в ADOPTION_BOARD.md.
 #
@@ -27,7 +27,7 @@ on:
         required: false
         type: string
       text_worker:
-        description: "Текстовый воркер: kimi (дефолт) | openrouter | auto (проверка фолбэка)"
+        description: "Текстовый воркер: gemini | openrouter (дефолт) | auto (gemini->openrouter); kimi исключён"
         required: false
         type: string
   schedule:
@@ -103,24 +103,14 @@ jobs:
           printf '[ydrive]\ntype = yandex\nclient_id = %s\nclient_secret = %s\ntoken = %s\n' \
             "$YDRIVE_CLIENT_ID" "$YDRIVE_CLIENT_SECRET" "$YDRIVE_TOKEN" \
             > "$HOME/.config/rclone/rclone.conf"
-      - name: Setup text worker (Kimi by default, OpenRouter fallback)
-        # [2026-10-06] Текстовый воркер переведён на Kimi: chat.qwen.ai заблокирован
-        # (токен отозван + Aliyun WAF-капча на /completions), из-за чего с 23.09 каждый
-        # разбор падал в ANALYSIS_ERROR и доска/TG показывали нули. Kimi — чистый stdlib
-        # urllib: ни Chromium, ни профиль. Фолбэк — OpenRouter (обычный HTTPS с ключом),
-        # поэтому Qwen-сессия/Playwright больше не тянутся.
+      - name: Setup text worker (Gemini, kimi excluded)
+        # kimi ИСКЛЮЧЁН. Движок: Gemini (GEMINI_API_KEY/_2/_3 + ротация при 429/403/5xx);
+        # фолбэк OpenRouter free-chain. Qwen/Mimo/Kimi-сессия больше не тянутся.
         env:
-          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'openrouter' }}
+          ANALYST_TEXT_WORKER: ${{ vars.ANALYST_TEXT_WORKER || 'gemini' }}
         run: |
           set -e
-          mkdir -p kimi
-          rclone copyto "ydrive:Content factory/cloud_io/cnchat_ci/kimi_session.json" \
-            kimi/kimi_session.json
-          SIZE=$(stat -c%s kimi/kimi_session.json)
-          if [ "$SIZE" -lt 5000 ]; then
-            echo "::error::сессия Kimi битая/пустая ($SIZE б) — анализатор без текстового воркера"
-            exit 1
-          fi
+          echo "text worker: ${{ vars.ANALYST_TEXT_WORKER || 'gemini' }} (kimi excluded)"
       - name: Analyze target
         env:
           CLOUDFLARE_WORKER:   ${{ secrets.CLOUDFLARE_WORKER }}
@@ -128,8 +118,12 @@ jobs:
           SCOUT_CHAT_ID:       ${{ secrets.SCOUT_CHAT_ID }}
           GITHUB_TOKEN:        ${{ secrets.GITHUB_TOKEN }}
           SCOUT_THREAD:        ${{ inputs.thread }}
-          ANALYST_TEXT_WORKER: ${{ inputs.text_worker || vars.ANALYST_TEXT_WORKER || 'openrouter' }}
-          KIMI_SESSION_FILE:   ${{ github.workspace }}/kimi/kimi_session.json
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2:    ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3:    ${{ secrets.GEMINI_API_KEY_3 }}
+          GEMINI_MODEL:        ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
+          ANALYST_WEB:         ${{ vars.ANALYST_WEB || '1' }}
+          ANALYST_TEXT_WORKER: ${{ inputs.text_worker || vars.ANALYST_TEXT_WORKER || 'gemini' }}
           OPENROUTER_API_KEY:  ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODELS:   ${{ vars.OPENROUTER_MODELS || 'nvidia/nemotron-3-super-120b-a12b:free,openrouter/free' }}
         run: python3 auto_analyst.py --targets "${{ matrix.target }}"

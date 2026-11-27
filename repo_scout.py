@@ -369,9 +369,20 @@ def _call_groq(prompt: str) -> str | None:
     return None
 
 
+def _gemini_keys() -> list[str]:
+    """Пул ключей: GEMINI_API_KEY + GEMINI_API_KEY_2 + GEMINI_API_KEY_3 (dedup)."""
+    out = []
+    for v in (GEMINI_API_KEY, os.environ.get("GEMINI_API_KEY_2", ""), os.environ.get("GEMINI_API_KEY_3", "")):
+        v = (v or "").strip()
+        if v and v not in out:
+            out.append(v)
+    return out
+
+
 def _call_gemini(prompt: str) -> str | None:
-    """Gemini-фолбэк. Цепочка моделей на случай 429 (квота) / 503 (перегрузка)."""
-    if not GEMINI_API_KEY:
+    """Gemini. Цепочка моделей + РОТАЦИЯ КЛЮЧЕЙ при лимите (429/403/503)."""
+    keys = _gemini_keys()
+    if not keys:
         return None
     models = [GEMINI_MODEL] + [m for m in ("gemini-2.5-flash", "gemini-2.0-flash", "gemini-flash-latest")
                                if m != GEMINI_MODEL]
@@ -380,21 +391,22 @@ def _call_gemini(prompt: str) -> str | None:
         "generationConfig": {"temperature": 0.4, "response_mime_type": "application/json"},
     }
     for model in models:
-        url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
-               f"{model}:generateContent?key={GEMINI_API_KEY}")
-        for attempt in range(2):  # 2 попытки: transient 503/429 часто проходят
-            try:
-                r = requests.post(url, json=payload, timeout=90)
-            except Exception as e:
-                print(f"[llm] Gemini {model}: сеть ({e})")
+        for key in keys:
+            url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
+                   f"{model}:generateContent?key={key}")
+            for attempt in range(2):  # transient 503/429 проходят
+                try:
+                    r = requests.post(url, json=payload, timeout=90)
+                except Exception as e:
+                    print(f"[llm] Gemini {model}: сеть ({e})")
+                    break
+                if r.status_code == 200:
+                    print(f"[llm] обогащение через Gemini ({model})")
+                    return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if r.status_code in (429, 403, 503) and attempt == 0:
+                    continue
+                print(f"[llm] Gemini {model}: HTTP {r.status_code} -> следующий ключ/модель")
                 break
-            if r.status_code == 200:
-                print(f"[llm] обогащение через Gemini ({model})")
-                return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-            if r.status_code in (429, 503) and attempt == 0:
-                continue
-            print(f"[llm] Gemini {model}: HTTP {r.status_code}")
-            break
     return None
 
 
@@ -436,8 +448,8 @@ def enrich_with_llm(items: list[dict]) -> None:
         f"Репозитории:\n{json.dumps(catalog, ensure_ascii=False, indent=1)}"
     )
 
-    # Groq основной, Gemini фолбэк. Первый, кто вернёт текст — побеждает.
-    raw = _call_groq(prompt) or _call_gemini(prompt)
+    # Gemini основной (+ротация ключей); Groq только фолбэк. Первый, кто вернёт текст — побеждает.
+    raw = _call_gemini(prompt) or _call_groq(prompt)
     if raw is None:
         print("[llm] все провайдеры недоступны — fallback на описания")
         return

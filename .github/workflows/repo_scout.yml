@@ -32,8 +32,12 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           SCOUT_CHAT_ID: ${{ secrets.SCOUT_CHAT_ID }}
           SCOUT_THREAD_ID: "1699"   # REPO SCOUT — дайджест находок (отдельно от GROK SCOUT 1653)
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          # kimi исключён; движок обогащения = Gemini + ротация ключей. Groq только фолбэк (по умолчанию выключен).
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || '' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}
         run: python repo_scout.py --top 25
 
       - name: Commit updated state

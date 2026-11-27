@@ -73,6 +73,23 @@ def assess_grok_github_item(item: dict, needs: CurrentNeeds) -> dict | None:
     })
 
 
+def _normalize_item(it):
+    """Любая разумная схема Grok -> канон (source_link + what + why_us + type). None если без ссылки/текста."""
+    if not isinstance(it, dict):
+        return None
+    src = str(it.get("source_link") or it.get("source_url") or it.get("url") or it.get("link") or it.get("source") or "")
+    what = it.get("what") or it.get("what_found") or it.get("content") or it.get("text") or it.get("title") or it.get("notes") or ""
+    if not src.startswith("http") or not what:
+        return None
+    out = dict(it)
+    out["source_link"] = src
+    out["what"] = what
+    out.setdefault("why_us", it.get("why_us") or it.get("practical_value") or it.get("content_factory_application") or it.get("notes") or "")
+    if not out.get("type"):
+        out["type"] = it.get("type") or ("anti_pattern" if it.get("anti_pattern") in (True, "true", "yes") else "visual_reference")
+    return out
+
+
 def grok_signals(needs: CurrentNeeds | None = None):
     """Кандидаты из свежего grok_*.json. Возвращает (в_анализатор, в_дайджест).
 
@@ -100,10 +117,14 @@ def grok_signals(needs: CurrentNeeds | None = None):
             check=True, capture_output=True, text=True, timeout=60,
         )
         doc = json.loads(fetched.stdout)
-        items = doc.get("candidates") or doc.get("items") or []
+        items = doc.get("candidates") or doc.get("items") or doc.get("findings") or []
         to_analyst, to_digest, sat, needs_drop = [], [], 0, 0
-        for it in items:
-            link = str(it.get("source_link", ""))
+        for raw_it in items:
+            # схема Grok дрейфует: candidates/items И findings; поля source_link|source_url, what|what_found...
+            it = _normalize_item(raw_it)
+            if it is None:
+                continue
+            link = it["source_link"]
             if not link.startswith("http"):
                 continue
             # Замер 07.08 по четырём дням подряд: 38 из 55 кандидатов Grok'а — «бесплатные
