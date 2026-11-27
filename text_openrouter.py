@@ -18,7 +18,7 @@ import urllib.error
 import urllib.request
 
 URL = "https://openrouter.ai/api/v1/chat/completions"
-DEFAULT_MODELS = ("cohere/north-mini-code:free", "google/gemma-4-31b-it:free", "openrouter/free")
+DEFAULT_MODELS = ("particle-ai/particle-1:free", "baidu/ernie-5.5-flash-preview:free", "recursive/flint-v1.0:free")
 
 
 def model_chain() -> list[str]:

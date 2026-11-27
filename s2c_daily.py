@@ -656,8 +656,16 @@ def relevant(item: dict, profile: dict) -> bool:
 
 def openrouter_generate(prompt: str, model: str = "", timeout: int = 300) -> str:
     """Фолбэк через OpenRouter. Qwen-чат выпилен 06.10: токен отозван, а
-    /completions режет Aliyun WAF-капча (HTTP 200 + FAIL_SYS_USER_VALIDATE)."""
-    text = text_openrouter.generate(prompt, model=model or None, timeout=timeout)
+    /completions режет Aliyun WAF-капча (HTTP 200 + FAIL_SYS_USER_VALIDATE).
+
+    model здесь исторический (QWEN_MODEL, напр. Qwen3-Coder) — для OpenRouter он
+    не годится: платная модель на free-tier ключе отдаёт 402. Модель берём из
+    OPENROUTER_MODEL, иначе — бесплатная цепочка text_openrouter.model_chain().
+    """
+    explicit = os.getenv("OPENROUTER_MODEL", "").strip()
+    if not explicit and model and ("/" in model or model.endswith(":free")):
+        explicit = model
+    text = text_openrouter.generate(prompt, model=explicit or None, timeout=timeout)
     return _CITATION_RE.sub("", text).replace("[[", "").replace("]]", "").strip()
 
 
