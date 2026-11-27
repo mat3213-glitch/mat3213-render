@@ -122,7 +122,7 @@ jobs:
           MESSAGE:    ${{ inputs.message }}
         run: python3 Instrument/CnChat/gemini_chat.py build
 
-      - name: Run OpenRouter
+      - name: Run Gemini
         if: ${{ inputs.action != 'clear' }}
         id: run
         env:
