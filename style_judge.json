@@ -2,61 +2,55 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "холодный тон, подходящий для даунтемпо-вайб, близкий к deep teal"
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": true,
-      "score": 9.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "холодный тон, подходящий для даунтемпо-вайб, близкий к deep teal"
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": true,
-      "score": 7.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "холодный тон, подходящий для даунтемпо-вайб, близкий к deep teal"
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
+    },
+    {
+      "name": "scout_neutral_night_soft",
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
+    },
+    {
+      "name": "scout_neutral_night_soft_2",
+      "keep": false,
+      "score": 0,
+      "votes": "0/1",
+      "status": "не виден на листе",
+      "reason": "тайл не отрисован?"
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 4.0,
+      "score": 1.0,
       "votes": "0/1",
       "status": "отклонён",
-      "reason": "слишком мягкий, не соответствует cold teal"
-    },
-    {
-      "name": "scout_green_mid_soft_2",
-      "keep": true,
-      "score": 8.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "холодный тон, подходящий для даунтемпо-вайб, близкий к deep teal"
-    },
-    {
-      "name": "scout_cool_mid_soft",
-      "keep": true,
-      "score": 9.0,
-      "votes": "1/1",
-      "status": "принят",
-      "reason": "холодный тон, подходящий для даунтемпо-вайб, близкий к deep teal"
+      "reason": "слишком зелёный"
     }
   ],
-  "recommend_merge": [
-    "scout_neutral_mid_muted",
-    "scout_neutral_night_muted",
-    "scout_neutral_bright_muted",
-    "scout_green_mid_soft_2",
-    "scout_cool_mid_soft"
-  ],
+  "recommend_merge": [],
   "disputed": [],
-  "_generated": "2026-11-26",
+  "_generated": "2026-11-27",
   "_judge": "gh-vision-ensemble(1/5)"
 }
