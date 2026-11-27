@@ -131,8 +131,8 @@ def test_402_metered_on_web_retries_same_model_without_web(monkeypatch):
 
     monkeypatch.setattr(tor.urllib.request, "urlopen", fake_urlopen)
     monkeypatch.setenv("OPENROUTER_API_KEY", "k")
-    result, cap = _capture(lambda: tor.generate("p", model="m:free", web=True, report_model=True), monkeypatch)
-    assert cap["calls"][0]["plugins"] == [{"id": "web"}]
-    assert "plugins" not in cap["calls"][1]
-    assert [c["model"] for c in cap["calls"]] == ["m:free", "m:free"]
+    result = tor.generate("p", model="m:free", web=True, report_model=True)
+    assert captured["calls"][0]["plugins"] == [{"id": "web"}]
+    assert "plugins" not in captured["calls"][1]
+    assert [c["model"] for c in captured["calls"]] == ["m:free", "m:free"]
     assert result == ("ответ", "m:free")

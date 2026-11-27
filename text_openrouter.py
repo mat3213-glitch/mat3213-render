@@ -84,15 +84,15 @@ def generate(prompt: str, model: str | None = None, timeout: int = 120,
             try:
                 with urllib.request.urlopen(req, timeout=timeout) as resp:
                     data = json.loads(resp.read().decode("utf-8", "replace"))
-        except urllib.error.HTTPError as exc:
-            if web_remaining and exc.code in (400, 422, 402):
-                # web-поле не поддерживается моделью (400/422) или — наблюдение
-                # 15.11 — ведёт к тарифу (402) при живой базе; та же модель
-                # перепрашивается без web
-                web_remaining = False
-                print(f"  [openrouter] web-поле отклонено ({exc.code}) — повтор без web",
-                      file=sys.stderr)
-                continue
+            except urllib.error.HTTPError as exc:
+                if web_remaining and exc.code in (400, 422, 402):
+                    # web-поле не поддерживается моделью (400/422) или — наблюдение
+                    # 15.11 — ведёт к тарифу (402) при живой базе; та же модель
+                    # перепрашивается без web
+                    web_remaining = False
+                    print(f"  [openrouter] web-поле отклонено ({exc.code}) — повтор без web",
+                          file=sys.stderr)
+                    continue
                 errors.append(f"{m}: HTTP {exc.code}")
                 break
             except (urllib.error.URLError, TimeoutError, OSError) as exc:
