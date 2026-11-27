@@ -106,7 +106,7 @@ jobs:
           S2C_TEXT_WORKER: ${{ vars.S2C_TEXT_WORKER || 'openrouter' }}
           KIMI_SESSION_FILE: ${{ github.workspace }}/kimi/kimi_session.json
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS || 'openrouter/free' }}
+          OPENROUTER_MODELS: ${{ vars.OPENROUTER_MODELS || 'particle-ai/particle-1:free,baidu/ernie-5.5-flash-preview:free,recursive/flint-v1.0:free' }}
         run: |
           if [ "$S2C_DRY_RUN" = "true" ]; then
             .s2c-image-venv/bin/python s2c_daily.py --dry-run
