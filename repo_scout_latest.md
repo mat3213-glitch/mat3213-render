@@ -1,11 +1,11 @@
-# Repo Scout — 2026-11-26T19:26:00.821414
+# Repo Scout — 2026-11-27T16:21:54.878870
 Всего в шортлисте: 1
-- **voyager67/cliprally** ⭐1 [video]
-  - https://github.com/voyager67/cliprally
+- **ukr8b3g-cmyk/write-h3-motion-prompts-skills** ⭐1 [craft]
+  - https://github.com/ukr8b3g-cmyk/write-h3-motion-prompts-skills
   - ⚠️ fallback: query-grounded
-  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
-  - 🔎 evidence: query matched: render manifest ffmpeg
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
   - 🧩 integration cost: low
-  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
-  - 💡 ClipRally нарезает длинные видео на вертикальные клипы с субтитрами, используя FFmpeg для рендеринга. Он усиливает воспроизводимость рендера на CPU/GitHub Actions благодаря работе с манифестами и FFmpeg. Несмотря на низкую стоимость интеграции, риск дублирования функционала высок, так как схожие решения уже частично внедрены.
-  - 📄 Turn long videos into captioned vertical clips. ClipRally is a local-first AI video clipper for streams, gameplay, podcasts and recordings—with speech transcrip
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предоставляет навык для создания видео-промптов с описанием движения камеры и других визуальных элементов для генераторов MiniMax H3. Он помогает закрыть потребность в проверяемых операторских словарях и схемах для управляемой i2v-моторики, предлагая новые формулировки. Интеграция имеет низкую стоимость, но высокий риск дублирования, поэтому ценность представляют только новые, проверяемые формулировки.
+  - 📄 An agent skill for writing MiniMax H3 and H3 Max video prompts with camera movement, motion graphics, on-screen text, and sound cues.
