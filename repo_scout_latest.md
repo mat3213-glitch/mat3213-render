@@ -1,2 +1,65 @@
-# Repo Scout — 2026-11-27T19:21:50.253601
-Всего в шортлисте: 0
+# Repo Scout — 2026-11-28T17:58:04.951664
+Всего в шортлисте: 7
+- **bupznguyen/ai-video-prompt-lab** ⭐0 [craft]
+  - https://github.com/bupznguyen/ai-video-prompt-lab
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: cinematography prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий предлагает систему промптов для AI-видео, включая кинематографические подсказки и эмоциональные таймлайны. Он может предоставить проверяемые формулировки для управления движениями камеры, закрывая потребность в операторских словарях. Интеграция недорогая, но риск дублирования высок; стоит брать только новые, уникальные и проверяемые формулировки.
+  - 📄 Prompting system for AI animal-rescue videos: evidence rows, emotional timelines, locked identity, QC pass + Nano Banana/Veo cinematography
+- **damiaan111/pulseforge** ⭐4 [video]
+  - https://github.com/damiaan111/pulseforge
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Проект представляет собой автономный GPU-ускоренный рендерер музыкальных видео с детерминированным экспортом. Он может усилить воспроизводимость рендера за счёт своих детерминированных возможностей, способствуя созданию проверяемых receipts. Интеграция низкая, но риск дублирования высок, так как частичные решения уже есть; нужен конкретный незакрытый guardrail.
+  - 📄 Self-hosted, GPU-accelerated music-video renderer for Windows: 1,750 MilkDrop presets, stem-driven modulation, an auto-director, karaoke lyrics and deterministi
+- **digitald2tox-beep/previzkit** ⭐0 [craft]
+  - https://github.com/digitald2tox-beep/previzkit
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `camera_prompt_contracts` (priority 8): Проверяемые операторские словари и prompt-схемы для управляемой i2v-моторики через уже доступные облачные генераторы.
+  - 🔎 evidence: query matched: camera movement prompt
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — camera_moves.json и prompt_writer уже есть; брать только новые проверяемые формулировки
+  - 💡 Этот репозиторий генерирует промпты для AI-видео, фокусируясь на углах и движениях камеры. Он предлагает проверяемые prompt-схемы для управляемой моторики камеры, закрывая потребность в операторских словарях. Интеграция низкая, но риск дублирования высок, поскольку уже существуют аналогичные решения; целесообразно брать только новые, проверяемые формулировки.
+  - 📄 AI video camera angle and movement prompt generator
+- **spitzenidee/yt-commenter-stats** ⭐0 [video]
+  - https://github.com/spitzenidee/yt-commenter-stats
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Проект собирает детерминированную статистику комментариев YouTube-видео, сохраняя их с таймстампами. Хотя он не связан напрямую с рендером видео, его детерминированный подход может быть изучен для принципов воспроизводимости. Интеграция низкая, но риск дублирования высок, и это слабый кандидат для усиления воспроизводимости рендера видео.
+  - 📄 Deterministic YouTube video commenter account stats. Give it a video URL; it walks the comment section, enriches every comment with an exact timestamp, stores e
+- **Permvir/shaderera** ⭐0 [video]
+  - https://github.com/Permvir/shaderera
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Этот проект рендерит детерминированное 2D/3D видео из кода с валидацией кадров и параллельным экспортом. Он напрямую усиливает воспроизводимость рендера за счёт детерминированного вывода и валидации, способствуя созданию проверяемых receipts. Интеграция низкая, но риск дублирования высок; необходимо точно определить, какой конкретный незакрытый guardrail он может закрыть.
+  - 📄 Render deterministic 2D/3D video from code with frame validation, parallel ffmpeg export, still previews, and automated review.
+- **ShaunNYC/director-engine** ⭐0 [video]
+  - https://github.com/ShaunNYC/director-engine
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Это бесплатный, безголовый 3D-движок рендеринга, который AI-агенты используют для рендеринга изображений и видео из текста. Его способность к детерминированному рендерингу может способствовать усилению воспроизводимости рендера. Интеграция низкая, но риск дублирования высок, так как частичные решения уже есть; нужен конкретный незакрытый guardrail.
+  - 📄 Designed by AI, for AI. A free, headless 3D render engine that AI agents use to render images, video and games from plain text.
+- **OutoriNemuri/hello-bug-mv** ⭐0 [video]
+  - https://github.com/OutoriNemuri/hello-bug-mv
+  - ⚠️ fallback: query-grounded
+  - 🎯 gap `render_reproducibility` (priority 6): Усиление воспроизводимости CPU/GitHub Actions рендера: manifests, hashes, resumable chunks и проверяемые receipts.
+  - 🔎 evidence: query matched: deterministic video render
+  - 🧩 integration cost: low
+  - ♻ duplicate-risk: high — fallback candidate; metadata did not contain exact evidence terms; high — chunk cache и Video Receipt частично внедрены; нужен конкретный незакрытый guardrail
+  - 💡 Проект демонстрирует детерминированное WebGL музыкальное видео, рендеринг которого распределённо выполняется на GitHub Actions. Он напрямую соответствует потребности в усилении воспроизводимости рендера и может предоставить примеры для manifests и hashes. Интеграция низкая, но риск дублирования высок; необходимо точно определить, какой конкретный незакрытый guardrail он может закрыть.
+  - 📄 ハロー、バグ (HELLO, BUG) — an original VOCALOID song and its deterministic WebGL music video, rendered sharded on GitHub Actions
