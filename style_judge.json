@@ -2,55 +2,61 @@
   "verdicts": [
     {
       "name": "scout_neutral_mid_muted",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 7.7,
+      "votes": "3/3",
+      "status": "принят",
+      "reason": "Хороший нейтральный холодный тон, глубокая атмосфера."
     },
     {
       "name": "scout_neutral_night_muted",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 8.3,
+      "votes": "3/3",
+      "status": "принят",
+      "reason": "Близко к deep teal, отличная глубина теней."
     },
     {
       "name": "scout_neutral_bright_muted",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 6.0,
+      "votes": "2/3",
+      "status": "принят",
+      "reason": "Слишком светло, но попадает в холодную гамму."
     },
     {
       "name": "scout_neutral_night_soft",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 7.7,
+      "votes": "3/3",
+      "status": "принят",
+      "reason": "Чистый холодный свет, идеальный нуарный вайб."
     },
     {
       "name": "scout_neutral_night_soft_2",
-      "keep": false,
-      "score": 0,
-      "votes": "0/1",
-      "status": "не виден на листе",
-      "reason": "тайл не отрисован?"
+      "keep": true,
+      "score": 8.0,
+      "votes": "3/3",
+      "status": "принят",
+      "reason": "Глубокий холодный тон, соответствует эстетике."
     },
     {
       "name": "scout_green_mid_soft",
       "keep": false,
-      "score": 1.0,
-      "votes": "0/1",
+      "score": 3.0,
+      "votes": "0/3",
       "status": "отклонён",
-      "reason": "слишком зелёный"
+      "reason": "Грязный желто-зеленый каст, уходит в болото."
     }
   ],
-  "recommend_merge": [],
+  "recommend_merge": [
+    "scout_neutral_mid_muted",
+    "scout_neutral_night_muted",
+    "scout_neutral_bright_muted",
+    "scout_neutral_night_soft",
+    "scout_neutral_night_soft_2"
+  ],
   "disputed": [],
-  "_generated": "2026-11-27",
-  "_judge": "gh-vision-ensemble(1/5)"
+  "_generated": "2026-11-28",
+  "_judge": "gh-vision-ensemble(3/5)"
 }

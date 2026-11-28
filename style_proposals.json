@@ -1,5 +1,5 @@
 {
-  "_generated": "2026-11-27",
+  "_generated": "2026-11-28",
   "_note": "ОС yaromat → merge.py",
   "candidates": [
     {
@@ -12,7 +12,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "11807181.jpg"
+      "_src": "62773604.jpg"
     },
     {
       "name": "scout_neutral_night_muted",
@@ -24,7 +24,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "44131485.jpg"
+      "_src": "21612225.jpg"
     },
     {
       "name": "scout_neutral_bright_muted",
@@ -36,7 +36,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "76621532.jpg"
+      "_src": "44994391.jpg"
     },
     {
       "name": "scout_neutral_night_soft",
@@ -48,7 +48,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "97963180.jpg"
+      "_src": "28064131.jpg"
     },
     {
       "name": "scout_neutral_night_soft_2",
@@ -60,7 +60,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "23720065.jpg"
+      "_src": "32089815.jpg"
     },
     {
       "name": "scout_green_mid_soft",
@@ -72,7 +72,7 @@
         17
       ],
       "vignette": "angle=PI/4.5",
-      "_src": "1293467.jpg"
+      "_src": "48492986.jpg"
     }
   ]
 }
